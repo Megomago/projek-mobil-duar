@@ -59,6 +59,11 @@ namespace Weapons
         [Tooltip("Gaya dorong mundur yang diaplikasikan ke kendaraan saat menembak")]
         public float recoilForce = 500f;
         private Rigidbody _vehicleRb;
+        
+        [Tooltip("Pengali seberapa kuat guncangan kamera berdasarkan recoil (contoh: 0.0005)")]
+        public float cameraShakeMultiplier = 0.0005f;
+        [Tooltip("Durasi guncangan kamera saat menembak (detik)")]
+        public float cameraShakeDuration = 0.2f;
         #endregion
 
         #region --- 6. AUDIO & TRANSFORMS ---
@@ -112,6 +117,12 @@ namespace Weapons
         
         private Vector3 _meshOriginalLocalPos;
         private Vector3 _meshTargetLocalPos;
+
+        [Header("=== ANIMATOR (RELOAD & STATE) ===")]
+        [Tooltip("Animator dari model senjata untuk memutar animasi Reload")]
+        public Animator weaponAnimator;
+        [Tooltip("Nama trigger parameter di Animator untuk memulai reload")]
+        public string reloadTriggerName = "Reload";
         #endregion
 
         #region --- 8. ROTARY BARREL (MINIGUN) ---
@@ -251,6 +262,12 @@ namespace Weapons
             // Pukul mundur kendaraan (Fisika nyata)
             ApplyVehicleRecoil();
 
+            // Efek Guncangan Kamera (Camera Shake) berdasarkan recoil
+            if (VehicleCamera.Instance != null && cameraShakeMultiplier > 0f)
+            {
+                VehicleCamera.Instance.Shake(recoilForce * cameraShakeMultiplier, cameraShakeDuration);
+            }
+
             // Picu animasi hentakan senjata (Procedural)
             if (enableProceduralRecoil && movableMesh != null)
             {
@@ -351,6 +368,13 @@ namespace Weapons
         public void StartReload()
         {
             if (_isReloading || maxAmmo <= 0 || currentAmmo == maxAmmo) return;
+            
+            // Picu Animasi Reload jika ada
+            if (weaponAnimator != null)
+            {
+                weaponAnimator.SetTrigger(reloadTriggerName);
+            }
+
             StartCoroutine(ReloadCoroutine());
         }
 
