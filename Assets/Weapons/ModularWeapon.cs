@@ -19,9 +19,12 @@ namespace Weapons
         [Tooltip("Batas amunisi dalam satu magazine (0 = Infinite)")]
         public int maxAmmo = 30;
         public int currentAmmo;
+        [Tooltip("Otomatis melakukan reload saat peluru habis?")]
+        public bool autoReload = false;
         [Tooltip("Waktu yang dibutuhkan untuk reload (detik)")]
         public float reloadTime = 2f;
         private bool _isReloading;
+        private float _reloadEndTime; // Untuk melacak sisa waktu reload bagi UI
         private float _fireCooldown;
         #endregion
 
@@ -70,10 +73,20 @@ namespace Weapons
         [Header("=== AUDIO & TRANSFORMS ===")]
         [Tooltip("Titik keluarnya peluru")]
         public Transform muzzleTransform;
+        [Tooltip("Titik untuk posisi Muzzle Flash (Opsional, jika kosong akan menggunakan muzzleTransform)")]
+        public Transform muzzleFlashTransform;
         [Tooltip("Titik lontaran selongsong peluru (Opsional)")]
         public Transform ejectionPortTransform;
         [Tooltip("Prefab selongsong peluru yang terlempar (Opsional)")]
         public GameObject casingPrefab;
+
+        [Header("=== CASING EJECTION SETTINGS ===")]
+        [Tooltip("Waktu tunda sebelum selongsong terlempar (detik)")]
+        public float casingEjectDelay = 0f;
+        [Tooltip("Kekuatan dasar lemparan selongsong relatif terhadap Ejection Port (X=Kanan, Y=Atas, Z=Maju)")]
+        public Vector3 casingEjectForce = new Vector3(4f, 1.5f, -0.75f);
+        [Tooltip("Acak kekuatan lemparan (+/- dari kekuatan dasar)")]
+        public Vector3 casingEjectRandomness = new Vector3(1f, 0.5f, 0.25f);
 
         [Space]
         public AudioSource weaponAudioSource;
@@ -186,7 +199,14 @@ namespace Weapons
             
             if (maxAmmo > 0 && currentAmmo <= 0)
             {
-                if (Input.GetMouseButtonDown(0)) PlaySound(emptyClickSound);
+                if (autoReload)
+                {
+                    StartReload();
+                }
+                else
+                {
+                    if (Input.GetMouseButtonDown(0)) PlaySound(emptyClickSound);
+                }
                 return;
             }
 
@@ -206,6 +226,11 @@ namespace Weapons
         {
             if (maxAmmo > 0) currentAmmo--;
 
+            if (autoReload && maxAmmo > 0 && currentAmmo <= 0)
+            {
+                StartReload();
+            }
+
             float timeBetweenShots = 60f / fireRateRPM;
             _fireCooldown = timeBetweenShots;
 
@@ -220,17 +245,18 @@ namespace Weapons
             if (muzzleFlash != null) muzzleFlash.Play();
             
             // Spawn muzzle flash — Instantiate + Destroy, works for any prefab type
-            if (muzzleFlashPrefab != null && muzzleTransform != null)
+            Transform flashSpawnPoint = muzzleFlashTransform != null ? muzzleFlashTransform : muzzleTransform;
+            if (muzzleFlashPrefab != null && flashSpawnPoint != null)
             {
-                // Rotasi = rotasi muzzle + offset koreksi (buat benerin sumbu yang kebalik)
-                Quaternion flashRot = muzzleTransform.rotation * Quaternion.Euler(muzzleFlashRotOffset);
+                // Rotasi = rotasi flashSpawnPoint + offset koreksi
+                Quaternion flashRot = flashSpawnPoint.rotation * Quaternion.Euler(muzzleFlashRotOffset);
                 GameObject flash = Instantiate(
                     muzzleFlashPrefab,
-                    muzzleTransform.position,
+                    flashSpawnPoint.position,
                     flashRot
                 );
-                // Parent ke muzzleTransform — flash ngikut laras ke mana pun bergerak
-                flash.transform.SetParent(muzzleTransform, worldPositionStays: true);
+                // Parent ke flashSpawnPoint — flash ngikut laras ke mana pun bergerak
+                flash.transform.SetParent(flashSpawnPoint, worldPositionStays: true);
                 // Random scale
                 float s = Random.Range(muzzleFlashScaleMin, muzzleFlashScaleMax);
                 flash.transform.localScale = Vector3.one * s;
@@ -256,8 +282,15 @@ namespace Weapons
                 SpawnProjectile(currentDispersion);
             }
 
-            // Lontarkan selongsong peluru
-            EjectCasing();
+            // Lontarkan selongsong peluru dengan delay atau langsung
+            if (casingEjectDelay > 0f)
+            {
+                StartCoroutine(EjectCasingCoroutine());
+            }
+            else
+            {
+                EjectCasing();
+            }
 
             // Pukul mundur kendaraan (Fisika nyata)
             ApplyVehicleRecoil();
@@ -301,6 +334,12 @@ namespace Weapons
             }
         }
 
+        private IEnumerator EjectCasingCoroutine()
+        {
+            yield return new WaitForSeconds(casingEjectDelay);
+            EjectCasing();
+        }
+
         private void EjectCasing()
         {
             if (casingPrefab == null || ejectionPortTransform == null) return;
@@ -310,10 +349,16 @@ namespace Weapons
             if (casingRb != null)
             {
                 casingRb.velocity = Vector3.zero;
-                // Lempar selongsong ke kanan + sedikit ke atas dan belakang
-                Vector3 ejectForce = ejectionPortTransform.right * Random.Range(3f, 5f) + 
-                                     ejectionPortTransform.up * Random.Range(1f, 2f) -
-                                     ejectionPortTransform.forward * Random.Range(0.5f, 1f);
+                
+                // Menghitung lontaran acak berdasarkan variabel Inspector
+                float forceRight = casingEjectForce.x + Random.Range(-casingEjectRandomness.x, casingEjectRandomness.x);
+                float forceUp = casingEjectForce.y + Random.Range(-casingEjectRandomness.y, casingEjectRandomness.y);
+                float forceForward = casingEjectForce.z + Random.Range(-casingEjectRandomness.z, casingEjectRandomness.z);
+
+                Vector3 ejectForce = (ejectionPortTransform.right * forceRight) + 
+                                     (ejectionPortTransform.up * forceUp) +
+                                     (ejectionPortTransform.forward * forceForward);
+                                     
                 casingRb.AddForce(ejectForce, ForceMode.Impulse);
                 casingRb.AddTorque(Random.insideUnitSphere * 10f, ForceMode.Impulse);
             }
@@ -381,6 +426,7 @@ namespace Weapons
         private IEnumerator ReloadCoroutine()
         {
             _isReloading = true;
+            _reloadEndTime = Time.time + reloadTime;
             PlaySound(reloadSound);
             
             yield return new WaitForSeconds(reloadTime);
@@ -395,6 +441,15 @@ namespace Weapons
             {
                 weaponAudioSource.PlayOneShot(clip);
             }
+        }
+
+        // --- PUBLIC GETTERS UNTUK UI ---
+        public bool IsReloading() => _isReloading;
+        
+        public float GetRemainingReloadTime()
+        {
+            if (!_isReloading) return 0f;
+            return Mathf.Max(0f, _reloadEndTime - Time.time);
         }
     }
 }
