@@ -1,5 +1,8 @@
+using System;
 using System.Collections;
 using UnityEngine;
+using Random = UnityEngine.Random;
+
 
 namespace Weapons
 {
@@ -121,8 +124,10 @@ namespace Weapons
         public bool enableProceduralRecoil = true;
         [Tooltip("Bagian senjata yang mundur saat ditembak (contoh: kokangan / laras atas)")]
         public Transform movableMesh;
-        [Tooltip("Seberapa jauh mundur ke belakang (Z axis lokal)")]
+        [Tooltip("Seberapa jauh mundur ke belakang")]
         public float recoilDistance = 0.15f;
+        [Tooltip("Sumbu arah mundurnya (0,0,1 = mundur di sumbu Z. Kalau muter aneh ke atas, coba isi 0,1,0 atau 0,-1,0)")]
+        public Vector3 recoilAxis = new Vector3(0, 0, 1);
         [Tooltip("Kecepatan hentakan mundur")]
         public float recoilSnapSpeed = 50f;
         [Tooltip("Kecepatan kembali ke posisi semula")]
@@ -131,11 +136,8 @@ namespace Weapons
         private Vector3 _meshOriginalLocalPos;
         private Vector3 _meshTargetLocalPos;
 
-        [Header("=== ANIMATOR (RELOAD & STATE) ===")]
-        [Tooltip("Animator dari model senjata untuk memutar animasi Reload")]
-        public Animator weaponAnimator;
-        [Tooltip("Nama trigger parameter di Animator untuk memulai reload")]
-        public string reloadTriggerName = "Reload";
+        // Event untuk memicu animasi
+        public event Action OnReloadStart;
         #endregion
 
         #region --- 8. ROTARY BARREL (MINIGUN) ---
@@ -304,7 +306,7 @@ namespace Weapons
             // Picu animasi hentakan senjata (Procedural)
             if (enableProceduralRecoil && movableMesh != null)
             {
-                _meshTargetLocalPos = _meshOriginalLocalPos - new Vector3(0, 0, recoilDistance);
+                _meshTargetLocalPos = _meshOriginalLocalPos - (recoilAxis.normalized * recoilDistance);
             }
         }
 
@@ -414,11 +416,8 @@ namespace Weapons
         {
             if (_isReloading || maxAmmo <= 0 || currentAmmo == maxAmmo) return;
             
-            // Picu Animasi Reload jika ada
-            if (weaponAnimator != null)
-            {
-                weaponAnimator.SetTrigger(reloadTriggerName);
-            }
+            // Beritahu script lain bahwa reload dimulai
+            OnReloadStart?.Invoke();
 
             StartCoroutine(ReloadCoroutine());
         }
