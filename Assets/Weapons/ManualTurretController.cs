@@ -3,92 +3,112 @@ using UnityEngine;
 namespace Weapons
 {
     /// <summary>
-    /// Mengontrol rotasi turret secara horizontal dan vertikal agar mengikuti kursor mouse (Gaya War Thunder).
+    /// Overhauled War Thunder Turret Controller.
+    /// Standardized to Unity's Local Coordinate System (Z-Forward, Y-Up, X-Right).
     /// </summary>
     public class ManualTurretController : MonoBehaviour
     {
-        [Header("=== TRANSFORMS ===")]
-        [Tooltip("Transform yang hanya berputar Kanan/Kiri (Yaw)")]
+        [Header("=== TRANSFORMS (Use Pivot Objects!) ===")]
+        [Tooltip("Object Pivot Turret (Yaw - Muter Kiri/Kanan)")]
         public Transform turretBase;
-        [Tooltip("Transform yang hanya berputar Atas/Bawah (Pitch)")]
+        [Tooltip("Object Pivot Laras (Pitch - Muter Atas/Bawah)")]
         public Transform gunBarrel;
 
-        [Header("=== SPEED SETTINGS ===")]
-        [Tooltip("Kecepatan putar Turret Base (Kanan-Kiri)")]
-        public float turretRotateSpeed = 45f;
-        [Tooltip("Kecepatan naik-turun laras (Atas-Bawah)")]
-        public float barrelElevateSpeed = 30f;
+        [Header("=== SPEED & WEIGHT (War Thunder Feel) ===")]
+        [Tooltip("Kecepatan maksimal putaran turret (derajat/detik)")]
+        public float turretYawSpeed = 40f;      
+        [Tooltip("Kecepatan maksimal naik/turun laras (derajat/detik)")]
+        public float gunPitchSpeed = 20f;       
+        [Range(0.01f, 0.5f)]
+        [Tooltip("Makin gede angkanya, makin kerasa 'berat berton-ton' turret lu")]
+        public float turretWeight = 0.15f; 
 
         [Header("=== ELEVATION LIMITS ===")]
-        [Tooltip("Sudut terendah senjata bisa menunduk (biasanya negatif, misal -10)")]
         public float minElevation = -10f;
-        [Tooltip("Sudut tertinggi senjata bisa mendongak (misal 20)")]
-        public float maxElevation = 20f;
+        public float maxElevation = 25f;
 
         [Header("=== RAYCASTING ===")]
-        [Tooltip("Kamera utama (Jika kosong, akan auto-find Camera.main)")]
         public Camera mainCamera;
-        [Tooltip("Layer tanah/objek yang bisa ditunjuk oleh kursor")]
         public LayerMask aimMask;
-        [Tooltip("Jarak maksimal raycast bidikan")]
         public float maxAimDistance = 1000f;
+
+        // Internal Angles
+        private float _currentYaw;
+        private float _currentPitch;
+        
+        // Damp velocities untuk SmoothDamp
+        private float _yawVelocity;
+        private float _pitchVelocity;
 
         private void Awake()
         {
             if (mainCamera == null) mainCamera = Camera.main;
         }
 
-        private void Update()
+        private void Start()
         {
-            AimAtMouse();
+            // Sinkronisasi angle awal biar ga langsung 'njeklek' pas Play
+            if (turretBase != null) _currentYaw = turretBase.localEulerAngles.y;
+            if (gunBarrel != null) _currentPitch = FormatAngle(gunBarrel.localEulerAngles.x);
         }
 
-        private void AimAtMouse()
+        private void Update()
         {
-            if (mainCamera == null || turretBase == null || gunBarrel == null) return;
+            if (turretBase == null || gunBarrel == null) return;
 
-            // 1. Dapatkan titik di dunia nyata berdasarkan posisi kursor mouse
+            Vector3 targetWorldPosition = GetTargetPoint();
+            AimAtTarget(targetWorldPosition);
+        }
+
+        private Vector3 GetTargetPoint()
+        {
             Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-            Vector3 targetPoint;
-
             if (Physics.Raycast(ray, out RaycastHit hit, maxAimDistance, aimMask))
             {
-                targetPoint = hit.point;
+                return hit.point;
             }
-            else
+            return ray.GetPoint(maxAimDistance);
+        }
+
+        private void AimAtTarget(Vector3 targetPos)
+        {
+            // ─── YAW (TURRET BASE) ───
+            // Dapatkan posisi target relatif terhadap HULL (parent turret)
+            Transform hull = turretBase.parent != null ? turretBase.parent : transform;
+            Vector3 targetLocalToHull = hull.InverseTransformPoint(targetPos);
+            
+            // Kita cuma peduli X dan Z untuk Yaw (horizontal)
+            targetLocalToHull.y = 0; 
+            
+            if (targetLocalToHull.sqrMagnitude > 0.01f)
             {
-                // Jika kursor menghadap langit/kosong, asumsikan jarak sangat jauh
-                targetPoint = ray.GetPoint(maxAimDistance);
+                // Atan2 otomatis ngasih tau sudut ke target dalam local space
+                float targetYaw = Mathf.Atan2(targetLocalToHull.x, targetLocalToHull.z) * Mathf.Rad2Deg;
+                _currentYaw = Mathf.SmoothDampAngle(_currentYaw, targetYaw, ref _yawVelocity, turretWeight, turretYawSpeed);
             }
 
-            // 2. Putar Turret Base (Hanya Yaw / Sumbu Y lokal)
-            Vector3 directionToBase = (targetPoint - turretBase.position).normalized;
-            // Buat arahnya rata dengan turret base agar tidak ikut mendongak
-            Vector3 projectedDirBase = Vector3.ProjectOnPlane(directionToBase, turretBase.up).normalized;
+            // ─── PITCH (GUN BARREL) ───
+            // Dapatkan posisi target relatif terhadap TURRET BASE (parent laras)
+            Vector3 targetLocalToTurret = turretBase.InverseTransformPoint(targetPos);
             
-            if (projectedDirBase != Vector3.zero)
-            {
-                Quaternion targetBaseRot = Quaternion.LookRotation(projectedDirBase, turretBase.up);
-                turretBase.rotation = Quaternion.RotateTowards(turretBase.rotation, targetBaseRot, turretRotateSpeed * Time.deltaTime);
-            }
+            // Atan2 untuk pitch (Sumbu Y dan Z lokal)
+            // Minus di depan karena di Unity, rotasi X positif itu nunduk kebawah
+            float targetPitch = -Mathf.Atan2(targetLocalToTurret.y, targetLocalToTurret.z) * Mathf.Rad2Deg;
+            targetPitch = Mathf.Clamp(targetPitch, minElevation, maxElevation);
 
-            // 3. Putar Gun Barrel (Hanya Pitch / Sumbu X lokal relatif terhadap Turret Base)
-            Vector3 directionToBarrel = (targetPoint - gunBarrel.position).normalized;
-            
-            // Konversi arah global ke arah lokal turret base
-            Vector3 localTargetDir = turretBase.InverseTransformDirection(directionToBarrel);
-            
-            // Hitung sudut elevasi yang dibutuhkan (Atan2 Y terhadap Z)
-            float targetElevation = -Mathf.Atan2(localTargetDir.y, localTargetDir.z) * Mathf.Rad2Deg;
-            
-            // Batasi elevasi laras (Clamp)
-            targetElevation = Mathf.Clamp(targetElevation, minElevation, maxElevation);
+            _currentPitch = Mathf.SmoothDampAngle(_currentPitch, targetPitch, ref _pitchVelocity, turretWeight, gunPitchSpeed);
 
-            // Terapkan rotasi halus (Lerp/RotateTowards)
-            Quaternion currentLocalRot = gunBarrel.localRotation;
-            Quaternion targetLocalRot = Quaternion.Euler(targetElevation, 0f, 0f); // Barrel hanya muter X
-            
-            gunBarrel.localRotation = Quaternion.RotateTowards(currentLocalRot, targetLocalRot, barrelElevateSpeed * Time.deltaTime);
+            // ─── APPLY ROTATIONS ───
+            // Sekarang sangat clean, cuma butuh local rotation standar
+            turretBase.localRotation = Quaternion.Euler(0, _currentYaw, 0);
+            gunBarrel.localRotation = Quaternion.Euler(_currentPitch, 0, 0);
+        }
+
+        // Helper buat ngebebasin angle dari format 0-360 ke -180 sampe 180
+        private float FormatAngle(float angle)
+        {
+            if (angle > 180f) angle -= 360f;
+            return angle;
         }
     }
 }
