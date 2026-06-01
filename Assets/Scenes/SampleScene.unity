@@ -147,7 +147,7 @@ Transform:
   m_GameObject: {fileID: 9807220}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: -1.453, z: -0.006}
+  m_LocalPosition: {x: 0, y: -0.514, z: -0.006}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -445,7 +445,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   target: {fileID: 7951172344436110579}
   distance: 6
-  height: 2.5
+  height: 5.05
   mouseSensitivity: 2
 --- !u!1 &351276589
 GameObject:
@@ -807,18 +807,17 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d836c1b887ea0ca46aa0d315820e5d5b, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  playerCamera: {fileID: 330585545}
   turretBase: {fileID: 1301002962}
   gunBarrel: {fileID: 1944729377}
-  turretYawSpeed: 40
-  gunPitchSpeed: 20
-  turretWeight: 0.15
-  minElevation: -10
-  maxElevation: 20
-  mainCamera: {fileID: 330585545}
+  aimOrigin: {fileID: 9807221}
+  aimingSpeed: 20
+  maxAimDistance: 1000
   aimMask:
     serializedVersion: 2
-    m_Bits: 0
-  maxAimDistance: 1000
+    m_Bits: 4294967295
+  minPitch: -15
+  maxPitch: 45
 --- !u!1001 &627832629
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -865,22 +864,32 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
+      value: 89.98021
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
+      value: -179.99998
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -3789951470263837015, guid: 349dfda9f317da54193933643d6fdabd,
+        type: 3}
+      propertyPath: m_Name
+      value: base pitch
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}
       propertyPath: m_Name
       value: meriam gede
+      objectReference: {fileID: 0}
+    - target: {fileID: 8296715141642357980, guid: 349dfda9f317da54193933643d6fdabd,
+        type: 3}
+      propertyPath: m_Name
+      value: gun body
       objectReference: {fileID: 0}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
@@ -901,7 +910,7 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}
       insertIndex: -1
-      addedObject: {fileID: 1804058448}
+      addedObject: {fileID: 1804058450}
     - targetCorrespondingSourceObject: {fileID: 8296715141642357980, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}
       insertIndex: -1
@@ -1267,21 +1276,6 @@ Transform:
     type: 3}
   m_PrefabInstance: {fileID: 627832629}
   m_PrefabAsset: {fileID: 0}
---- !u!114 &1804058448
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 1804058446}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 41a7ed71228f52941b58a80f9ea87588, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  targetWeapon: {fileID: 582701928}
-  weaponAnimator: {fileID: 1804058449}
-  reloadTriggerName: Reload
 --- !u!95 &1804058449
 Animator:
   serializedVersion: 5
@@ -1303,6 +1297,21 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &1804058450
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1804058446}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 41a7ed71228f52941b58a80f9ea87588, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  targetWeapon: {fileID: 582701928}
+  weaponAnimator: {fileID: 1804058449}
+  reloadTriggerName: Reload
 --- !u!1 &1944729376 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8296715141642357980, guid: 349dfda9f317da54193933643d6fdabd,
@@ -2288,9 +2297,9 @@ GameObject:
   - component: {fileID: 7951172344436110582}
   - component: {fileID: 7951172344436110581}
   - component: {fileID: 7951172344436110580}
-  m_Layer: 0
+  m_Layer: 2
   m_Name: Free Racing Car Red Variant
-  m_TagString: Untagged
+  m_TagString: Player
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
   m_StaticEditorFlags: 0

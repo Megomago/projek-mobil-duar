@@ -2,113 +2,139 @@ using UnityEngine;
 
 namespace Weapons
 {
-    /// <summary>
-    /// Overhauled War Thunder Turret Controller.
-    /// Standardized to Unity's Local Coordinate System (Z-Forward, Y-Up, X-Right).
-    /// </summary>
     public class ManualTurretController : MonoBehaviour
     {
-        [Header("=== TRANSFORMS (Use Pivot Objects!) ===")]
-        [Tooltip("Object Pivot Turret (Yaw - Muter Kiri/Kanan)")]
+        [Header("=== REFERENSI (BEBAS STRES SUMBU BLENDER) ===")]
+        public Camera playerCamera;
+        [Tooltip("Pivot putaran kiri-kanan (Base Yaw)")]
         public Transform turretBase;
-        [Tooltip("Object Pivot Laras (Pitch - Muter Atas/Bawah)")]
+        [Tooltip("Pivot putaran atas-bawah (Gun Body Pitch)")]
         public Transform gunBarrel;
+        [Tooltip("Wajib: Objek empty 'muz' di ujung laras! Pastikan panah BIRU (Z) lurus ke depan laras!")]
+        public Transform aimOrigin;
 
-        [Header("=== SPEED & WEIGHT (War Thunder Feel) ===")]
-        [Tooltip("Kecepatan maksimal putaran turret (derajat/detik)")]
-        public float turretYawSpeed = 40f;      
-        [Tooltip("Kecepatan maksimal naik/turun laras (derajat/detik)")]
-        public float gunPitchSpeed = 20f;       
-        [Range(0.01f, 0.5f)]
-        [Tooltip("Makin gede angkanya, makin kerasa 'berat berton-ton' turret lu")]
-        public float turretWeight = 0.15f; 
-
-        [Header("=== ELEVATION LIMITS ===")]
-        public float minElevation = -10f;
-        public float maxElevation = 25f;
-
-        [Header("=== RAYCASTING ===")]
-        public Camera mainCamera;
-        public LayerMask aimMask;
+        [Header("=== SETTING AIMING ===")]
+        public float aimingSpeed = 120f;
         public float maxAimDistance = 1000f;
+        public LayerMask aimMask = ~0;
 
-        // Internal Angles
-        private float _currentYaw;
-        private float _currentPitch;
-        
-        // Damp velocities untuk SmoothDamp
-        private float _yawVelocity;
-        private float _pitchVelocity;
+        [Header("=== BATASAN PITCH ===")]
+        public float minPitch = -15f;
+        public float maxPitch = 45f;
 
-        private void Awake()
+        void Start()
         {
-            if (mainCamera == null) mainCamera = Camera.main;
+            if (playerCamera == null) playerCamera = Camera.main;
+            if (aimOrigin == null) Debug.LogError("Tolong assign objek 'muz' ke aimOrigin!");
         }
 
-        private void Start()
+        void LateUpdate()
         {
-            // Sinkronisasi angle awal biar ga langsung 'njeklek' pas Play
-            if (turretBase != null) _currentYaw = turretBase.localEulerAngles.y;
-            if (gunBarrel != null) _currentPitch = FormatAngle(gunBarrel.localEulerAngles.x);
+            if (turretBase == null || gunBarrel == null || aimOrigin == null || playerCamera == null) return;
+
+            Vector3 targetPt = GetCrosshairTarget();
+
+            // 1. Arahkan Yaw (Kiri/Kanan)
+            AimTurretYaw(targetPt);
+
+            // 2. Arahkan Pitch (Atas/Bawah)
+            AimBarrelPitch(targetPt);
         }
 
-        private void Update()
+        private Vector3 GetCrosshairTarget()
         {
-            if (turretBase == null || gunBarrel == null) return;
-
-            Vector3 targetWorldPosition = GetTargetPoint();
-            AimAtTarget(targetWorldPosition);
-        }
-
-        private Vector3 GetTargetPoint()
-        {
-            Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
+            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             if (Physics.Raycast(ray, out RaycastHit hit, maxAimDistance, aimMask))
-            {
                 return hit.point;
-            }
             return ray.GetPoint(maxAimDistance);
         }
 
-        private void AimAtTarget(Vector3 targetPos)
+        private void AimTurretYaw(Vector3 targetPoint)
         {
-            // ─── YAW (TURRET BASE) ───
-            // Dapatkan posisi target relatif terhadap HULL (parent turret)
-            Transform hull = turretBase.parent != null ? turretBase.parent : transform;
-            Vector3 targetLocalToHull = hull.InverseTransformPoint(targetPos);
-            
-            // Kita cuma peduli X dan Z untuk Yaw (horizontal)
-            targetLocalToHull.y = 0; 
-            
-            if (targetLocalToHull.sqrMagnitude > 0.01f)
+            // Sumbu atas absolut (mengabaikan sumbu acak-acakan dari Blender)
+            Vector3 upAxis = Vector3.up; 
+
+            // Cari arah horizontal dari laras (muz) saat ini
+            Vector3 currentMuzFlat = Vector3.ProjectOnPlane(aimOrigin.forward, upAxis).normalized;
+            // Cari arah horizontal ke target
+            Vector3 dirToTarget = targetPoint - turretBase.position;
+            Vector3 targetFlat = Vector3.ProjectOnPlane(dirToTarget, upAxis).normalized;
+
+            if (currentMuzFlat.sqrMagnitude > 0.001f && targetFlat.sqrMagnitude > 0.001f)
             {
-                // Atan2 otomatis ngasih tau sudut ke target dalam local space
-                float targetYaw = Mathf.Atan2(targetLocalToHull.x, targetLocalToHull.z) * Mathf.Rad2Deg;
-                _currentYaw = Mathf.SmoothDampAngle(_currentYaw, targetYaw, ref _yawVelocity, turretWeight, turretYawSpeed);
+                // Hitung berapa derajat harus muter
+                float yawError = Vector3.SignedAngle(currentMuzFlat, targetFlat, upAxis);
+                
+                // Bikin rotasi baru berdasarkan sumbu UP murni
+                Quaternion targetYawRot = Quaternion.AngleAxis(yawError, upAxis) * turretBase.rotation;
+                
+                // Terapkan rotasi secara halus
+                turretBase.rotation = Quaternion.RotateTowards(turretBase.rotation, targetYawRot, aimingSpeed * Time.deltaTime);
             }
-
-            // ─── PITCH (GUN BARREL) ───
-            // Dapatkan posisi target relatif terhadap TURRET BASE (parent laras)
-            Vector3 targetLocalToTurret = turretBase.InverseTransformPoint(targetPos);
-            
-            // Atan2 untuk pitch (Sumbu Y dan Z lokal)
-            // Minus di depan karena di Unity, rotasi X positif itu nunduk kebawah
-            float targetPitch = -Mathf.Atan2(targetLocalToTurret.y, targetLocalToTurret.z) * Mathf.Rad2Deg;
-            targetPitch = Mathf.Clamp(targetPitch, minElevation, maxElevation);
-
-            _currentPitch = Mathf.SmoothDampAngle(_currentPitch, targetPitch, ref _pitchVelocity, turretWeight, gunPitchSpeed);
-
-            // ─── APPLY ROTATIONS ───
-            // Sekarang sangat clean, cuma butuh local rotation standar
-            turretBase.localRotation = Quaternion.Euler(0, _currentYaw, 0);
-            gunBarrel.localRotation = Quaternion.Euler(_currentPitch, 0, 0);
         }
 
-        // Helper buat ngebebasin angle dari format 0-360 ke -180 sampe 180
-        private float FormatAngle(float angle)
+        private void AimBarrelPitch(Vector3 targetPoint)
         {
-            if (angle > 180f) angle -= 360f;
-            return angle;
+            Vector3 upAxis = Vector3.up;
+            
+            // Sumbu engsel pitch (kiri-kanan) dibuat murni dari hasil silang (cross product) arah moncong & atas.
+            // Ini membuat script SAMA SEKALI TIDAK PEDULI mau sumbu X, Y, Z larasnya kebalik atau ngacak.
+            Vector3 currentMuzFlat = Vector3.ProjectOnPlane(aimOrigin.forward, upAxis).normalized;
+            if (currentMuzFlat.sqrMagnitude < 0.001f) return; 
+
+            Vector3 pitchHingeAxis = Vector3.Cross(upAxis, currentMuzFlat).normalized;
+
+            // Cari arah pitch saat ini dan target pada bidang engsel
+            Vector3 dirToTarget = targetPoint - aimOrigin.position;
+            Vector3 currentAimFlat = Vector3.ProjectOnPlane(aimOrigin.forward, pitchHingeAxis).normalized;
+            Vector3 targetAimFlat = Vector3.ProjectOnPlane(dirToTarget, pitchHingeAxis).normalized;
+
+            if (currentAimFlat.sqrMagnitude > 0.001f && targetAimFlat.sqrMagnitude > 0.001f)
+            {
+                float pitchError = Vector3.SignedAngle(currentAimFlat, targetAimFlat, pitchHingeAxis);
+
+                // Hitung pitch aktual saat ini (0 derajat = sejajar tanah / horizontal)
+                float currentPitch = Vector3.SignedAngle(currentMuzFlat, currentAimFlat, pitchHingeAxis);
+
+                // Tambahkan error ke pitch saat ini untuk dapat target pitch
+                float desiredPitch = currentPitch + pitchError;
+                
+                // Clamp target pitch biar laras nggak tembus body tank
+                float clampedPitch = Mathf.Clamp(desiredPitch, minPitch, maxPitch);
+                
+                // Hitung sisa rotasi yang diizinkan setelah di-clamp
+                float allowedError = clampedPitch - currentPitch;
+
+                // Terapkan rotasi secara halus murni di sumbu engsel dunia
+                Quaternion targetPitchRot = Quaternion.AngleAxis(allowedError, pitchHingeAxis) * gunBarrel.rotation;
+                gunBarrel.rotation = Quaternion.RotateTowards(gunBarrel.rotation, targetPitchRot, aimingSpeed * Time.deltaTime);
+            }
+        }
+
+        void OnDrawGizmos()
+        {
+            if (playerCamera == null || aimOrigin == null) return;
+
+            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+            Vector3 targetPt;
+            if (Physics.Raycast(ray, out RaycastHit hit, maxAimDistance, aimMask))
+            {
+                targetPt = hit.point;
+                Gizmos.color = Color.green;
+                Gizmos.DrawLine(playerCamera.transform.position, targetPt);
+                if (Application.isPlaying) Gizmos.DrawSphere(targetPt, 0.2f);
+            }
+            else
+            {
+                targetPt = ray.GetPoint(maxAimDistance);
+                Gizmos.color = Color.red;
+                Gizmos.DrawLine(playerCamera.transform.position, targetPt);
+            }
+
+            Gizmos.color = Color.blue;
+            float dist = Vector3.Distance(aimOrigin.position, targetPt);
+            // Garis biru 100% dari arah muz
+            Gizmos.DrawLine(aimOrigin.position, aimOrigin.position + (aimOrigin.forward * dist));
         }
     }
 }
