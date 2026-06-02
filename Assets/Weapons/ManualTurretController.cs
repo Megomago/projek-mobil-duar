@@ -41,22 +41,43 @@ namespace Weapons
             AimBarrelPitch(targetPt);
         }
 
+        private RaycastHit[] _raycastHits = new RaycastHit[10];
+
         private Vector3 GetCrosshairTarget()
         {
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            if (Physics.Raycast(ray, out RaycastHit hit, maxAimDistance, aimMask))
-                return hit.point;
-            return ray.GetPoint(maxAimDistance);
+            int hitCount = Physics.RaycastNonAlloc(ray, _raycastHits, maxAimDistance, aimMask);
+            
+            float closestDistance = float.MaxValue;
+            Vector3 targetPoint = ray.GetPoint(maxAimDistance);
+
+            for (int i = 0; i < hitCount; i++)
+            {
+                RaycastHit hit = _raycastHits[i];
+                
+                // Abaikan jika yang ditabrak adalah bagian dari kendaraan kita sendiri (root yang sama)
+                if (hit.transform.root == transform.root) continue;
+
+                if (hit.distance < closestDistance)
+                {
+                    closestDistance = hit.distance;
+                    targetPoint = hit.point;
+                }
+            }
+
+            return targetPoint;
         }
 
         private void AimTurretYaw(Vector3 targetPoint)
         {
-            // Sumbu atas absolut (mengabaikan sumbu acak-acakan dari Blender)
-            Vector3 upAxis = Vector3.up; 
-
-            // Cari arah horizontal dari laras (muz) saat ini
+            // Sumbu atas kita ambil dari ROOT kendaraan (mobil utamanya).
+            // Ini menjamin sumbu atas selalu sejajar atap mobil, TAPI tetap mengabaikan 
+            // sumbu turret/barrel yang mungkin acak-acakan dari Blender.
+            Vector3 upAxis = transform.root.up; 
+            
+            // Cari arah horizontal dari laras (muz) saat ini (relatif terhadap atap kendaraan)
             Vector3 currentMuzFlat = Vector3.ProjectOnPlane(aimOrigin.forward, upAxis).normalized;
-            // Cari arah horizontal ke target
+            // Cari arah horizontal ke target (relatif terhadap atap kendaraan)
             Vector3 dirToTarget = targetPoint - turretBase.position;
             Vector3 targetFlat = Vector3.ProjectOnPlane(dirToTarget, upAxis).normalized;
 
@@ -65,7 +86,7 @@ namespace Weapons
                 // Hitung berapa derajat harus muter
                 float yawError = Vector3.SignedAngle(currentMuzFlat, targetFlat, upAxis);
                 
-                // Bikin rotasi baru berdasarkan sumbu UP murni
+                // Bikin rotasi baru berdasarkan sumbu UP kendaraan
                 Quaternion targetYawRot = Quaternion.AngleAxis(yawError, upAxis) * turretBase.rotation;
                 
                 // Terapkan rotasi secara halus
@@ -75,7 +96,8 @@ namespace Weapons
 
         private void AimBarrelPitch(Vector3 targetPoint)
         {
-            Vector3 upAxis = Vector3.up;
+            // Sama, gunakan UP dari root mobil agar pitch tetap sejajar bodi mobil
+            Vector3 upAxis = transform.root.up;
             
             // Sumbu engsel pitch (kiri-kanan) dibuat murni dari hasil silang (cross product) arah moncong & atas.
             // Ini membuat script SAMA SEKALI TIDAK PEDULI mau sumbu X, Y, Z larasnya kebalik atau ngacak.
@@ -93,7 +115,7 @@ namespace Weapons
             {
                 float pitchError = Vector3.SignedAngle(currentAimFlat, targetAimFlat, pitchHingeAxis);
 
-                // Hitung pitch aktual saat ini (0 derajat = sejajar tanah / horizontal)
+                // Hitung pitch aktual saat ini (0 derajat = sejajar atap kendaraan / horizontal lokal)
                 float currentPitch = Vector3.SignedAngle(currentMuzFlat, currentAimFlat, pitchHingeAxis);
 
                 // Tambahkan error ke pitch saat ini untuk dapat target pitch
@@ -116,17 +138,32 @@ namespace Weapons
             if (playerCamera == null || aimOrigin == null) return;
 
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            Vector3 targetPt;
-            if (Physics.Raycast(ray, out RaycastHit hit, maxAimDistance, aimMask))
+            Vector3 targetPt = ray.GetPoint(maxAimDistance);
+            
+            RaycastHit[] hits = Physics.RaycastAll(ray, maxAimDistance, aimMask);
+            float closestDistance = float.MaxValue;
+            bool hitValid = false;
+
+            foreach (var hit in hits)
             {
-                targetPt = hit.point;
+                if (hit.transform.root == transform.root) continue;
+                
+                if (hit.distance < closestDistance)
+                {
+                    closestDistance = hit.distance;
+                    targetPt = hit.point;
+                    hitValid = true;
+                }
+            }
+
+            if (hitValid)
+            {
                 Gizmos.color = Color.green;
                 Gizmos.DrawLine(playerCamera.transform.position, targetPt);
                 if (Application.isPlaying) Gizmos.DrawSphere(targetPt, 0.2f);
             }
             else
             {
-                targetPt = ray.GetPoint(maxAimDistance);
                 Gizmos.color = Color.red;
                 Gizmos.DrawLine(playerCamera.transform.position, targetPt);
             }

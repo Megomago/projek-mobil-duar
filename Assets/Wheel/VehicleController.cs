@@ -417,20 +417,37 @@ public class VehicleController : MonoBehaviour
         // Engine rev-up independent dari wheel saat throttle input (free revving)
         float throttleRevTarget = engine.idleRPM + (throttleInput * (engine.maxRPM - engine.idleRPM));
 
-        // Tentukan target RPM berdasarkan tipe transmisi dan kopling
-        float targetRPM = wheelBasedRPM;
+        // Tentukan apakah kopling terlepas (Free-rev / Launch Control)
+        bool isClutchDisengaged = false;
         
         if (transmissionType == TransmissionType.Manual && clutchInput)
+            isClutchDisengaged = true;
+            
+        // ARCADE LAUNCH CONTROL: Jika menekan Handbrake saat mobil berhenti/pelan, kopling dilepas agar bisa burnout.
+        // Namun jika sedang mengebut (drifting), handbrake tidak akan memutus transmisi agar RPM tetap tinggi ngikutin roda.
+        if (handbrakeInput > 0.5f && speedKmh < 10f)
+            isClutchDisengaged = true;
+
+        float targetRPM = wheelBasedRPM;
+        
+        if (isClutchDisengaged)
         {
-            // Jika kopling diinjak penuh, mesin free-rev (lepas dari roda)
+            // Kopling lepas: mesin bebas menderu sesuai gas
             targetRPM = throttleRevTarget;
         }
         else
         {
-            // Untuk tarikan awal yang asik (simulasi slip dari torque converter / kopling),
-            // biarkan RPM naik sedikit melebihi putaran roda, lalu perlahan "ngelock" ke roda saat RPM makin tinggi.
-            float slipRPM = throttleInput * 1200f; // Max tambahan slip RPM saat digas
-            float lockUpFactor = Mathf.Clamp01(wheelBasedRPM / 2000f); // Slip menghilang setelah 2000 RPM
+            // TORQUE CONVERTER / AUTO CLUTCH SIMULATION
+            // Tarikan awal butuh RPM tinggi (mendekati Peak Torque) agar torsi maksimal bisa keluar.
+            // Batas RPM ini disebut "Stall Speed" pada transmisi otomatis.
+            float stallSpeedRPM = Mathf.Min(engine.peakTorqueRPM, engine.maxRPM * 0.7f); 
+            
+            // Saat dari 0km/h dan digas penuh, RPM akan langsung melompat ke stallSpeedRPM
+            float slipRPM = throttleInput * (stallSpeedRPM - engine.idleRPM); 
+            
+            // Efek slip ini akan berkurang secara perlahan dan "mengunci" (lock up) ke putaran roda 
+            // ketika kecepatan putaran roda sudah menyamai stall speed.
+            float lockUpFactor = Mathf.Clamp01(wheelBasedRPM / stallSpeedRPM); 
             
             targetRPM = wheelBasedRPM + Mathf.Lerp(slipRPM, 0f, lockUpFactor);
         }
@@ -599,8 +616,8 @@ public class VehicleController : MonoBehaviour
         if (_shiftCooldown > 0f) return;
         if (isReverse) return;
 
-        // Upshift: RPM limit atau kecepatan (jangan require throttle minimum)
-        if (currentRPM >= autoUpshiftRPM && currentGearIndex < gearRatios.Length - 1)
+        // Upshift: Cegah upshift jika handbrake sedang ditarik (agar bisa free-rev / burnout di gigi 1)
+        if (currentRPM >= autoUpshiftRPM && currentGearIndex < gearRatios.Length - 1 && handbrakeInput < 0.5f)
         {
             if (throttleInput > 0f) // cuma perlu ada throttle, tidak 0.3f
                 ShiftUp();
@@ -618,17 +635,29 @@ public class VehicleController : MonoBehaviour
                 _shiftCooldown = 0.4f; // Cooldown lebih cepat buat aggressive downshift
             }
         }
-        // Downshift Normal: lebih smooth - cek speed min untuk prevent RPM spike
+        // Kickdown / Stalling Prevention (saat nabrak atau nanjak berat)
+        // Jika gas ditahan penuh tapi RPM/kecepatan ngedrop, kita paksa downshift agar dapat torsi!
+        else if (throttleInput > 0.8f && currentGearIndex > 1)
+        {
+            float nextGearRatio = Mathf.Abs(gearRatios[currentGearIndex - 1].ratio);
+            float projectedRPM = Mathf.Abs(_wheelRPM) * nextGearRatio * finalDriveRatio;
+            
+            // Paksa turun gigi jika kita berada di bawah Peak Torque RPM, DAN turun gigi tidak akan bikin mesin meleduk (over-rev)
+            if (currentRPM < engine.peakTorqueRPM && projectedRPM < engine.maxRPM * 0.9f)
+            {
+                ShiftDown();
+                _shiftCooldown = 0.3f; // Cooldown dicepatkan agar bisa turun gigi berkali-kali dengan cepat
+            }
+        }
+        // Downshift Normal: lebih smooth saat melambat / lepas gas
         else if (currentRPM <= autoDownshiftRPM && currentGearIndex > 1)
         {
-            if (throttleInput < 0.8f) // downshift kalau throttle moderate
-            {
-                // Cegah downshift kalau bakal spike RPM ke redline
-                float nextGearRatio = Mathf.Abs(gearRatios[currentGearIndex - 1].ratio);
-                float projectedRPM = Mathf.Abs(_wheelRPM) * nextGearRatio * finalDriveRatio;
-                if (projectedRPM < engine.maxRPM * 0.85f) // buffer 85% redline
-                    ShiftDown();
-            }
+            // Cegah downshift kalau bakal spike RPM ke redline
+            float nextGearRatio = Mathf.Abs(gearRatios[currentGearIndex - 1].ratio);
+            float projectedRPM = Mathf.Abs(_wheelRPM) * nextGearRatio * finalDriveRatio;
+            
+            if (projectedRPM < engine.maxRPM * 0.85f) // buffer 85% redline
+                ShiftDown();
         }
     }
 
