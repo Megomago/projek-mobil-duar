@@ -1,0 +1,119 @@
+using UnityEngine;
+
+namespace Weapons
+{
+    /// <summary>
+    /// ScriptableObject berisi SEMUA data/value konfigurasi senjata.
+    /// Buat asset baru: Right Click → Create → Weapons → Weapon Data.
+    /// Lalu drag ke slot "weaponData" di ModularWeapon.
+    /// </summary>
+    [CreateAssetMenu(fileName = "New WeaponData", menuName = "Weapons/Weapon Data")]
+    public class WeaponData : ScriptableObject
+    {
+        #region --- 1. CORE SETTINGS ---
+        [Header("=== CORE SETTINGS ===")]
+        [Tooltip("Kecepatan peluru saat keluar dari laras (m/s)")]
+        public float muzzleVelocity = 800f;
+        [Tooltip("Tembakan per menit (RPM)")]
+        public float fireRateRPM = 600f;
+        
+        [Tooltip("Batas amunisi dalam satu magazine (0 = Infinite)")]
+        public int maxAmmo = 30;
+        [Tooltip("Otomatis melakukan reload saat peluru habis?")]
+        public bool autoReload = false;
+        [Tooltip("Waktu yang dibutuhkan untuk reload (detik)")]
+        public float reloadTime = 2f;
+        #endregion
+
+        #region --- 2. PROJECTILE & SHOTGUN ---
+        [Header("=== PROJECTILE & SHOTGUN MECHANIC ===")]
+        [Tooltip("Prefab peluru yang memiliki script KinematicProjectile")]
+        public GameObject projectilePrefab;
+        [Tooltip("Jumlah peluru yang keluar dalam 1x tembakan (Misal 8 untuk shotgun). Hanya mengurangi 1 Ammo.")]
+        [Min(1)] public int pelletCount = 1;
+        #endregion
+
+        #region --- 3. DISPERSION & ACCURACY ---
+        [Header("=== DISPERSION & ACCURACY ===")]
+        [Tooltip("Penyebaran dasar peluru dalam derajat (0 = Lurus presisi)")]
+        [Range(0f, 15f)] public float baseDispersion = 0.5f;
+        #endregion
+
+        #region --- 4. OVERHEAT SYSTEM ---
+        [Header("=== OVERHEAT SYSTEM ===")]
+        public bool enableOverheat = false;
+        [Tooltip("Panas yang bertambah tiap 1 peluru tertembak")]
+        public float heatPerShot = 5f;
+        [Tooltip("Panas yang berkurang per detik saat tidak menembak")]
+        public float coolingRate = 15f;
+        [Tooltip("Kapasitas maksimum panas sebelum Jammed/Overheat penuh")]
+        public float maxHeat = 100f;
+        [Tooltip("Saat overheat 100%, dispersi tembakan dikali berapa? (Bikin akurasi sangat buruk)")]
+        public float heatDispersionMultiplier = 4f;
+        #endregion
+
+        #region --- 5. RECOIL (VEHICLE PHYSICS) ---
+        [Header("=== RECOIL (VEHICLE PHYSICS) ===")]
+        [Tooltip("Gaya dorong mundur yang diaplikasikan ke kendaraan saat menembak")]
+        public float recoilForce = 500f;
+        
+        [Tooltip("Pengali seberapa kuat guncangan kamera berdasarkan recoil (contoh: 0.0005)")]
+        public float cameraShakeMultiplier = 0.0005f;
+        [Tooltip("Durasi guncangan kamera saat menembak (detik)")]
+        public float cameraShakeDuration = 0.2f;
+        #endregion
+
+        #region --- 6. AUDIO ---
+        [Header("=== AUDIO ===")]
+        public AudioClip shootSound;
+        public AudioClip reloadSound;
+        public AudioClip emptyClickSound;
+        #endregion
+
+        #region --- 7. CASING EJECTION ---
+        [Header("=== CASING EJECTION ===")]
+        [Tooltip("Prefab selongsong peluru yang terlempar (Opsional)")]
+        public GameObject casingPrefab;
+        [Tooltip("Waktu tunda sebelum selongsong terlempar (detik)")]
+        public float casingEjectDelay = 0f;
+        [Tooltip("Kekuatan dasar lemparan selongsong relatif terhadap Ejection Port (X=Kanan, Y=Atas, Z=Maju)")]
+        public Vector3 casingEjectForce = new Vector3(4f, 1.5f, -0.75f);
+        [Tooltip("Acak kekuatan lemparan (+/- dari kekuatan dasar)")]
+        public Vector3 casingEjectRandomness = new Vector3(1f, 0.5f, 0.25f);
+        #endregion
+
+        #region --- 8. MUZZLE FLASH PREFAB ---
+        [Header("=== MUZZLE FLASH PREFAB ===")]
+        [Tooltip("Prefab muzzle flash (bisa 4-plane, FPS style, atau sprite). Drag langsung dari Project folder.")]
+        public GameObject muzzleFlashPrefab;
+        [Tooltip("Berapa detik flash hidup sebelum dihancurkan")]
+        public float muzzleFlashDuration = 0.06f;
+        [Tooltip("Ukuran acak minimum")]
+        public float muzzleFlashScaleMin = 0.8f;
+        [Tooltip("Ukuran acak maksimum")]
+        public float muzzleFlashScaleMax = 1.3f;
+        [Tooltip("Koreksi rotasi flash (tweak ini kalau flash kebalik atau miring). Ini offset dari rotasi muzzle.")]
+        public Vector3 muzzleFlashRotOffset = Vector3.zero;
+        [Tooltip("Rotasi acak di sumbu X (0=mati, 1=aktif)")]
+        [Range(0f,1f)] public float muzzleFlashRotX = 0f;
+        [Tooltip("Rotasi acak di sumbu Y (0=mati, 1=aktif)")]
+        [Range(0f,1f)] public float muzzleFlashRotY = 0f;
+        [Tooltip("Rotasi acak di sumbu Z (0=mati, 1=aktif)")]
+        [Range(0f,1f)] public float muzzleFlashRotZ = 1f;
+        #endregion
+
+        #region --- 9. PROCEDURAL ANIMATION (VISUAL RECOIL) ---
+        [Header("=== PROCEDURAL ANIMATION ===")]
+        public bool enableProceduralRecoil = true;
+        #endregion
+
+        #region --- 10. ROTARY BARREL (MINIGUN) ---
+        [Header("=== ROTARY BARREL (MINIGUN) ===")]
+        public bool isRotaryBarrel = false;
+        [Tooltip("Waktu tahan klik sampai laras berputar maksimal dan mulai nembak")]
+        public float spinUpTime = 1f;
+        [Tooltip("Kecepatan putar maksimal laras (derajat per detik)")]
+        public float maxSpinSpeed = 1000f;
+        #endregion
+    }
+}

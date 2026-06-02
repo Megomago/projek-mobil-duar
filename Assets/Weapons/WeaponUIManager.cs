@@ -27,14 +27,14 @@ namespace Weapons
         {
             if (ammoText == null) return;
 
-            if (targetWeapon.maxAmmo <= 0)
+            if (targetWeapon.weaponData == null || targetWeapon.weaponData.maxAmmo <= 0)
             {
                 ammoText.text = "Ammo: &infin;"; // Simbol infinity
             }
             else
             {
                 // Menampilkan format: Ammo: 30 / 30
-                ammoText.text = $"Ammo: {targetWeapon.currentAmmo} / {targetWeapon.maxAmmo}";
+                ammoText.text = $"Ammo: {targetWeapon.currentAmmo} / {targetWeapon.weaponData.maxAmmo}";
                 
                 // Ubah warna merah jika amunisi habis
                 if (targetWeapon.currentAmmo <= 0)
@@ -59,7 +59,7 @@ namespace Weapons
                 float remainingTime = targetWeapon.GetRemainingReloadTime();
                 reloadText.text = $"Reloading... {remainingTime:F1}s";
             }
-            else if (targetWeapon.maxAmmo > 0 && targetWeapon.currentAmmo <= 0)
+            else if (targetWeapon.weaponData != null && targetWeapon.weaponData.maxAmmo > 0 && targetWeapon.currentAmmo <= 0)
             {
                 reloadText.gameObject.SetActive(true);
                 reloadText.text = "Press 'R' to Reload";

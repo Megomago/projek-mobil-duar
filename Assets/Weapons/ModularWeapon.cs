@@ -7,160 +7,157 @@ using Random = UnityEngine.Random;
 namespace Weapons
 {
     /// <summary>
+    /// Bagian senjata yang bergerak mundur saat menembak (bolt, kokangan, cover, dll).
+    /// Masing-masing punya arah dan jarak sendiri.
+    /// </summary>
+    [Serializable]
+    public class RecoilPart
+    {
+        [Tooltip("Transform bagian yang bergerak")]
+        public Transform mesh;
+        [Tooltip("Sumbu arah mundurnya (0,0,1 = mundur di -Z local)")]
+        public Vector3 recoilAxis = new Vector3(0, 0, 1);
+        [Tooltip("Seberapa jauh mundur ke belakang")]
+        public float recoilDistance = 0.15f;
+        [Tooltip("Kecepatan hentakan mundur")]
+        public float snapSpeed = 50f;
+        [Tooltip("Kecepatan kembali ke posisi semula")]
+        public float returnSpeed = 10f;
+
+        // Runtime state (otomatis, tidak perlu diisi)
+        [HideInInspector] public Vector3 originalLocalPos;
+        [HideInInspector] public Vector3 targetLocalPos;
+    }
+
+    /// <summary>
+    /// Bagian senjata yang berputar (laras minigun, dll).
+    /// Masing-masing punya sumbu putar sendiri.
+    /// </summary>
+    [Serializable]
+    public class RotaryPart
+    {
+        [Tooltip("Transform bagian yang berputar")]
+        public Transform mesh;
+        [Tooltip("Sumbu putaran local (default: Forward/Z)")]
+        public Vector3 rotationAxis = Vector3.forward;
+    }
+
+    /// <summary>
+    /// Bagian senjata yang MEMUTAR per tembakan (silinder revolver, belt feed, dll).
+    /// Berbeda dari RotaryPart yang muter terus-menerus (minigun).
+    /// </summary>
+    [Serializable]
+    public class RotatablePart
+    {
+        [Tooltip("Transform bagian yang berputar per tembakan")]
+        public Transform mesh;
+        [Tooltip("Sumbu putaran local (default: Right/X untuk silinder revolver)")]
+        public Vector3 rotationAxis = Vector3.right;
+        [Tooltip("Sudut rotasi per tembakan (derajat). Contoh: 60 untuk revolver 6 peluru")]
+        public float anglePerShot = 60f;
+        [Tooltip("Kecepatan snap ke sudut baru")]
+        public float snapSpeed = 20f;
+
+        // Runtime state
+        [HideInInspector] public Quaternion originalLocalRot;
+        [HideInInspector] public float currentAngle;
+        [HideInInspector] public float targetAngle;
+    }
+
+    /// <summary>
     /// God Class untuk senjata konvensional modular.
-    /// Mencakup semua fungsionalitas: Single Shot, Shotgun Pellet, Minigun Rotary, Overheat, dan Procedural Recoil.
+    /// Semua VALUE/konfigurasi dibaca dari WeaponData (ScriptableObject).
+    /// Script ini hanya berisi LOGIC + referensi Transform/AudioSource per-instance.
     /// </summary>
     public class ModularWeapon : MonoBehaviour
     {
-        #region --- 1. CORE SETTINGS ---
-        [Header("=== CORE SETTINGS ===")]
-        [Tooltip("Kecepatan peluru saat keluar dari laras (m/s)")]
-        public float muzzleVelocity = 800f;
-        [Tooltip("Tembakan per menit (RPM)")]
-        public float fireRateRPM = 600f;
-        
-        [Tooltip("Batas amunisi dalam satu magazine (0 = Infinite)")]
-        public int maxAmmo = 30;
+        #region --- WEAPON DATA SLOT ---
+        [Header("=== WEAPON DATA (DRAG SCRIPTABLEOBJECT DISINI) ===")]
+        [Tooltip("ScriptableObject berisi semua konfigurasi senjata. Buat via: Right Click → Create → Weapons → Weapon Data")]
+        public WeaponData weaponData;
+        #endregion
+
+        #region --- RUNTIME STATE (TIDAK DISIMPAN DI WEAPON DATA) ---
+        [Header("=== RUNTIME STATE ===")]
         public int currentAmmo;
-        [Tooltip("Otomatis melakukan reload saat peluru habis?")]
-        public bool autoReload = false;
-        [Tooltip("Waktu yang dibutuhkan untuk reload (detik)")]
-        public float reloadTime = 2f;
         private bool _isReloading;
-        private float _reloadEndTime; // Untuk melacak sisa waktu reload bagi UI
+        private float _reloadEndTime;
         private float _fireCooldown;
-        #endregion
-
-        #region --- 2. PROJECTILE & SHOTGUN ---
-        [Header("=== PROJECTILE & SHOTGUN MECHANIC ===")]
-        [Tooltip("Prefab peluru yang memiliki script KinematicProjectile")]
-        public GameObject projectilePrefab;
-        [Tooltip("Jumlah peluru yang keluar dalam 1x tembakan (Misal 8 untuk shotgun). Hanya mengurangi 1 Ammo.")]
-        [Min(1)] public int pelletCount = 1;
-        #endregion
-
-        #region --- 3. DISPERSION & ACCURACY ---
-        [Header("=== DISPERSION & ACCURACY ===")]
-        [Tooltip("Penyebaran dasar peluru dalam derajat (0 = Lurus presisi)")]
-        [Range(0f, 15f)] public float baseDispersion = 0.5f;
-        #endregion
-
-        #region --- 4. OVERHEAT SYSTEM ---
-        [Header("=== OVERHEAT SYSTEM ===")]
-        public bool enableOverheat = false;
-        [Tooltip("Panas yang bertambah tiap 1 peluru tertembak")]
-        public float heatPerShot = 5f;
-        [Tooltip("Panas yang berkurang per detik saat tidak menembak")]
-        public float coolingRate = 15f;
-        [Tooltip("Kapasitas maksimum panas sebelum Jammed/Overheat penuh")]
-        public float maxHeat = 100f;
-        [Tooltip("Saat overheat 100%, dispersi tembakan dikali berapa? (Bikin akurasi sangat buruk)")]
-        public float heatDispersionMultiplier = 4f;
-        
         [SerializeField] private float _currentHeat = 0f;
+        private float _currentSpinLerp = 0f;
+        private bool _isHoldingTrigger = false;
         #endregion
 
-        #region --- 5. RECOIL (VEHICLE PHYSICS) ---
-        [Header("=== RECOIL (VEHICLE PHYSICS) ===")]
-        [Tooltip("Gaya dorong mundur yang diaplikasikan ke kendaraan saat menembak")]
-        public float recoilForce = 500f;
-        private Rigidbody _vehicleRb;
-        
-        [Tooltip("Pengali seberapa kuat guncangan kamera berdasarkan recoil (contoh: 0.0005)")]
-        public float cameraShakeMultiplier = 0.0005f;
-        [Tooltip("Durasi guncangan kamera saat menembak (detik)")]
-        public float cameraShakeDuration = 0.2f;
-        #endregion
-
-        #region --- 6. AUDIO & TRANSFORMS ---
-        [Header("=== AUDIO & TRANSFORMS ===")]
+        #region --- INSTANCE REFERENCES (PER-PREFAB) ---
+        [Header("=== TRANSFORMS (PER-PREFAB) ===")]
         [Tooltip("Titik keluarnya peluru")]
         public Transform muzzleTransform;
         [Tooltip("Titik untuk posisi Muzzle Flash (Opsional, jika kosong akan menggunakan muzzleTransform)")]
         public Transform muzzleFlashTransform;
         [Tooltip("Titik lontaran selongsong peluru (Opsional)")]
         public Transform ejectionPortTransform;
-        [Tooltip("Prefab selongsong peluru yang terlempar (Opsional)")]
-        public GameObject casingPrefab;
 
-        [Header("=== CASING EJECTION SETTINGS ===")]
-        [Tooltip("Waktu tunda sebelum selongsong terlempar (detik)")]
-        public float casingEjectDelay = 0f;
-        [Tooltip("Kekuatan dasar lemparan selongsong relatif terhadap Ejection Port (X=Kanan, Y=Atas, Z=Maju)")]
-        public Vector3 casingEjectForce = new Vector3(4f, 1.5f, -0.75f);
-        [Tooltip("Acak kekuatan lemparan (+/- dari kekuatan dasar)")]
-        public Vector3 casingEjectRandomness = new Vector3(1f, 0.5f, 0.25f);
+        [Header("=== RECOIL PARTS (BISA BANYAK) ===")]
+        [Tooltip("Semua bagian senjata yang bergerak mundur saat menembak. Masing-masing punya arah & jarak sendiri.")]
+        public RecoilPart[] recoilParts;
 
-        [Space]
+        [Header("=== ROTARY PARTS (BISA BANYAK) ===")]
+        [Tooltip("Semua bagian senjata yang berputar TERUS-MENERUS (minigun barrel, dll). Masing-masing punya sumbu putar sendiri.")]
+        public RotaryPart[] rotaryParts;
+
+        [Header("=== ROTATABLE PARTS (PUTAR PER TEMBAKAN) ===")]
+        [Tooltip("Semua bagian senjata yang MEMUTAR per tembakan (silinder revolver, belt feed, dll).")]
+        public RotatablePart[] rotatableParts;
+
+        [Header("=== AUDIO & VFX ===")]
         public AudioSource weaponAudioSource;
-        public AudioClip shootSound;
-        public AudioClip reloadSound;
-        public AudioClip emptyClickSound;
-        
         [Tooltip("Particle system efek kilatan laras")]
         public ParticleSystem muzzleFlash;
-
-        [Header("=== MUZZLE FLASH PREFAB ===")]
-        [Tooltip("Prefab muzzle flash (bisa 4-plane, FPS style, atau sprite). Drag langsung dari Project folder.")]
-        public GameObject muzzleFlashPrefab;
-        [Tooltip("Berapa detik flash hidup sebelum dihancurkan")]
-        public float muzzleFlashDuration = 0.06f;
-        [Tooltip("Ukuran acak minimum")]
-        public float muzzleFlashScaleMin = 0.8f;
-        [Tooltip("Ukuran acak maksimum")]
-        public float muzzleFlashScaleMax = 1.3f;
-        [Tooltip("Koreksi rotasi flash (tweak ini kalau flash kebalik atau miring). Ini offset dari rotasi muzzle.")]
-        public Vector3 muzzleFlashRotOffset = Vector3.zero;
-        [Tooltip("Rotasi acak di sumbu X (0=mati, 1=aktif)")]
-        [Range(0f,1f)] public float muzzleFlashRotX = 0f;
-        [Tooltip("Rotasi acak di sumbu Y (0=mati, 1=aktif)")]
-        [Range(0f,1f)] public float muzzleFlashRotY = 0f;
-        [Tooltip("Rotasi acak di sumbu Z (0=mati, 1=aktif)")]
-        [Range(0f,1f)] public float muzzleFlashRotZ = 1f;
         #endregion
 
-        #region --- 7. PROCEDURAL ANIMATION (VISUAL RECOIL) ---
-        [Header("=== PROCEDURAL ANIMATION ===")]
-        public bool enableProceduralRecoil = true;
-        [Tooltip("Bagian senjata yang mundur saat ditembak (contoh: kokangan / laras atas)")]
-        public Transform movableMesh;
-        [Tooltip("Seberapa jauh mundur ke belakang")]
-        public float recoilDistance = 0.15f;
-        [Tooltip("Sumbu arah mundurnya (0,0,1 = mundur di sumbu Z. Kalau muter aneh ke atas, coba isi 0,1,0 atau 0,-1,0)")]
-        public Vector3 recoilAxis = new Vector3(0, 0, 1);
-        [Tooltip("Kecepatan hentakan mundur")]
-        public float recoilSnapSpeed = 50f;
-        [Tooltip("Kecepatan kembali ke posisi semula")]
-        public float recoilReturnSpeed = 10f;
-        
-        private Vector3 _meshOriginalLocalPos;
-        private Vector3 _meshTargetLocalPos;
+        #region --- PRIVATE REFERENCES ---
+        private Rigidbody _vehicleRb;
 
         // Event untuk memicu animasi
         public event Action OnReloadStart;
         #endregion
 
-        #region --- 8. ROTARY BARREL (MINIGUN) ---
-        [Header("=== ROTARY BARREL (MINIGUN) ===")]
-        public bool isRotaryBarrel = false;
-        [Tooltip("Laras yang berputar")]
-        public Transform barrelMesh;
-        [Tooltip("Waktu tahan klik sampai laras berputar maksimal dan mulai nembak")]
-        public float spinUpTime = 1f;
-        [Tooltip("Kecepatan putar maksimal laras (derajat per detik)")]
-        public float maxSpinSpeed = 1000f;
-        
-        private float _currentSpinLerp = 0f;
-        private bool _isHoldingTrigger = false;
-        #endregion
-
         private void Awake()
         {
-            currentAmmo = maxAmmo;
-            if (movableMesh != null)
+            if (weaponData == null)
             {
-                _meshOriginalLocalPos = movableMesh.localPosition;
-                _meshTargetLocalPos = _meshOriginalLocalPos;
+                Debug.LogError($"[ModularWeapon] WeaponData belum di-assign pada '{gameObject.name}'! Senjata tidak akan berfungsi.", this);
+                enabled = false;
+                return;
+            }
+
+            currentAmmo = weaponData.maxAmmo;
+
+            // Simpan posisi awal semua recoil part
+            if (recoilParts != null)
+            {
+                foreach (var part in recoilParts)
+                {
+                    if (part.mesh != null)
+                    {
+                        part.originalLocalPos = part.mesh.localPosition;
+                        part.targetLocalPos = part.originalLocalPos;
+                    }
+                }
+            }
+
+            // Simpan rotasi awal semua rotatable part
+            if (rotatableParts != null)
+            {
+                foreach (var part in rotatableParts)
+                {
+                    if (part.mesh != null)
+                    {
+                        part.originalLocalRot = part.mesh.localRotation;
+                        part.currentAngle = 0f;
+                        part.targetAngle = 0f;
+                    }
+                }
             }
 
             // Mencari Rigidbody kendaraan induk secara otomatis
@@ -169,13 +166,14 @@ namespace Weapons
 
         private void Update()
         {
+            if (weaponData == null) return;
+
             if (_fireCooldown > 0) _fireCooldown -= Time.deltaTime;
 
             HandleCooling();
             HandleProceduralRecoilAnimation();
+            HandleRotatableAnimation();
             HandleRotaryBarrel();
-            
-            // Sprite Muzzle Flash dihandle sepenuhnya oleh SpriteMuzzleFlash.cs via Coroutine
             
             // DEMO INPUT: Hapus atau ganti ini jika sudah punya sistem input/turret sentral
             if (Input.GetMouseButton(0))
@@ -199,24 +197,21 @@ namespace Weapons
 
             if (_isReloading) return;
             
-            if (maxAmmo > 0 && currentAmmo <= 0)
+            if (weaponData.maxAmmo > 0 && currentAmmo <= 0)
             {
-                if (autoReload)
+                if (weaponData.autoReload)
                 {
                     StartReload();
                 }
                 else
                 {
-                    if (Input.GetMouseButtonDown(0)) PlaySound(emptyClickSound);
+                    if (Input.GetMouseButtonDown(0)) PlaySound(weaponData.emptyClickSound);
                 }
                 return;
             }
 
             // Jika senjata butuh spin up (Minigun), tunggu sampai putaran penuh
-            if (isRotaryBarrel && _currentSpinLerp < 0.95f) return;
-
-            // Jika senjata kepanasan ekstrim (Jammed), bisa ditambahkan blokir nembak disini.
-            // Sementara kita biarkan bisa nembak tapi akurasinya ampas total.
+            if (weaponData.isRotaryBarrel && _currentSpinLerp < 0.95f) return;
 
             if (_fireCooldown <= 0f)
             {
@@ -226,66 +221,61 @@ namespace Weapons
 
         private void Fire()
         {
-            if (maxAmmo > 0) currentAmmo--;
+            if (weaponData.maxAmmo > 0) currentAmmo--;
 
-            if (autoReload && maxAmmo > 0 && currentAmmo <= 0)
+            if (weaponData.autoReload && weaponData.maxAmmo > 0 && currentAmmo <= 0)
             {
                 StartReload();
             }
 
-            float timeBetweenShots = 60f / fireRateRPM;
+            float timeBetweenShots = 60f / weaponData.fireRateRPM;
             _fireCooldown = timeBetweenShots;
 
             // Tambah panas
-            if (enableOverheat)
+            if (weaponData.enableOverheat)
             {
-                _currentHeat = Mathf.Min(_currentHeat + heatPerShot, maxHeat);
+                _currentHeat = Mathf.Min(_currentHeat + weaponData.heatPerShot, weaponData.maxHeat);
             }
 
             // Efek suara & flash
-            PlaySound(shootSound);
+            PlaySound(weaponData.shootSound);
             if (muzzleFlash != null) muzzleFlash.Play();
             
             // Spawn muzzle flash — Instantiate + Destroy, works for any prefab type
             Transform flashSpawnPoint = muzzleFlashTransform != null ? muzzleFlashTransform : muzzleTransform;
-            if (muzzleFlashPrefab != null && flashSpawnPoint != null)
+            if (weaponData.muzzleFlashPrefab != null && flashSpawnPoint != null)
             {
-                // Rotasi = rotasi flashSpawnPoint + offset koreksi
-                Quaternion flashRot = flashSpawnPoint.rotation * Quaternion.Euler(muzzleFlashRotOffset);
+                Quaternion flashRot = flashSpawnPoint.rotation * Quaternion.Euler(weaponData.muzzleFlashRotOffset);
                 GameObject flash = Instantiate(
-                    muzzleFlashPrefab,
+                    weaponData.muzzleFlashPrefab,
                     flashSpawnPoint.position,
                     flashRot
                 );
-                // Parent ke flashSpawnPoint — flash ngikut laras ke mana pun bergerak
                 flash.transform.SetParent(flashSpawnPoint, worldPositionStays: true);
-                // Random scale
-                float s = Random.Range(muzzleFlashScaleMin, muzzleFlashScaleMax);
+                float s = Random.Range(weaponData.muzzleFlashScaleMin, weaponData.muzzleFlashScaleMax);
                 flash.transform.localScale = Vector3.one * s;
-                // Random rotation
                 float angle = Random.Range(0f, 360f);
                 flash.transform.Rotate(
-                    muzzleFlashRotX * angle,
-                    muzzleFlashRotY * angle,
-                    muzzleFlashRotZ * angle,
+                    weaponData.muzzleFlashRotX * angle,
+                    weaponData.muzzleFlashRotY * angle,
+                    weaponData.muzzleFlashRotZ * angle,
                     Space.Self
                 );
-                // Auto-destroy setelah durasi
-                Destroy(flash, muzzleFlashDuration);
+                Destroy(flash, weaponData.muzzleFlashDuration);
             }
 
             // Hitung multiplier dispersi dari kepanasan
-            float heatFactor = enableOverheat ? (_currentHeat / maxHeat) : 0f;
-            float currentDispersion = Mathf.Lerp(baseDispersion, baseDispersion * heatDispersionMultiplier, heatFactor);
+            float heatFactor = weaponData.enableOverheat ? (_currentHeat / weaponData.maxHeat) : 0f;
+            float currentDispersion = Mathf.Lerp(weaponData.baseDispersion, weaponData.baseDispersion * weaponData.heatDispersionMultiplier, heatFactor);
 
             // Tembakkan peluru (Loop untuk Shotgun Pellet)
-            for (int i = 0; i < pelletCount; i++)
+            for (int i = 0; i < weaponData.pelletCount; i++)
             {
                 SpawnProjectile(currentDispersion);
             }
 
             // Lontarkan selongsong peluru dengan delay atau langsung
-            if (casingEjectDelay > 0f)
+            if (weaponData.casingEjectDelay > 0f)
             {
                 StartCoroutine(EjectCasingCoroutine());
             }
@@ -298,23 +288,40 @@ namespace Weapons
             ApplyVehicleRecoil();
 
             // Efek Guncangan Kamera (Camera Shake) berdasarkan recoil
-            if (VehicleCamera.Instance != null && cameraShakeMultiplier > 0f)
+            if (VehicleCamera.Instance != null && weaponData.cameraShakeMultiplier > 0f)
             {
-                VehicleCamera.Instance.Shake(recoilForce * cameraShakeMultiplier, cameraShakeDuration);
+                VehicleCamera.Instance.Shake(weaponData.recoilForce * weaponData.cameraShakeMultiplier, weaponData.cameraShakeDuration);
             }
 
-            // Picu animasi hentakan senjata (Procedural)
-            if (enableProceduralRecoil && movableMesh != null)
+            // Picu animasi hentakan SEMUA recoil part
+            if (weaponData.enableProceduralRecoil && recoilParts != null)
             {
-                _meshTargetLocalPos = _meshOriginalLocalPos - (recoilAxis.normalized * recoilDistance);
+                foreach (var part in recoilParts)
+                {
+                    if (part.mesh != null)
+                    {
+                        part.targetLocalPos = part.originalLocalPos - (part.recoilAxis.normalized * part.recoilDistance);
+                    }
+                }
+            }
+
+            // Picu rotasi SEMUA rotatable part (revolver cylinder, dll)
+            if (rotatableParts != null)
+            {
+                foreach (var part in rotatableParts)
+                {
+                    if (part.mesh != null)
+                    {
+                        part.targetAngle += part.anglePerShot;
+                    }
+                }
             }
         }
 
         private void SpawnProjectile(float dispersionAngle)
         {
-            if (projectilePrefab == null || muzzleTransform == null) return;
+            if (weaponData.projectilePrefab == null || muzzleTransform == null) return;
 
-            // Kalkulasi arah peluru dengan dispersi acak
             Vector3 randomDirection = muzzleTransform.forward;
             if (dispersionAngle > 0f)
             {
@@ -325,37 +332,36 @@ namespace Weapons
                 ) * muzzleTransform.forward;
             }
 
-            GameObject projObj = ObjectPool.Instance.Spawn(projectilePrefab, muzzleTransform.position, Quaternion.identity);
+            GameObject projObj = ObjectPool.Instance.Spawn(weaponData.projectilePrefab, muzzleTransform.position, Quaternion.identity);
             if (projObj != null)
             {
                 KinematicProjectile kp = projObj.GetComponent<KinematicProjectile>();
                 if (kp != null)
                 {
-                    kp.Initialize(muzzleTransform.position, randomDirection, muzzleVelocity);
+                    kp.Initialize(muzzleTransform.position, randomDirection, weaponData.muzzleVelocity);
                 }
             }
         }
 
         private IEnumerator EjectCasingCoroutine()
         {
-            yield return new WaitForSeconds(casingEjectDelay);
+            yield return new WaitForSeconds(weaponData.casingEjectDelay);
             EjectCasing();
         }
 
         private void EjectCasing()
         {
-            if (casingPrefab == null || ejectionPortTransform == null) return;
+            if (weaponData.casingPrefab == null || ejectionPortTransform == null) return;
 
-            GameObject casing = ObjectPool.Instance.Spawn(casingPrefab, ejectionPortTransform.position, ejectionPortTransform.rotation);
+            GameObject casing = ObjectPool.Instance.Spawn(weaponData.casingPrefab, ejectionPortTransform.position, ejectionPortTransform.rotation);
             Rigidbody casingRb = casing.GetComponent<Rigidbody>();
             if (casingRb != null)
             {
                 casingRb.velocity = Vector3.zero;
                 
-                // Menghitung lontaran acak berdasarkan variabel Inspector
-                float forceRight = casingEjectForce.x + Random.Range(-casingEjectRandomness.x, casingEjectRandomness.x);
-                float forceUp = casingEjectForce.y + Random.Range(-casingEjectRandomness.y, casingEjectRandomness.y);
-                float forceForward = casingEjectForce.z + Random.Range(-casingEjectRandomness.z, casingEjectRandomness.z);
+                float forceRight = weaponData.casingEjectForce.x + Random.Range(-weaponData.casingEjectRandomness.x, weaponData.casingEjectRandomness.x);
+                float forceUp = weaponData.casingEjectForce.y + Random.Range(-weaponData.casingEjectRandomness.y, weaponData.casingEjectRandomness.y);
+                float forceForward = weaponData.casingEjectForce.z + Random.Range(-weaponData.casingEjectRandomness.z, weaponData.casingEjectRandomness.z);
 
                 Vector3 ejectForce = (ejectionPortTransform.right * forceRight) + 
                                      (ejectionPortTransform.up * forceUp) +
@@ -370,67 +376,88 @@ namespace Weapons
         {
             if (_vehicleRb != null && muzzleTransform != null)
             {
-                // Force diberikan berlawanan dengan arah moncong tembak
-                _vehicleRb.AddForceAtPosition(-muzzleTransform.forward * recoilForce, muzzleTransform.position, ForceMode.Impulse);
+                _vehicleRb.AddForceAtPosition(-muzzleTransform.forward * weaponData.recoilForce, muzzleTransform.position, ForceMode.Impulse);
             }
         }
 
         private void HandleCooling()
         {
-            if (!enableOverheat) return;
+            if (!weaponData.enableOverheat) return;
 
-            // Jika tidak sedang menembak secara aktif, dinginkan
-            if (!_isHoldingTrigger || (isRotaryBarrel && _currentSpinLerp < 0.95f))
+            if (!_isHoldingTrigger || (weaponData.isRotaryBarrel && _currentSpinLerp < 0.95f))
             {
-                _currentHeat = Mathf.Max(_currentHeat - (coolingRate * Time.deltaTime), 0f);
+                _currentHeat = Mathf.Max(_currentHeat - (weaponData.coolingRate * Time.deltaTime), 0f);
             }
         }
 
         private void HandleProceduralRecoilAnimation()
         {
-            if (!enableProceduralRecoil || movableMesh == null) return;
+            if (!weaponData.enableProceduralRecoil || recoilParts == null) return;
 
-            // Kembalikan target perlahan ke posisi semula
-            _meshTargetLocalPos = Vector3.Lerp(_meshTargetLocalPos, _meshOriginalLocalPos, Time.deltaTime * recoilReturnSpeed);
-            
-            // Snap mesh ke posisi target
-            movableMesh.localPosition = Vector3.Lerp(movableMesh.localPosition, _meshTargetLocalPos, Time.deltaTime * recoilSnapSpeed);
+            foreach (var part in recoilParts)
+            {
+                if (part.mesh == null) continue;
+
+                // Kembalikan target perlahan ke posisi semula
+                part.targetLocalPos = Vector3.Lerp(part.targetLocalPos, part.originalLocalPos, Time.deltaTime * part.returnSpeed);
+                
+                // Snap mesh ke posisi target
+                part.mesh.localPosition = Vector3.Lerp(part.mesh.localPosition, part.targetLocalPos, Time.deltaTime * part.snapSpeed);
+            }
+        }
+
+        private void HandleRotatableAnimation()
+        {
+            if (rotatableParts == null) return;
+
+            foreach (var part in rotatableParts)
+            {
+                if (part.mesh == null) continue;
+
+                // Lerp sudut saat ini menuju target
+                part.currentAngle = Mathf.Lerp(part.currentAngle, part.targetAngle, Time.deltaTime * part.snapSpeed);
+
+                // Terapkan rotasi: originalRot + rotasi tambahan di sumbu yang ditentukan
+                part.mesh.localRotation = part.originalLocalRot * Quaternion.AngleAxis(part.currentAngle, part.rotationAxis);
+            }
         }
 
         private void HandleRotaryBarrel()
         {
-            if (!isRotaryBarrel || barrelMesh == null) return;
+            if (!weaponData.isRotaryBarrel || rotaryParts == null || rotaryParts.Length == 0) return;
 
             // Hitung akselerasi putaran (0 sampai 1)
             float lerpTarget = _isHoldingTrigger ? 1f : 0f;
-            float spinAccelRate = 1f / spinUpTime;
+            float spinAccelRate = 1f / weaponData.spinUpTime;
             
             _currentSpinLerp = Mathf.MoveTowards(_currentSpinLerp, lerpTarget, spinAccelRate * Time.deltaTime);
 
-            // Putar laras (Z axis secara lokal)
-            float currentSpinSpeed = _currentSpinLerp * maxSpinSpeed;
-            barrelMesh.Rotate(Vector3.forward * (currentSpinSpeed * Time.deltaTime), Space.Self);
+            // Putar SEMUA rotary part
+            float currentSpinSpeed = _currentSpinLerp * weaponData.maxSpinSpeed;
+            foreach (var part in rotaryParts)
+            {
+                if (part.mesh == null) continue;
+                part.mesh.Rotate(part.rotationAxis * (currentSpinSpeed * Time.deltaTime), Space.Self);
+            }
         }
 
         public void StartReload()
         {
-            if (_isReloading || maxAmmo <= 0 || currentAmmo == maxAmmo) return;
+            if (_isReloading || weaponData.maxAmmo <= 0 || currentAmmo == weaponData.maxAmmo) return;
             
-            // Beritahu script lain bahwa reload dimulai
             OnReloadStart?.Invoke();
-
             StartCoroutine(ReloadCoroutine());
         }
 
         private IEnumerator ReloadCoroutine()
         {
             _isReloading = true;
-            _reloadEndTime = Time.time + reloadTime;
-            PlaySound(reloadSound);
+            _reloadEndTime = Time.time + weaponData.reloadTime;
+            PlaySound(weaponData.reloadSound);
             
-            yield return new WaitForSeconds(reloadTime);
+            yield return new WaitForSeconds(weaponData.reloadTime);
 
-            currentAmmo = maxAmmo;
+            currentAmmo = weaponData.maxAmmo;
             _isReloading = false;
         }
 
