@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   muzzleVelocity: 800
   fireRateRPM: 600
-  maxAmmo: 6
+  maxAmmo: 500
   autoReload: 1
   reloadTime: 4
   projectilePrefab: {fileID: 721100698013322737, guid: 19ec54492bfae2442b367740493a6953,

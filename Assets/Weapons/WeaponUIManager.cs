@@ -10,6 +10,8 @@ namespace Weapons
         public ModularWeapon targetWeapon;
 
         [Header("=== UI ELEMENTS ===")]
+        [Tooltip("Teks untuk menampilkan nama senjata (diambil otomatis dari nama prefab)")]
+        public TextMeshProUGUI weaponNameText;
         [Tooltip("Teks untuk menampilkan jumlah amunisi (contoh: 30 / 30)")]
         public TextMeshProUGUI ammoText;
         [Tooltip("Teks untuk menampilkan status reload (contoh: Reloading... 1.5s)")]
@@ -21,6 +23,14 @@ namespace Weapons
 
             UpdateAmmoUI();
             UpdateReloadUI();
+        }
+
+        public void SetWeaponName(string name)
+        {
+            if (weaponNameText != null)
+            {
+                weaponNameText.text = name;
+            }
         }
 
         private void UpdateAmmoUI()

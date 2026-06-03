@@ -109,6 +109,10 @@ namespace Weapons
         [Tooltip("Semua bagian senjata yang MEMUTAR per tembakan (silinder revolver, belt feed, dll).")]
         public RotatablePart[] rotatableParts;
 
+        [Header("=== RELOAD VISUALS ===")]
+        [Tooltip("Object (contoh: Magazine) yang di-disable saat mulai reload, dan di-enable kembali setelah selesai.")]
+        public GameObject[] hideDuringReload;
+
         [Header("=== AUDIO & VFX ===")]
         public AudioSource weaponAudioSource;
         [Tooltip("Particle system efek kilatan laras")]
@@ -162,6 +166,19 @@ namespace Weapons
 
             // Mencari Rigidbody kendaraan induk secara otomatis
             _vehicleRb = GetComponentInParent<Rigidbody>();
+        }
+
+        private void OnDisable()
+        {
+            if (hideDuringReload != null)
+            {
+                foreach (var obj in hideDuringReload)
+                {
+                    if (obj != null) obj.SetActive(true);
+                }
+            }
+            _isReloading = false;
+            _isHoldingTrigger = false;
         }
 
         private void Update()
@@ -455,10 +472,26 @@ namespace Weapons
             _reloadEndTime = Time.time + weaponData.reloadTime;
             PlaySound(weaponData.reloadSound);
             
+            if (hideDuringReload != null)
+            {
+                foreach (var obj in hideDuringReload)
+                {
+                    if (obj != null) obj.SetActive(false);
+                }
+            }
+
             yield return new WaitForSeconds(weaponData.reloadTime);
 
             currentAmmo = weaponData.maxAmmo;
             _isReloading = false;
+
+            if (hideDuringReload != null)
+            {
+                foreach (var obj in hideDuringReload)
+                {
+                    if (obj != null) obj.SetActive(true);
+                }
+            }
         }
 
         private void PlaySound(AudioClip clip)

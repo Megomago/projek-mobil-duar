@@ -26,14 +26,14 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 4319246731602881390}
   serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
   m_LocalPosition: {x: -0.21, y: 1.38, z: -0.39}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 7507946682526829429}
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: -90, y: 0, z: 0}
 --- !u!114 &1116260678293484598
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -46,56 +46,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6c0d6cb97b1f0df40b14c3f19f568c84, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  muzzleVelocity: 800
-  fireRateRPM: 600
-  maxAmmo: 1
+  weaponData: {fileID: 11400000, guid: bd73829a84b32c04c9b3edf7cd795cc9, type: 2}
   currentAmmo: 0
-  autoReload: 1
-  reloadTime: 4
-  projectilePrefab: {fileID: 721100698013322737, guid: 19ec54492bfae2442b367740493a6953,
-    type: 3}
-  pelletCount: 1
-  baseDispersion: 0.5
-  enableOverheat: 0
-  heatPerShot: 5
-  coolingRate: 15
-  maxHeat: 100
-  heatDispersionMultiplier: 4
   _currentHeat: 0
-  recoilForce: 3407
-  cameraShakeMultiplier: 0.00005
-  cameraShakeDuration: 4.45
   muzzleTransform: {fileID: 3265717603539852209}
   muzzleFlashTransform: {fileID: 0}
   ejectionPortTransform: {fileID: 7142609945544757166}
-  casingPrefab: {fileID: 5084048985380002692, guid: baef944df61177242aab56a768ffffed,
-    type: 3}
-  casingEjectDelay: 0.5
-  casingEjectForce: {x: 0, y: 4, z: 0}
-  casingEjectRandomness: {x: 1, y: 0, z: 0}
+  recoilParts: []
+  rotaryParts: []
+  rotatableParts: []
+  hideDuringReload: []
   weaponAudioSource: {fileID: 4191827926362441310}
-  shootSound: {fileID: 8300000, guid: 43c70cd559d03234188a0a79839aef85, type: 3}
-  reloadSound: {fileID: 0}
-  emptyClickSound: {fileID: 0}
   muzzleFlash: {fileID: 0}
-  muzzleFlashPrefab: {fileID: 100006, guid: 7c442b9b6852b8a4f93306f3d154d471, type: 3}
-  muzzleFlashDuration: 6
-  muzzleFlashScaleMin: 0.8
-  muzzleFlashScaleMax: 1.3
-  muzzleFlashRotOffset: {x: 0, y: 0, z: 0}
-  muzzleFlashRotX: 0
-  muzzleFlashRotY: 0
-  muzzleFlashRotZ: 1
-  enableProceduralRecoil: 1
-  movableMesh: {fileID: 5427468949478677010}
-  recoilDistance: 1.83
-  recoilAxis: {x: 0, y: -1, z: 0}
-  recoilSnapSpeed: 50
-  recoilReturnSpeed: 10
-  isRotaryBarrel: 0
-  barrelMesh: {fileID: 0}
-  spinUpTime: 1
-  maxSpinSpeed: 1000
 --- !u!114 &7132638992804656412
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -207,32 +169,32 @@ PrefabInstance:
     - target: {fileID: -8679921383154817045, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}
       propertyPath: m_LocalRotation.w
-      value: -0.00000009415697
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}
       propertyPath: m_LocalRotation.x
-      value: -0.00000009415696
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}
       propertyPath: m_LocalRotation.y
-      value: 0.7071068
+      value: -0.7071068
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}
       propertyPath: m_LocalRotation.z
-      value: -0.7071067
+      value: 0.7071068
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.x
-      value: 89.98021
+      value: 90
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}
       propertyPath: m_LocalEulerAnglesHint.y
-      value: -179.99998
+      value: -180
       objectReference: {fileID: 0}
     - target: {fileID: -8679921383154817045, guid: 349dfda9f317da54193933643d6fdabd,
         type: 3}

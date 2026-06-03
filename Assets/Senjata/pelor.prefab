@@ -124,7 +124,7 @@ MonoBehaviour:
   hitMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  hitImpactPrefab: {fileID: 0}
+  hitImpactPrefab: {fileID: 100006, guid: 94a130fb17f1cae4388a8fe1d8bd3055, type: 3}
 --- !u!96 &7936667348779146880
 TrailRenderer:
   serializedVersion: 3
