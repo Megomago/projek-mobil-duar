@@ -10,7 +10,7 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe49559cf43e52a4d8be128c37864496, type: 3}
-  m_Name: Universal wpdata
+  m_Name: 120mm artileri
   m_EditorClassIdentifier: 
   weaponName: 40mm
   weapon3DPrefab: {fileID: 1625101706936596825, guid: b5e1beb5db4ca2946ade90e878b7eb9c,
