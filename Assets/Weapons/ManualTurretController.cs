@@ -22,6 +22,17 @@ namespace Weapons
         public float minPitch = -15f;
         public float maxPitch = 45f;
 
+        [Header("=== INPUT SETTINGS ===")]
+        [Tooltip("Jika menyala, turret akan mengikuti crosshair layar (Player). Jika mati, turret dikendalikan script lain lewat SetAimTarget().")]
+        public bool usePlayerInput = true;
+
+        private Vector3 _currentTargetPoint;
+
+        public void SetAimTarget(Vector3 targetPoint)
+        {
+            _currentTargetPoint = targetPoint;
+        }
+
         void Start()
         {
             if (playerCamera == null) playerCamera = Camera.main;
@@ -30,15 +41,18 @@ namespace Weapons
 
         void LateUpdate()
         {
-            if (turretBase == null || gunBarrel == null || aimOrigin == null || playerCamera == null) return;
+            if (turretBase == null || gunBarrel == null || aimOrigin == null) return;
 
-            Vector3 targetPt = GetCrosshairTarget();
+            if (usePlayerInput && playerCamera != null)
+            {
+                _currentTargetPoint = GetCrosshairTarget();
+            }
 
             // 1. Arahkan Yaw (Kiri/Kanan)
-            AimTurretYaw(targetPt);
+            AimTurretYaw(_currentTargetPoint);
 
             // 2. Arahkan Pitch (Atas/Bawah)
-            AimBarrelPitch(targetPt);
+            AimBarrelPitch(_currentTargetPoint);
         }
 
         private RaycastHit[] _raycastHits = new RaycastHit[10];
@@ -135,37 +149,46 @@ namespace Weapons
 
         void OnDrawGizmos()
         {
-            if (playerCamera == null || aimOrigin == null) return;
+            if (aimOrigin == null) return;
+            Vector3 targetPt = _currentTargetPoint;
 
-            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            Vector3 targetPt = ray.GetPoint(maxAimDistance);
-            
-            RaycastHit[] hits = Physics.RaycastAll(ray, maxAimDistance, aimMask);
-            float closestDistance = float.MaxValue;
-            bool hitValid = false;
-
-            foreach (var hit in hits)
+            if (usePlayerInput && playerCamera != null)
             {
-                if (hit.transform.root == transform.root) continue;
+                Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
+                targetPt = ray.GetPoint(maxAimDistance);
                 
-                if (hit.distance < closestDistance)
-                {
-                    closestDistance = hit.distance;
-                    targetPt = hit.point;
-                    hitValid = true;
-                }
-            }
+                RaycastHit[] hits = Physics.RaycastAll(ray, maxAimDistance, aimMask);
+                float closestDistance = float.MaxValue;
+                bool hitValid = false;
 
-            if (hitValid)
-            {
-                Gizmos.color = Color.green;
-                Gizmos.DrawLine(playerCamera.transform.position, targetPt);
-                if (Application.isPlaying) Gizmos.DrawSphere(targetPt, 0.2f);
+                foreach (var hit in hits)
+                {
+                    if (hit.transform.root == transform.root) continue;
+                    
+                    if (hit.distance < closestDistance)
+                    {
+                        closestDistance = hit.distance;
+                        targetPt = hit.point;
+                        hitValid = true;
+                    }
+                }
+
+                if (hitValid)
+                {
+                    Gizmos.color = Color.green;
+                    Gizmos.DrawLine(playerCamera.transform.position, targetPt);
+                    if (Application.isPlaying) Gizmos.DrawSphere(targetPt, 0.2f);
+                }
+                else
+                {
+                    Gizmos.color = Color.red;
+                    Gizmos.DrawLine(playerCamera.transform.position, targetPt);
+                }
             }
             else
             {
-                Gizmos.color = Color.red;
-                Gizmos.DrawLine(playerCamera.transform.position, targetPt);
+                Gizmos.color = Color.yellow;
+                if (Application.isPlaying) Gizmos.DrawSphere(targetPt, 0.5f);
             }
 
             Gizmos.color = Color.blue;

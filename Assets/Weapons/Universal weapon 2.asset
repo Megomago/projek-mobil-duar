@@ -12,6 +12,11 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe49559cf43e52a4d8be128c37864496, type: 3}
   m_Name: Universal weapon 2
   m_EditorClassIdentifier: 
+  weaponName: 40mm
+  weapon3DPrefab: {fileID: 1625101706936596825, guid: b5e1beb5db4ca2946ade90e878b7eb9c,
+    type: 3}
+  hudPrefab: {fileID: 2739449908779926695, guid: c171b929750fe4f4c9f3e47e92dd04f0,
+    type: 3}
   muzzleVelocity: 800
   fireRateRPM: 600
   maxAmmo: 30

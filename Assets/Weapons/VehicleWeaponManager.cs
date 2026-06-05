@@ -1,97 +1,143 @@
 using UnityEngine;
-using UnityEngine.UI; // Untuk mengecek LayoutGroup jika diperlukan di masa depan
 
 namespace Weapons
 {
     [System.Serializable]
     public class WeaponSlot
     {
-        [Tooltip("Prefab senjata yang mau dipasang di slot ini. Kosongkan jika tidak ada senjata.")]
-        public GameObject weaponPrefab;
+        [Tooltip("WeaponData senjata yang dipasang di slot ini. Kosongkan jika slot ini tidak diisi.")]
+        public WeaponData weaponData;
 
-        [Tooltip("Titik (Transform kosong) di mobil tempat senjata akan ditempel.")]
+        [Tooltip("Titik (Transform kosong) di mobil tempat senjata 3D akan ditempel.")]
         public Transform pivot;
 
+        // Runtime references (otomatis diisi saat game berjalan)
         [HideInInspector] public ModularWeapon spawnedWeapon;
+        [HideInInspector] public GameObject spawnedHUD;
     }
 
     public class VehicleWeaponManager : MonoBehaviour
     {
         [Header("=== WEAPON SLOTS (PENGATURAN SENJATA MOBIL) ===")]
+        [Tooltip("Tambah slot sesuai jumlah titik senjata di mobil ini.")]
         public WeaponSlot[] weaponSlots;
 
         [Header("=== UI SETTINGS ===")]
-        [Tooltip("Patokan UI Utama di layar. (Tanpa Vertical Layout Group)")]
-        public RectTransform uiContainer;
+        [Tooltip("Wadah (RectTransform) di Canvas layar utama tempat HUD senjata berkumpul. Pasang Vertical Layout Group di objek ini.")]
+        public RectTransform hudContainer;
 
-        [Tooltip("Jarak UI ke atas (pixel UI). Gunakan angka seperti 50 atau 100.")]
-        public float uiVerticalSpacing = 100f;
+        [Header("=== INPUT SETTINGS ===")]
+        [Tooltip("Aktifkan jika kendaraan ini dikendalikan oleh Player.")]
+        public bool usePlayerInput = true;
 
         private void Start()
         {
-            InitializeWeapons();
+            InitializeAllSlots();
         }
 
-        private void InitializeWeapons()
+        private void Update()
         {
-            if (weaponSlots == null || weaponSlots.Length == 0) return;
+            if (!usePlayerInput || weaponSlots == null) return;
 
-            int activeWeaponCount = 0;
+            bool isFiring = Input.GetMouseButton(0);
+            bool isReloading = Input.GetKeyDown(KeyCode.R);
 
             foreach (var slot in weaponSlots)
             {
-                if (slot.weaponPrefab == null) continue;
-
-                if (slot.pivot == null)
+                if (slot.spawnedWeapon != null)
                 {
-                    Debug.LogWarning($"[VehicleWeaponManager] Pivot untuk '{slot.weaponPrefab.name}' kosong!", this);
-                    continue;
-                }
-
-                // 1. Spawn Senjata di 3D World
-                GameObject spawnedObj = Instantiate(slot.weaponPrefab, slot.pivot.position, slot.pivot.rotation);
-                spawnedObj.transform.SetParent(slot.pivot);
-                spawnedObj.transform.localPosition = Vector3.zero;
-                spawnedObj.transform.localRotation = Quaternion.identity;
-                spawnedObj.name = slot.weaponPrefab.name;
-
-                ModularWeapon modularWeapon = spawnedObj.GetComponent<ModularWeapon>();
-                slot.spawnedWeapon = modularWeapon;
-
-                if (modularWeapon != null)
-                {
-                    // 2. Setup UI
-                    WeaponUIManager uiManager = spawnedObj.GetComponentInChildren<WeaponUIManager>();
+                    if (isFiring) slot.spawnedWeapon.TryFire();
+                    else slot.spawnedWeapon.StopFiring();
                     
-                    if (uiManager != null)
-                    {
-                        uiManager.targetWeapon = modularWeapon;
-                        uiManager.SetWeaponName(spawnedObj.name);
-
-                        // Pindahkan UI senjata ke patokan
-                        if (uiContainer != null)
-                        {
-                            RectTransform uiRect = uiManager.GetComponent<RectTransform>();
-                            if (uiRect != null)
-                            {
-                                uiRect.SetParent(uiContainer, false);
-                                
-                                // Paksa Anchor dan Pivot ke tengah agar posisi murni berfungsi sebagai offset koordinat
-                                uiRect.anchorMin = new Vector2(0.5f, 0.5f);
-                                uiRect.anchorMax = new Vector2(0.5f, 0.5f);
-                                uiRect.pivot = new Vector2(0.5f, 0.5f);
-                                
-                                // Atur posisinya berjejer ke atas (Sumbu Y lokal dari UI)
-                                uiRect.anchoredPosition = new Vector2(0, activeWeaponCount * uiVerticalSpacing);
-                                
-                                // Pastikan skala normal
-                                uiRect.localScale = Vector3.one;
-                            }
-                        }
-                    }
-
-                    activeWeaponCount++;
+                    if (isReloading) slot.spawnedWeapon.StartReload();
                 }
+            }
+        }
+
+        private void InitializeAllSlots()
+        {
+            if (weaponSlots == null || weaponSlots.Length == 0) return;
+
+            foreach (var slot in weaponSlots)
+            {
+                // Jika slot kosong (tidak ada WeaponData), skip
+                if (slot.weaponData == null) continue;
+
+                // --- 1. SPAWN SENJATA 3D ---
+                SpawnWeapon3D(slot);
+
+                // --- 2. SPAWN HUD ---
+                SpawnHUD(slot);
+            }
+        }
+
+        private void SpawnWeapon3D(WeaponSlot slot)
+        {
+            if (slot.weaponData.weapon3DPrefab == null)
+            {
+                Debug.LogWarning($"[VehicleWeaponManager] WeaponData '{slot.weaponData.weaponName}' tidak punya weapon3DPrefab!", this);
+                return;
+            }
+
+            if (slot.pivot == null)
+            {
+                Debug.LogWarning($"[VehicleWeaponManager] Pivot untuk '{slot.weaponData.weaponName}' belum di-assign!", this);
+                return;
+            }
+
+            // Spawn prefab 3D di posisi dan rotasi pivot
+            GameObject spawnedObj = Instantiate(slot.weaponData.weapon3DPrefab, slot.pivot);
+            spawnedObj.transform.localPosition = Vector3.zero;
+            spawnedObj.transform.localRotation = Quaternion.identity;
+            spawnedObj.name = slot.weaponData.weaponName;
+
+            // Ambil & simpan referensi ModularWeapon
+            ModularWeapon modularWeapon = spawnedObj.GetComponent<ModularWeapon>();
+            if (modularWeapon != null)
+            {
+                modularWeapon.weaponData = slot.weaponData;
+                slot.spawnedWeapon = modularWeapon;
+            }
+            else
+            {
+                Debug.LogWarning($"[VehicleWeaponManager] Prefab 3D '{slot.weaponData.weaponName}' tidak punya script ModularWeapon!", this);
+            }
+        }
+
+        private void SpawnHUD(WeaponSlot slot)
+        {
+            if (slot.weaponData.hudPrefab == null) return;
+            if (slot.spawnedWeapon == null) return;
+
+            if (hudContainer == null)
+            {
+                Debug.LogWarning("[VehicleWeaponManager] hudContainer belum di-assign! HUD tidak bisa di-spawn.", this);
+                return;
+            }
+
+            // Spawn prefab HUD langsung ke dalam wadah di Canvas layar
+            GameObject hudObj = Instantiate(slot.weaponData.hudPrefab, hudContainer);
+            slot.spawnedHUD = hudObj;
+            hudObj.name = $"HUD_{slot.weaponData.weaponName}";
+
+            // Reset transform agar rapi di dalam layout
+            RectTransform hudRect = hudObj.GetComponent<RectTransform>();
+            if (hudRect != null)
+            {
+                hudRect.localScale = Vector3.one;
+                hudRect.localRotation = Quaternion.identity;
+            }
+
+            // Sambungkan HUD ke senjata 3D-nya
+            WeaponUIManager uiManager = hudObj.GetComponent<WeaponUIManager>();
+            if (uiManager == null)
+            {
+                uiManager = hudObj.GetComponentInChildren<WeaponUIManager>();
+            }
+
+            if (uiManager != null)
+            {
+                uiManager.Initialize(slot.spawnedWeapon, slot.weaponData.weaponName);
             }
         }
     }

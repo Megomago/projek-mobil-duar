@@ -122,8 +122,10 @@ namespace Weapons
         #region --- PRIVATE REFERENCES ---
         private Rigidbody _vehicleRb;
 
-        // Event untuk memicu animasi
+        // Event untuk memicu animasi dan UI
         public event Action OnReloadStart;
+        public event Action OnReloadFinished;
+        public event Action<int, int> OnAmmoChanged;
         #endregion
 
         private void Awake()
@@ -191,21 +193,11 @@ namespace Weapons
             HandleProceduralRecoilAnimation();
             HandleRotatableAnimation();
             HandleRotaryBarrel();
-            
-            // DEMO INPUT: Hapus atau ganti ini jika sudah punya sistem input/turret sentral
-            if (Input.GetMouseButton(0))
-            {
-                TryFire();
-            }
-            else
-            {
-                _isHoldingTrigger = false;
-            }
+        }
 
-            if (Input.GetKeyDown(KeyCode.R))
-            {
-                StartReload();
-            }
+        public void StopFiring()
+        {
+            _isHoldingTrigger = false;
         }
 
         public void TryFire()
@@ -238,7 +230,11 @@ namespace Weapons
 
         private void Fire()
         {
-            if (weaponData.maxAmmo > 0) currentAmmo--;
+            if (weaponData.maxAmmo > 0)
+            {
+                currentAmmo--;
+                OnAmmoChanged?.Invoke(currentAmmo, weaponData.maxAmmo);
+            }
 
             if (weaponData.autoReload && weaponData.maxAmmo > 0 && currentAmmo <= 0)
             {
@@ -484,6 +480,8 @@ namespace Weapons
 
             currentAmmo = weaponData.maxAmmo;
             _isReloading = false;
+            OnAmmoChanged?.Invoke(currentAmmo, weaponData.maxAmmo);
+            OnReloadFinished?.Invoke();
 
             if (hideDuringReload != null)
             {

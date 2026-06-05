@@ -10,6 +10,16 @@ namespace Weapons
     [CreateAssetMenu(fileName = "New WeaponData", menuName = "Weapons/Weapon Data")]
     public class WeaponData : ScriptableObject
     {
+        #region --- 0. IDENTITY & HUD ---
+        [Header("=== IDENTITY & HUD ===")]
+        [Tooltip("Nama senjata yang akan ditampilkan di HUD (misal: 40mm Penet)")]
+        public string weaponName = "Unnamed Weapon";
+        [Tooltip("Prefab 3D senjata yang memiliki script ModularWeapon. Akan di-spawn di pivot mobil.")]
+        public GameObject weapon3DPrefab;
+        [Tooltip("Prefab HUD khusus senjata ini (Panel berisi WeaponUIManager + Teks). BUKAN Canvas, cukup Panel/Empty.")]
+        public GameObject hudPrefab;
+        #endregion
+
         #region --- 1. CORE SETTINGS ---
         [Header("=== CORE SETTINGS ===")]
         [Tooltip("Kecepatan peluru saat keluar dari laras (m/s)")]

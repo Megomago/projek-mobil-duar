@@ -17,12 +17,53 @@ namespace Weapons
         [Tooltip("Teks untuk menampilkan status reload (contoh: Reloading... 1.5s)")]
         public TextMeshProUGUI reloadText;
 
+        private bool _isReloadingActive = false;
+
+        public void Initialize(ModularWeapon weapon, string weaponName)
+        {
+            // Unsubscribe dari senjata lama jika ada (untuk reuse UI)
+            if (targetWeapon != null)
+            {
+                targetWeapon.OnAmmoChanged -= HandleAmmoChanged;
+                targetWeapon.OnReloadStart -= HandleReloadStart;
+                targetWeapon.OnReloadFinished -= HandleReloadFinished;
+            }
+
+            targetWeapon = weapon;
+            SetWeaponName(weaponName);
+
+            if (targetWeapon != null)
+            {
+                // Subscribe ke event
+                targetWeapon.OnAmmoChanged += HandleAmmoChanged;
+                targetWeapon.OnReloadStart += HandleReloadStart;
+                targetWeapon.OnReloadFinished += HandleReloadFinished;
+
+                // Setup tampilan awal
+                HandleAmmoChanged(targetWeapon.currentAmmo, targetWeapon.weaponData.maxAmmo);
+                _isReloadingActive = targetWeapon.IsReloading();
+                UpdateReloadUIVisibility();
+            }
+        }
+
+        private void OnDestroy()
+        {
+            // Pastikan tidak ada memory leak
+            if (targetWeapon != null)
+            {
+                targetWeapon.OnAmmoChanged -= HandleAmmoChanged;
+                targetWeapon.OnReloadStart -= HandleReloadStart;
+                targetWeapon.OnReloadFinished -= HandleReloadFinished;
+            }
+        }
+
         private void Update()
         {
-            if (targetWeapon == null) return;
-
-            UpdateAmmoUI();
-            UpdateReloadUI();
+            // Teks reload hanya di-update tiap frame SAAT sedang reload
+            if (_isReloadingActive && targetWeapon != null)
+            {
+                UpdateReloadTimer();
+            }
         }
 
         public void SetWeaponName(string name)
@@ -33,41 +74,46 @@ namespace Weapons
             }
         }
 
-        private void UpdateAmmoUI()
+        private void HandleAmmoChanged(int currentAmmo, int maxAmmo)
         {
             if (ammoText == null) return;
 
-            if (targetWeapon.weaponData == null || targetWeapon.weaponData.maxAmmo <= 0)
+            if (maxAmmo <= 0)
             {
                 ammoText.text = "Ammo: &infin;"; // Simbol infinity
+                ammoText.color = Color.white;
             }
             else
             {
-                // Menampilkan format: Ammo: 30 / 30
-                ammoText.text = $"Ammo: {targetWeapon.currentAmmo} / {targetWeapon.weaponData.maxAmmo}";
-                
-                // Ubah warna merah jika amunisi habis
-                if (targetWeapon.currentAmmo <= 0)
-                {
-                    ammoText.color = Color.red;
-                }
-                else
-                {
-                    ammoText.color = Color.white;
-                }
+                ammoText.text = $"Ammo: {currentAmmo} / {maxAmmo}";
+                ammoText.color = currentAmmo <= 0 ? Color.red : Color.white;
             }
+
+            // Saat tembak / peluru berubah, pastikan pesan "Press R" update
+            UpdateReloadUIVisibility();
         }
 
-        private void UpdateReloadUI()
+        private void HandleReloadStart()
         {
-            if (reloadText == null) return;
+            _isReloadingActive = true;
+            UpdateReloadUIVisibility();
+        }
 
-            if (targetWeapon.IsReloading())
+        private void HandleReloadFinished()
+        {
+            _isReloadingActive = false;
+            UpdateReloadUIVisibility();
+        }
+
+        private void UpdateReloadUIVisibility()
+        {
+            if (reloadText == null || targetWeapon == null) return;
+
+            if (_isReloadingActive)
             {
                 reloadText.gameObject.SetActive(true);
-                // Menampilkan sisa detik dengan 1 angka di belakang koma (contoh: 1.5s)
-                float remainingTime = targetWeapon.GetRemainingReloadTime();
-                reloadText.text = $"Reloading... {remainingTime:F1}s";
+                reloadText.color = Color.white;
+                UpdateReloadTimer(); // Segera tampilkan angkanya
             }
             else if (targetWeapon.weaponData != null && targetWeapon.weaponData.maxAmmo > 0 && targetWeapon.currentAmmo <= 0)
             {
@@ -77,10 +123,15 @@ namespace Weapons
             }
             else
             {
-                // Sembunyikan tulisan reload jika tidak sedang reload dan masih ada peluru
                 reloadText.gameObject.SetActive(false);
-                reloadText.color = Color.white;
             }
+        }
+
+        private void UpdateReloadTimer()
+        {
+            if (reloadText == null) return;
+            float remainingTime = targetWeapon.GetRemainingReloadTime();
+            reloadText.text = $"Reloading... {remainingTime:F1}s";
         }
     }
 }
