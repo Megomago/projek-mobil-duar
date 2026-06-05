@@ -147,7 +147,7 @@ GameObject:
   - component: {fileID: 4161617705164949585}
   - component: {fileID: 2837580743381057013}
   m_Layer: 5
-  m_Name: 40mm penet panel
+  m_Name: konve
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
