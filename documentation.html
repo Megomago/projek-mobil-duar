@@ -1,0 +1,706 @@
+<!DOCTYPE html>
+<html lang="en" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Mobil Duaaaaaar - Documentation</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+    <style>
+        :root[data-theme="dark"] {
+            --bg-base: #0f111a;
+            --bg-surface: #1a1d27;
+            --bg-surface-hover: #24283b;
+            --text-main: #e0e2eb;
+            --text-muted: #8c92a6;
+            --accent-primary: #7aa2f7;
+            --accent-secondary: #bb9af7;
+            --accent-success: #9ece6a;
+            --accent-warning: #e0af68;
+            --accent-danger: #f7768e;
+            --border-color: rgba(255, 255, 255, 0.1);
+            --code-bg: #141620;
+            --glass-bg: rgba(26, 29, 39, 0.7);
+        }
+
+        :root[data-theme="light"] {
+            --bg-base: #f8f9fa;
+            --bg-surface: #ffffff;
+            --bg-surface-hover: #f1f3f5;
+            --text-main: #212529;
+            --text-muted: #6c757d;
+            --accent-primary: #3366ff;
+            --accent-secondary: #8a2be2;
+            --accent-success: #28a745;
+            --accent-warning: #ffc107;
+            --accent-danger: #dc3545;
+            --border-color: rgba(0, 0, 0, 0.1);
+            --code-bg: #f1f3f5;
+            --glass-bg: rgba(255, 255, 255, 0.8);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            scroll-behavior: smooth;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg-base);
+            color: var(--text-main);
+            line-height: 1.6;
+            display: flex;
+            transition: background-color 0.3s ease, color 0.3s ease;
+            overflow-x: hidden;
+        }
+
+        /* Glassmorphism Header */
+        header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            height: 70px;
+            background: var(--glass-bg);
+            backdrop-filter: blur(12px);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 0 40px;
+            z-index: 100;
+        }
+
+        .logo {
+            font-size: 1.5rem;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .logo-icon {
+            width: 32px;
+            height: 32px;
+            background: linear-gradient(135deg, var(--accent-primary), var(--accent-secondary));
+            border-radius: 8px;
+            display: inline-block;
+        }
+
+        .theme-toggle {
+            background: none;
+            border: 1px solid var(--border-color);
+            color: var(--text-main);
+            padding: 8px 16px;
+            border-radius: 20px;
+            cursor: pointer;
+            font-family: 'Inter', sans-serif;
+            font-size: 0.9rem;
+            font-weight: 500;
+            transition: all 0.2s ease;
+        }
+
+        .theme-toggle:hover {
+            background: var(--bg-surface-hover);
+            transform: translateY(-1px);
+        }
+
+        /* Layout Container */
+        .container {
+            display: flex;
+            width: 100%;
+            max-width: 1600px;
+            margin: 70px auto 0;
+            position: relative;
+        }
+
+        /* Sidebar Navigation */
+        .sidebar {
+            width: 280px;
+            height: calc(100vh - 70px);
+            position: sticky;
+            top: 70px;
+            padding: 40px 20px;
+            border-right: 1px solid var(--border-color);
+            overflow-y: auto;
+            background-color: var(--bg-base);
+        }
+
+        .sidebar::-webkit-scrollbar {
+            width: 6px;
+        }
+
+        .sidebar::-webkit-scrollbar-thumb {
+            background-color: var(--bg-surface-hover);
+            border-radius: 10px;
+        }
+
+        .nav-group {
+            margin-bottom: 30px;
+        }
+
+        .nav-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-muted);
+            margin-bottom: 15px;
+            font-weight: 600;
+            padding-left: 10px;
+        }
+
+        .nav-link {
+            display: block;
+            padding: 10px;
+            color: var(--text-main);
+            text-decoration: none;
+            border-radius: 8px;
+            margin-bottom: 5px;
+            font-size: 0.95rem;
+            transition: all 0.2s ease;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            background-color: var(--bg-surface);
+            color: var(--accent-primary);
+            padding-left: 15px;
+        }
+
+        .nav-link.active {
+            background-color: rgba(122, 162, 247, 0.1);
+            color: var(--accent-primary);
+            font-weight: 500;
+        }
+
+        .nav-link.active::before {
+            content: '';
+            position: absolute;
+            left: 0;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 3px;
+            height: 60%;
+            background-color: var(--accent-primary);
+            border-radius: 0 4px 4px 0;
+        }
+
+        /* Main Content */
+        .main-content {
+            flex: 1;
+            padding: 50px 80px;
+            max-width: 1000px;
+        }
+
+        .section {
+            margin-bottom: 80px;
+            opacity: 0;
+            transform: translateY(20px);
+            animation: fadeInUp 0.6s forwards;
+        }
+
+        @keyframes fadeInUp {
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        h1 {
+            font-size: 3rem;
+            margin-bottom: 20px;
+            letter-spacing: -1px;
+            background: linear-gradient(to right, var(--text-main), var(--text-muted));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        h2 {
+            font-size: 2rem;
+            margin: 40px 0 20px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        h3 {
+            font-size: 1.5rem;
+            margin: 30px 0 15px;
+            color: var(--accent-secondary);
+        }
+
+        p {
+            margin-bottom: 20px;
+            font-size: 1.05rem;
+            color: var(--text-muted);
+        }
+
+        a {
+            color: var(--accent-primary);
+            text-decoration: none;
+            transition: color 0.2s ease;
+        }
+
+        a:hover {
+            color: var(--accent-secondary);
+            text-decoration: underline;
+        }
+
+        /* Code Blocks */
+        pre {
+            background-color: var(--code-bg);
+            padding: 20px;
+            border-radius: 12px;
+            overflow-x: auto;
+            margin-bottom: 25px;
+            border: 1px solid var(--border-color);
+            position: relative;
+        }
+
+        code {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.9rem;
+            color: #a9b1d6;
+        }
+
+        .inline-code {
+            background-color: var(--code-bg);
+            padding: 3px 8px;
+            border-radius: 6px;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 0.85rem;
+            color: var(--accent-secondary);
+            border: 1px solid var(--border-color);
+        }
+
+        .copy-btn {
+            position: absolute;
+            top: 10px;
+            right: 10px;
+            background: var(--bg-surface);
+            border: 1px solid var(--border-color);
+            color: var(--text-muted);
+            padding: 5px 10px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.8rem;
+            transition: all 0.2s ease;
+        }
+
+        .copy-btn:hover {
+            background: var(--accent-primary);
+            color: #fff;
+            border-color: var(--accent-primary);
+        }
+
+        /* Info Alerts / Callouts */
+        .alert {
+            padding: 20px;
+            border-radius: 12px;
+            margin-bottom: 25px;
+            display: flex;
+            gap: 15px;
+            align-items: flex-start;
+            background-color: var(--bg-surface);
+            border-left: 4px solid;
+        }
+
+        .alert-info {
+            border-left-color: var(--accent-primary);
+        }
+        
+        .alert-warning {
+            border-left-color: var(--accent-warning);
+        }
+
+        .alert-success {
+            border-left-color: var(--accent-success);
+        }
+
+        .alert-icon {
+            font-size: 1.5rem;
+        }
+
+        .alert-content p {
+            margin: 0;
+            color: var(--text-main);
+            font-size: 0.95rem;
+        }
+
+        /* Tables */
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-bottom: 30px;
+        }
+
+        th, td {
+            padding: 15px;
+            text-align: left;
+            border-bottom: 1px solid var(--border-color);
+        }
+
+        th {
+            background-color: var(--bg-surface);
+            font-weight: 600;
+            color: var(--text-main);
+        }
+
+        tr:hover {
+            background-color: rgba(255, 255, 255, 0.02);
+        }
+
+        /* Right Sidebar (Table of Contents) */
+        .toc-sidebar {
+            width: 250px;
+            position: sticky;
+            top: 70px;
+            height: calc(100vh - 70px);
+            padding: 40px 20px;
+            overflow-y: auto;
+        }
+
+        .toc-title {
+            font-size: 0.85rem;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            color: var(--text-main);
+            margin-bottom: 15px;
+            font-weight: 600;
+        }
+
+        .toc-list {
+            list-style: none;
+        }
+
+        .toc-list li {
+            margin-bottom: 10px;
+        }
+
+        .toc-link {
+            color: var(--text-muted);
+            text-decoration: none;
+            font-size: 0.85rem;
+            transition: color 0.2s ease;
+            display: block;
+        }
+
+        .toc-link:hover, .toc-link.active {
+            color: var(--accent-primary);
+        }
+
+        /* Badges */
+        .badge {
+            display: inline-block;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-size: 0.75rem;
+            font-weight: 600;
+            margin-left: 10px;
+            vertical-align: middle;
+        }
+
+        .badge-primary { background-color: rgba(122, 162, 247, 0.2); color: var(--accent-primary); }
+        .badge-new { background-color: rgba(158, 206, 106, 0.2); color: var(--accent-success); }
+        .badge-deprecated { background-color: rgba(247, 118, 142, 0.2); color: var(--accent-danger); }
+
+        /* Responsive */
+        @media (max-width: 1200px) {
+            .toc-sidebar { display: none; }
+        }
+
+        @media (max-width: 900px) {
+            .sidebar { display: none; } /* Add hamburger menu for real prod */
+            .main-content { padding: 40px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <div class="logo">
+            <span class="logo-icon"></span>
+            Mobil Duaaaaaar
+        </div>
+        <div>
+            <button class="theme-toggle" id="themeToggle">Toggle Light/Dark</button>
+        </div>
+    </header>
+
+    <div class="container">
+        <!-- Left Navigation Sidebar -->
+        <nav class="sidebar">
+            <div class="nav-group">
+                <div class="nav-title">Overview</div>
+                <a href="#introduction" class="nav-link active">Introduction</a>
+                <a href="#architecture" class="nav-link">Architecture</a>
+                <a href="#quickstart" class="nav-link">Quick Start</a>
+            </div>
+            
+            <div class="nav-group">
+                <div class="nav-title">Core Systems</div>
+                <a href="#vehicle-physics" class="nav-link">Vehicle Physics <span class="badge badge-primary">Core</span></a>
+                <a href="#damage-system" class="nav-link">Damage System <span class="badge badge-new">v2.0</span></a>
+                <a href="#particle-effects" class="nav-link">Particle Effects</a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-title">API Reference</div>
+                <a href="#car-controller" class="nav-link">CarController API</a>
+                <a href="#explosion-manager" class="nav-link">ExplosionManager API</a>
+                <a href="#audio-mixer" class="nav-link">AudioMixer API</a>
+            </div>
+
+            <div class="nav-group">
+                <div class="nav-title">Advanced</div>
+                <a href="#custom-vehicles" class="nav-link">Custom Vehicles</a>
+                <a href="#optimization" class="nav-link">Optimization Guide</a>
+                <a href="#legacy-api" class="nav-link">Legacy API <span class="badge badge-deprecated">Dep</span></a>
+            </div>
+        </nav>
+
+        <!-- Main Documentation Content -->
+        <main class="main-content">
+            
+            <section id="introduction" class="section">
+                <h1>Introduction to Mobil Duaaaaaar</h1>
+                <p>Welcome to the official documentation for <strong>Mobil Duaaaaaar</strong>. This framework provides a robust, high-performance foundation for vehicular combat, physics-based destruction, and explosive visual effects within Unity.</p>
+                
+                <div class="alert alert-info">
+                    <span class="alert-icon">💡</span>
+                    <div class="alert-content">
+                        <p><strong>Note:</strong> This documentation is structured for developers. If you are an artist looking for asset integration guidelines, please refer to the <a href="#custom-vehicles">Custom Vehicles</a> section.</p>
+                    </div>
+                </div>
+                
+                <p>The system is built on a modular architecture, ensuring that you can decouple the driving mechanics from the damage simulation if needed. We utilize Unity's Data-Oriented Technology Stack (DOTS) in specific computationally heavy modules for maximum frame rates during large-scale explosions.</p>
+            </section>
+
+            <section id="architecture" class="section">
+                <h2>System Architecture</h2>
+                <p>Understanding the core loop of Mobil Duaaaaaar is essential before modifying the codebase. The architecture is primarily divided into three interconnected layers:</p>
+                
+                <ol style="margin-left: 20px; color: var(--text-muted); margin-bottom: 20px; line-height: 1.8;">
+                    <li><strong>Input & Physics Layer:</strong> Handles raw wheel colliders, torque application, and suspension telemetry.</li>
+                    <li><strong>Damage Simulation Layer:</strong> Listens to collision impulses and calculates mesh deformation and part detachment.</li>
+                    <li><strong>VFX & Audio Layer:</strong> Triggers particle systems and spatial audio based on the intensity of the damage layer events.</li>
+                </ol>
+
+                <div class="alert alert-warning">
+                    <span class="alert-icon">⚠️</span>
+                    <div class="alert-content">
+                        <p><strong>Warning:</strong> Modifying the FixedUpdate cycle of the Physics Layer directly without using our abstraction classes may result in unpredictable rigidbody jitter during high-speed collisions.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="quickstart" class="section">
+                <h2>Quick Start</h2>
+                <p>To get started quickly, you can initialize a basic destructible vehicle using our pre-built setup script.</p>
+
+                <h3>Installation via Package Manager</h3>
+                <p>Add the following to your <span class="inline-code">manifest.json</span>:</p>
+                <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>"dependencies": {
+  "com.megomago.mobil-duar": "https://github.com/megomago/mobil-duar.git#v2.1.0"
+}</code></pre>
+
+                <h3>Basic Initialization</h3>
+                <p>Attach the <span class="inline-code">DuarController</span> to your root vehicle GameObject:</p>
+                <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>using Megomago.MobilDuar.Core;
+
+public class GameStarter : MonoBehaviour 
+{
+    void Start() 
+    {
+        // Initialize the vehicle with default explosive parameters
+        var myCar = VehicleBuilder.Create()
+            .WithEnginePower(500f)
+            .WithExplosiveYield(ExplosionYield.Massive)
+            .Build();
+            
+        myCar.StartEngine();
+    }
+}</code></pre>
+            </section>
+
+            <section id="damage-system" class="section">
+                <h2>Damage System <span class="badge badge-new">v2.0</span></h2>
+                <p>The newly overhauled Damage System v2.0 introduces vertex-level mesh deformation and procedural part detachment. Instead of relying on pre-fractured meshes, the system dynamically recalculates normals and UVs upon impact.</p>
+
+                <h3>Configuration Parameters</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Parameter</th>
+                            <th>Type</th>
+                            <th>Description</th>
+                            <th>Default</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><span class="inline-code">DeformationThreshold</span></td>
+                            <td><span class="inline-code">float</span></td>
+                            <td>The minimum collision impulse required to trigger mesh bending.</td>
+                            <td><span class="inline-code">150.0f</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="inline-code">DetachmentProbability</span></td>
+                            <td><span class="inline-code">float</span></td>
+                            <td>Chance (0-1) of a loose part falling off upon secondary impact.</td>
+                            <td><span class="inline-code">0.45f</span></td>
+                        </tr>
+                        <tr>
+                            <td><span class="inline-code">CalculateInternalDamage</span></td>
+                            <td><span class="inline-code">bool</span></td>
+                            <td>If true, transfers kinetic energy to engine health.</td>
+                            <td><span class="inline-code">true</span></td>
+                        </tr>
+                    </tbody>
+                </table>
+
+                <div class="alert alert-success">
+                    <span class="alert-icon">🚀</span>
+                    <div class="alert-content">
+                        <p><strong>Performance Tip:</strong> If targeting mobile devices, disable <span class="inline-code">CalculateInternalDamage</span> and increase the <span class="inline-code">DeformationThreshold</span> to save CPU cycles.</p>
+                    </div>
+                </div>
+            </section>
+
+            <section id="car-controller" class="section">
+                <h2>CarController API</h2>
+                <p>The <span class="inline-code">CarController</span> class is the main entry point for manipulating vehicle behavior at runtime. It interfaces directly with the Unity physics engine.</p>
+
+                <h3>Methods</h3>
+                <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>public void ApplyNitrous(float duration, float multiplier)</code></pre>
+                <p>Injects a temporary boost of torque to the rear wheels.</p>
+                <ul style="margin-left: 20px; color: var(--text-muted); margin-bottom: 20px;">
+                    <li><strong>duration:</strong> Time in seconds the boost lasts.</li>
+                    <li><strong>multiplier:</strong> Torque multiplier (clamped between 1.5x and 4.0x).</li>
+                </ul>
+
+                <pre><button class="copy-btn" onclick="copyCode(this)">Copy</button><code>public void TriggerCatastrophicFailure()</code></pre>
+                <p>Forces the vehicle into a destroyed state, bypassing all health checks. Triggers the primary explosion sequence and detaches all marked visual nodes.</p>
+            </section>
+            
+            <section id="optimization" class="section">
+                <h2>Optimization Guide</h2>
+                <p>When spawning multiple "Mobil Duaaaaaar" instances in a single scene, consider the following best practices:</p>
+                
+                <ol style="margin-left: 20px; color: var(--text-muted); margin-bottom: 20px;">
+                    <li><strong>Object Pooling:</strong> Always pool your explosion particle systems and detached car parts. Instantiating complex prefabs during a collision frame will cause noticeable stutter.</li>
+                    <li><strong>Mesh Colliders:</strong> Avoid using MeshColliders for the vehicle body. Use compound primitive colliders (Box, Sphere, Capsule) to approximate the shape.</li>
+                    <li><strong>LODs (Level of Detail):</strong> Ensure your car models have at least 3 LOD levels. Damage deformation should only be calculated for LOD 0 and LOD 1.</li>
+                </ol>
+            </section>
+
+            <footer style="margin-top: 100px; padding-top: 20px; border-top: 1px solid var(--border-color); color: var(--text-muted); font-size: 0.9rem; display: flex; justify-content: space-between;">
+                <span>© 2026 Megomago Studios. All rights reserved.</span>
+                <span>Version 2.1.0</span>
+            </footer>
+
+        </main>
+
+        <!-- Right TOC Sidebar -->
+        <aside class="toc-sidebar">
+            <div class="toc-title">On this page</div>
+            <ul class="toc-list">
+                <li><a href="#introduction" class="toc-link active">Introduction</a></li>
+                <li><a href="#architecture" class="toc-link">System Architecture</a></li>
+                <li><a href="#quickstart" class="toc-link">Quick Start</a>
+                    <ul style="margin-left: 15px; margin-top: 5px; list-style: none;">
+                        <li><a href="#quickstart" class="toc-link" style="font-size: 0.8rem;">Installation</a></li>
+                        <li><a href="#quickstart" class="toc-link" style="font-size: 0.8rem;">Basic Init</a></li>
+                    </ul>
+                </li>
+                <li><a href="#damage-system" class="toc-link">Damage System</a></li>
+                <li><a href="#car-controller" class="toc-link">CarController API</a></li>
+                <li><a href="#optimization" class="toc-link">Optimization Guide</a></li>
+            </ul>
+        </aside>
+    </div>
+
+    <script>
+        // Copy to clipboard functionality
+        function copyCode(button) {
+            const codeBlock = button.nextElementSibling;
+            const textToCopy = codeBlock.innerText;
+            
+            navigator.clipboard.writeText(textToCopy).then(() => {
+                const originalText = button.innerText;
+                button.innerText = 'Copied!';
+                button.style.backgroundColor = 'var(--accent-success)';
+                button.style.color = '#1a1a1a';
+                
+                setTimeout(() => {
+                    button.innerText = originalText;
+                    button.style.backgroundColor = '';
+                    button.style.color = '';
+                }, 2000);
+            });
+        }
+
+        // Theme Toggle functionality
+        const themeToggle = document.getElementById('themeToggle');
+        const htmlElement = document.documentElement;
+        
+        // Check for saved theme preference or system preference
+        const savedTheme = localStorage.getItem('theme');
+        if (savedTheme) {
+            htmlElement.setAttribute('data-theme', savedTheme);
+        } else if (window.matchMedia && window.matchMedia('(prefers-color-scheme: light)').matches) {
+            htmlElement.setAttribute('data-theme', 'light');
+        }
+
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = htmlElement.getAttribute('data-theme');
+            const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
+            
+            htmlElement.setAttribute('data-theme', newTheme);
+            localStorage.setItem('theme', newTheme);
+        });
+
+        // Intersection Observer for highlighting active nav links
+        const sections = document.querySelectorAll('.section');
+        const navLinks = document.querySelectorAll('.nav-link');
+        const tocLinks = document.querySelectorAll('.toc-link');
+
+        const observerOptions = {
+            root: null,
+            rootMargin: '-20% 0px -60% 0px',
+            threshold: 0
+        };
+
+        const observer = new IntersectionObserver((entries) => {
+            entries.forEach(entry => {
+                if (entry.isIntersecting) {
+                    const id = entry.target.getAttribute('id');
+                    
+                    // Update left sidebar
+                    navLinks.forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === `#${id}`) {
+                            link.classList.add('active');
+                        }
+                    });
+
+                    // Update right TOC
+                    tocLinks.forEach(link => {
+                        link.classList.remove('active');
+                        if (link.getAttribute('href') === `#${id}`) {
+                            link.classList.add('active');
+                        }
+                    });
+                }
+            });
+        }, observerOptions);
+
+        sections.forEach(section => {
+            observer.observe(section);
+        });
+    </script>
+</body>
+</html>
