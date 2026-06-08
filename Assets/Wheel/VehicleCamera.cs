@@ -29,22 +29,21 @@ public class VehicleCamera : MonoBehaviour
 
     private void Update()
     {
-        currentX += Input.GetAxis("Mouse X") * mouseSensitivity;
-        currentY -= Input.GetAxis("Mouse Y") * mouseSensitivity;
-        currentY = Mathf.Clamp(currentY, -35f, 60f);
-
-        // ESC unlock cursor
-        if (Input.GetKeyDown(KeyCode.Escape))
+        // Tahan ALT untuk memunculkan kursor
+        if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))
         {
             Cursor.lockState = CursorLockMode.None;
             Cursor.visible = true;
         }
-
-        // Klik kiri untuk lock cursor kembali
-        if (Input.GetMouseButtonDown(0) && Cursor.lockState != CursorLockMode.Locked)
+        else
         {
             Cursor.lockState = CursorLockMode.Locked;
             Cursor.visible = false;
+
+            // Kamera hanya bisa digerakkan saat ALT tidak ditahan (kursor terkunci)
+            currentX += Input.GetAxis("Mouse X") * mouseSensitivity;
+            currentY -= Input.GetAxis("Mouse Y") * mouseSensitivity;
+            currentY = Mathf.Clamp(currentY, -35f, 60f);
         }
     }
 
