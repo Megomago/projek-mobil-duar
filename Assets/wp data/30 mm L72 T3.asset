@@ -10,41 +10,38 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: fe49559cf43e52a4d8be128c37864496, type: 3}
-  m_Name: 40mm penet wpdata
+  m_Name: 30 mm L72 T3
   m_EditorClassIdentifier: 
-  weaponName: 40mm L/70 HVC
+  weaponName: Unnamed Weapon
   weapon3DPrefab: {fileID: 0}
-  hudPrefab: {fileID: 6880005277670001014, guid: 173b46495b470c74f97a41a24a558c6b,
-    type: 3}
+  hudPrefab: {fileID: 0}
   muzzleVelocity: 800
-  fireRateRPM: 90
-  maxAmmo: 6
-  autoReload: 1
-  reloadTime: 4
-  projectilePrefab: {fileID: 721100698013322737, guid: 19ec54492bfae2442b367740493a6953,
-    type: 3}
-  pelletCount: 4
+  fireRateRPM: 600
+  maxAmmo: 30
+  autoReload: 0
+  reloadTime: 2
+  projectilePrefab: {fileID: 0}
+  pelletCount: 1
   baseDispersion: 0.5
   enableOverheat: 0
   heatPerShot: 5
   coolingRate: 15
   maxHeat: 100
   heatDispersionMultiplier: 4
-  recoilForce: 1200
-  cameraShakeMultiplier: 0
+  recoilForce: 500
+  cameraShakeMultiplier: 0.0005
   cameraShakeDuration: 0.2
-  shootSound: {fileID: 8300000, guid: d74d2ed14c3aedc4d8d196c6f4747eed, type: 3}
+  shootSound: {fileID: 0}
   reloadSound: {fileID: 0}
   emptyClickSound: {fileID: 0}
-  casingPrefab: {fileID: 8198052684427648971, guid: 44dadcba533f7754da5f7675966b23ce,
-    type: 3}
+  casingPrefab: {fileID: 0}
   casingEjectDelay: 0
   casingEjectForce: {x: 4, y: 1.5, z: -0.75}
   casingEjectRandomness: {x: 1, y: 0.5, z: 0.25}
-  muzzleFlashPrefab: {fileID: 100006, guid: 7e9c50938e32351438a7df9ccad2f2a5, type: 3}
-  muzzleFlashDuration: 0.11
-  muzzleFlashScaleMin: 2
-  muzzleFlashScaleMax: 3
+  muzzleFlashPrefab: {fileID: 0}
+  muzzleFlashDuration: 0.06
+  muzzleFlashScaleMin: 0.8
+  muzzleFlashScaleMax: 1.3
   muzzleFlashRotOffset: {x: 0, y: 0, z: 0}
   muzzleFlashRotX: 0
   muzzleFlashRotY: 0

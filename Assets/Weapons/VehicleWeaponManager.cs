@@ -18,6 +18,10 @@ namespace Weapons
 
     public class VehicleWeaponManager : MonoBehaviour
     {
+        [Header("=== DATABASE (LOADOUT SYSTEM) ===")]
+        [Tooltip("Masukkan WeaponDatabase ke sini agar sistem bisa memuat senjata dari PlayerPrefs pilihan Lobby.")]
+        public WeaponDatabase weaponDatabase;
+
         [Header("=== WEAPON SLOTS (PENGATURAN SENJATA MOBIL) ===")]
         [Tooltip("Tambah slot sesuai jumlah titik senjata di mobil ini.")]
         public WeaponSlot[] weaponSlots;
@@ -30,9 +34,63 @@ namespace Weapons
         [Tooltip("Aktifkan jika kendaraan ini dikendalikan oleh Player.")]
         public bool usePlayerInput = true;
 
+        // Variabel untuk menyimpan nama kendaraan (untuk PlayerPrefs unik per mobil)
+        [HideInInspector] public string currentVehicleName = "";
+
         private void Start()
         {
+            // Saat di Battlefield, jika nama kendaraan kosong, kita ambil dari nama GameObject-nya
+            if (string.IsNullOrEmpty(currentVehicleName))
+            {
+                currentVehicleName = gameObject.name.Replace("(Clone)", "").Trim();
+            }
+
+            RefreshWeapons();
+        }
+
+        public void RefreshWeapons()
+        {
+            // Hapus senjata yang sudah ada (untuk preview Lobby saat ganti senjata)
+            foreach (var slot in weaponSlots)
+            {
+                if (slot.spawnedWeapon != null) Destroy(slot.spawnedWeapon.gameObject);
+                if (slot.spawnedHUD != null) Destroy(slot.spawnedHUD);
+            }
+
+            LoadSavedWeapons();
             InitializeAllSlots();
+        }
+
+        private void LoadSavedWeapons()
+        {
+            // Jika database tidak dipasang, gunakan pengaturan awal bawaan Inspector
+            if (weaponDatabase == null) return; 
+
+            for (int i = 0; i < weaponSlots.Length; i++)
+            {
+                string prefKey = $"WeaponSlot_{currentVehicleName}_{i}";
+
+                // Cek apakah slot ini pernah disimpan PlayerPrefs-nya
+                if (PlayerPrefs.HasKey(prefKey))
+                {
+                    string savedWeaponName = PlayerPrefs.GetString(prefKey, "");
+                    
+                    if (string.IsNullOrEmpty(savedWeaponName))
+                    {
+                        // Player sengaja memilih opsi "Kosong"
+                        weaponSlots[i].weaponData = null;
+                    }
+                    else
+                    {
+                        // Cari WeaponData di database berdasarkan nama yang tersimpan
+                        WeaponData data = weaponDatabase.GetWeaponByName(savedWeaponName);
+                        if (data != null)
+                        {
+                            weaponSlots[i].weaponData = data;
+                        }
+                    }
+                }
+            }
         }
 
         private void Update()

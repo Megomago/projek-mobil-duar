@@ -130,15 +130,6 @@ namespace Weapons
 
         private void Awake()
         {
-            if (weaponData == null)
-            {
-                Debug.LogError($"[ModularWeapon] WeaponData belum di-assign pada '{gameObject.name}'! Senjata tidak akan berfungsi.", this);
-                enabled = false;
-                return;
-            }
-
-            currentAmmo = weaponData.maxAmmo;
-
             // Simpan posisi awal semua recoil part
             if (recoilParts != null)
             {
@@ -168,6 +159,19 @@ namespace Weapons
 
             // Mencari Rigidbody kendaraan induk secara otomatis
             _vehicleRb = GetComponentInParent<Rigidbody>();
+        }
+
+        private void Start()
+        {
+            if (weaponData == null)
+            {
+                Debug.LogError($"[ModularWeapon] WeaponData belum di-assign pada '{gameObject.name}'! Senjata tidak akan berfungsi.", this);
+                enabled = false;
+                return;
+            }
+
+            // Inisialisasi ammo awal setelah WeaponData pasti di-assign oleh script manager
+            currentAmmo = weaponData.maxAmmo;
         }
 
         private void OnDisable()
