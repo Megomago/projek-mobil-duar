@@ -12,15 +12,18 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe49559cf43e52a4d8be128c37864496, type: 3}
   m_Name: 30 mm L72 T3
   m_EditorClassIdentifier: 
-  weaponName: Unnamed Weapon
-  weapon3DPrefab: {fileID: 0}
-  hudPrefab: {fileID: 0}
+  weaponName: 30 mm L/72 T3
+  weapon3DPrefab: {fileID: 4321475538121803593, guid: e0140dcbd1840884a823eb8af8a994a4,
+    type: 3}
+  hudPrefab: {fileID: 6880005277670001014, guid: 173b46495b470c74f97a41a24a558c6b,
+    type: 3}
   muzzleVelocity: 800
   fireRateRPM: 600
   maxAmmo: 30
   autoReload: 0
   reloadTime: 2
-  projectilePrefab: {fileID: 0}
+  projectilePrefab: {fileID: 3544021237832653162, guid: 19ec54492bfae2442b367740493a6953,
+    type: 3}
   pelletCount: 1
   baseDispersion: 0.5
   enableOverheat: 0
@@ -31,17 +34,18 @@ MonoBehaviour:
   recoilForce: 500
   cameraShakeMultiplier: 0.0005
   cameraShakeDuration: 0.2
-  shootSound: {fileID: 0}
+  shootSound: {fileID: 8300000, guid: d74d2ed14c3aedc4d8d196c6f4747eed, type: 3}
   reloadSound: {fileID: 0}
   emptyClickSound: {fileID: 0}
-  casingPrefab: {fileID: 0}
+  casingPrefab: {fileID: 437479386250466393, guid: c247300e6dc2e5e41821386c8b892328,
+    type: 3}
   casingEjectDelay: 0
-  casingEjectForce: {x: 4, y: 1.5, z: -0.75}
-  casingEjectRandomness: {x: 1, y: 0.5, z: 0.25}
-  muzzleFlashPrefab: {fileID: 0}
-  muzzleFlashDuration: 0.06
-  muzzleFlashScaleMin: 0.8
-  muzzleFlashScaleMax: 1.3
+  casingEjectForce: {x: 0, y: 0, z: 0}
+  casingEjectRandomness: {x: 0, y: 0, z: 0}
+  muzzleFlashPrefab: {fileID: 100006, guid: 2f7910242354c78419d50ac9e64b496f, type: 3}
+  muzzleFlashDuration: 0.18
+  muzzleFlashScaleMin: 0
+  muzzleFlashScaleMax: 0
   muzzleFlashRotOffset: {x: 0, y: 0, z: 0}
   muzzleFlashRotX: 0
   muzzleFlashRotY: 0
