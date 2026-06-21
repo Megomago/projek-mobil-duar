@@ -17,8 +17,18 @@ namespace Weapons
         [Header("=== UI SETTINGS ===")]
         [Tooltip("Teks untuk menampilkan nama mobil yang sedang dipilih")]
         public TextMeshProUGUI vehicleNameText;
-        [Tooltip("Wadah Dropdown. Dropdown yang tidak terpakai akan disembunyikan.")]
-        public List<TMP_Dropdown> slotDropdowns;
+
+        [Header("=== MODE PANELS ===")]
+        public GameObject mainUIPanel;
+        public GameObject inventoryUIPanel;
+
+        [Header("=== INVENTORY UI ===")]
+        public List<WeaponSlotUI> slotButtons;
+        public GameObject weaponGridPanel;
+        public Transform gridContainer;
+        public GameObject gridItemPrefab;
+
+        private int _activeSlotIndex = -1;
 
         private int _currentVehicleIndex = 0;
         private GameObject _currentPreviewVehicle;
@@ -103,80 +113,110 @@ namespace Weapons
                 }
             }
 
-            // --- 2. UPDATE UI DROPDOWN ---
+            // --- 2. UPDATE UI SLOT BUTTONS ---
             int slotCount = currentData.weaponSlotCount;
             
-            for (int i = 0; i < slotDropdowns.Count; i++)
+            for (int i = 0; i < slotButtons.Count; i++)
             {
-                TMP_Dropdown dropdown = slotDropdowns[i];
-                if (dropdown == null) continue;
-
-                // Hilangkan listener lama agar tidak trigger saat kita set value manual
-                dropdown.onValueChanged.RemoveAllListeners();
+                WeaponSlotUI slotBtn = slotButtons[i];
+                if (slotBtn == null) continue;
 
                 if (i < slotCount)
                 {
-                    dropdown.gameObject.SetActive(true);
-                    SetupDropdown(dropdown, i, currentData.vehicleName);
+                    slotBtn.gameObject.SetActive(true);
+                    slotBtn.Setup(i, this);
                     
-                    int slotIndex = i; // local copy for delegate
-                    string vehName = currentData.vehicleName;
-                    dropdown.onValueChanged.AddListener((int val) => OnDropdownChanged(vehName, slotIndex, val));
+                    // Baca senjata yang terpasang dari PlayerPrefs
+                    string prefKey = $"WeaponSlot_{currentData.vehicleName}_{i}";
+                    string savedWeaponName = PlayerPrefs.GetString(prefKey, "");
+                    WeaponData savedWeapon = weaponDatabase.GetWeaponByName(savedWeaponName);
+                    
+                    slotBtn.UpdateVisual(savedWeapon);
                 }
                 else
                 {
-                    dropdown.gameObject.SetActive(false);
+                    slotBtn.gameObject.SetActive(false);
                 }
+            }
+            
+            // Pastikan Mode Utama yang aktif saat ganti mobil
+            CloseInventoryMode();
+        }
+
+        // === UI MODE TOGGLE ===
+        public void OpenInventoryMode()
+        {
+            if (mainUIPanel != null) mainUIPanel.SetActive(false);
+            if (inventoryUIPanel != null) inventoryUIPanel.SetActive(true);
+            if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
+        }
+
+        public void CloseInventoryMode()
+        {
+            if (mainUIPanel != null) mainUIPanel.SetActive(true);
+            if (inventoryUIPanel != null) inventoryUIPanel.SetActive(false);
+            if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
+        }
+
+        // === GRID SYSTEM ===
+        public void OpenWeaponGrid(int slotIndex)
+        {
+            _activeSlotIndex = slotIndex;
+            
+            if (weaponGridPanel != null) weaponGridPanel.SetActive(true);
+
+            // Bersihkan isi grid lama
+            foreach (Transform child in gridContainer)
+            {
+                Destroy(child.gameObject);
+            }
+
+            // Buat tombol "Kosong" (Lepas Senjata)
+            GameObject emptyItem = Instantiate(gridItemPrefab, gridContainer);
+            emptyItem.GetComponent<WeaponGridItemUI>().Initialize(null, this);
+
+            // Buat tombol untuk tiap senjata di database
+            foreach (WeaponData wData in weaponDatabase.allWeapons)
+            {
+                if (wData == null) continue;
+
+                GameObject item = Instantiate(gridItemPrefab, gridContainer);
+                item.GetComponent<WeaponGridItemUI>().Initialize(wData, this);
             }
         }
 
-        private void SetupDropdown(TMP_Dropdown dropdown, int slotIndex, string vehicleName)
+        public void SelectWeaponFromGrid(WeaponData weapon)
         {
-            dropdown.ClearOptions();
-            List<string> options = new List<string> { "Kosong (Tidak Dipasang)" };
+            if (_activeSlotIndex < 0) return;
 
-            int savedIndex = 0;
-            string prefKey = $"WeaponSlot_{vehicleName}_{slotIndex}";
-            string savedWeaponName = PlayerPrefs.GetString(prefKey, "");
+            VehicleData currentData = vehicleDatabase.allVehicles[_currentVehicleIndex];
+            string prefKey = $"WeaponSlot_{currentData.vehicleName}_{_activeSlotIndex}";
 
-            for (int j = 0; j < weaponDatabase.allWeapons.Count; j++)
+            if (weapon == null)
             {
-                WeaponData wData = weaponDatabase.allWeapons[j];
-                if (wData != null)
-                {
-                    options.Add(wData.weaponName);
-                    if (wData.weaponName == savedWeaponName)
-                    {
-                        savedIndex = j + 1; // +1 karena index 0 = Kosong
-                    }
-                }
-            }
-
-            dropdown.AddOptions(options);
-            dropdown.value = savedIndex;
-        }
-
-        private void OnDropdownChanged(string vehicleName, int slotIndex, int dropdownIndex)
-        {
-            string prefKey = $"WeaponSlot_{vehicleName}_{slotIndex}";
-
-            if (dropdownIndex == 0)
-            {
-                PlayerPrefs.SetString(prefKey, "");
+                PlayerPrefs.SetString(prefKey, ""); // Kosong
             }
             else
             {
-                WeaponData selectedWeapon = weaponDatabase.allWeapons[dropdownIndex - 1];
-                PlayerPrefs.SetString(prefKey, selectedWeapon.weaponName);
+                PlayerPrefs.SetString(prefKey, weapon.weaponName);
             }
             
             PlayerPrefs.Save();
 
-            // --- REFRESH VISUAL SENJATA DI MOBIL PREVIEW ---
+            // Refresh UI Tombol Slot
+            if (_activeSlotIndex < slotButtons.Count)
+            {
+                slotButtons[_activeSlotIndex].UpdateVisual(weapon);
+            }
+
+            // Refresh Visual Senjata di Mobil 3D
             if (_currentPreviewWeaponManager != null)
             {
                 _currentPreviewWeaponManager.RefreshWeapons();
             }
+
+            // Tutup Panel Grid setelah memilih
+            if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
         }
     }
 }

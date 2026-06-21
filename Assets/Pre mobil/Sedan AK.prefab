@@ -1270,7 +1270,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 10a54067bf8a68a40a40a9258cf8ca47, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  weaponDatabase: {fileID: 11400000, guid: ab1cd39410386f3448684e2f6d7fdd0a, type: 2}
+  weaponDatabase: {fileID: 11400000, guid: f2ba357f9ca7a3340956770d4a4510cf, type: 2}
   weaponSlots:
   - weaponData: {fileID: 0}
     pivot: {fileID: 9181919029650625649}

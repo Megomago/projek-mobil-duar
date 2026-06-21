@@ -14,6 +14,8 @@ namespace Weapons
         [Header("=== IDENTITY & HUD ===")]
         [Tooltip("Nama senjata yang akan ditampilkan di HUD (misal: 40mm Penet)")]
         public string weaponName = "Unnamed Weapon";
+        [Tooltip("Ikon senjata untuk ditampilkan di Inventory Grid")]
+        public Sprite weaponIcon;
         [Tooltip("Prefab 3D senjata yang memiliki script ModularWeapon. Akan di-spawn di pivot mobil.")]
         public GameObject weapon3DPrefab;
         [Tooltip("Prefab HUD khusus senjata ini (Panel berisi WeaponUIManager + Teks). BUKAN Canvas, cukup Panel/Empty.")]
