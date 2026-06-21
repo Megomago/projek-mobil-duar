@@ -245,6 +245,8 @@ public class VehicleController : MonoBehaviour
             HandleAutoTransmission();
 
         _shiftCooldown -= Time.deltaTime;
+        
+        UpdateWheelMeshes();
     }
 
     private void FixedUpdate()
@@ -255,7 +257,6 @@ public class VehicleController : MonoBehaviour
         ApplySteering();
         ApplyAntiRollBar();
         ApplyDownforce();
-        UpdateWheelMeshes();
     }
 
     #endregion

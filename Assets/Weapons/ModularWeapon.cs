@@ -258,12 +258,12 @@ namespace Weapons
             PlaySound(weaponData.shootSound);
             if (muzzleFlash != null) muzzleFlash.Play();
             
-            // Spawn muzzle flash — Instantiate + Destroy, works for any prefab type
+            // Spawn muzzle flash — Menggunakan Object Pool
             Transform flashSpawnPoint = muzzleFlashTransform != null ? muzzleFlashTransform : muzzleTransform;
             if (weaponData.muzzleFlashPrefab != null && flashSpawnPoint != null)
             {
                 Quaternion flashRot = flashSpawnPoint.rotation * Quaternion.Euler(weaponData.muzzleFlashRotOffset);
-                GameObject flash = Instantiate(
+                GameObject flash = ObjectPool.Instance.Spawn(
                     weaponData.muzzleFlashPrefab,
                     flashSpawnPoint.position,
                     flashRot
@@ -278,7 +278,7 @@ namespace Weapons
                     weaponData.muzzleFlashRotZ * angle,
                     Space.Self
                 );
-                Destroy(flash, weaponData.muzzleFlashDuration);
+                StartCoroutine(DespawnMuzzleFlashCoroutine(flash, weaponData.muzzleFlashDuration));
             }
 
             // Hitung multiplier dispersi dari kepanasan
@@ -332,6 +332,15 @@ namespace Weapons
                         part.targetAngle += part.anglePerShot;
                     }
                 }
+            }
+        }
+
+        private IEnumerator DespawnMuzzleFlashCoroutine(GameObject flash, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            if (flash != null && flash.activeInHierarchy)
+            {
+                ObjectPool.Instance.Despawn(flash);
             }
         }
 

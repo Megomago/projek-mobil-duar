@@ -82,9 +82,15 @@ namespace Weapons
                 _currentPreviewVehicle = Instantiate(currentData.vehiclePrefab, vehiclePreviewPivot.position, vehiclePreviewPivot.rotation);
                 _currentPreviewVehicle.name = currentData.vehicleName;
                 
-                // Matikan komponen fisika & player input agar mobil tidak jalan-jalan di lobby
-                if (_currentPreviewVehicle.TryGetComponent<Rigidbody>(out var rb)) rb.isKinematic = true;
+                // Matikan player input agar mobil tidak jalan-jalan, biarkan fisika nyala agar mobil "jatuh" ke lantai
                 if (_currentPreviewVehicle.TryGetComponent<VehicleController>(out var vc)) vc.enabled = false;
+
+                // Matikan semua suara (mesin, dsb) di mobil agar lobby tidak berisik
+                AudioSource[] audioSources = _currentPreviewVehicle.GetComponentsInChildren<AudioSource>();
+                foreach (var audio in audioSources)
+                {
+                    audio.enabled = false;
+                }
 
                 _currentPreviewWeaponManager = _currentPreviewVehicle.GetComponent<VehicleWeaponManager>();
                 if (_currentPreviewWeaponManager != null)

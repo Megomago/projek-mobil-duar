@@ -26,9 +26,15 @@ namespace Weapons
         private Vector3 _currentVelocity;
         private Vector3 _currentPosition;
         private float _aliveTime;
+        private TrailRenderer _trailRenderer;
 
         // Gravitasi bumi (-9.81), bisa diubah jika butuh balistik spesifik
         private readonly Vector3 _gravity = new Vector3(0f, -9.81f, 0f);
+
+        private void Awake()
+        {
+            _trailRenderer = GetComponent<TrailRenderer>();
+        }
 
         /// <summary>
         /// Dipanggil oleh senjata saat menembakkan peluru ini.
@@ -47,10 +53,9 @@ namespace Weapons
 
             // FIX: Bersihkan jejak TrailRenderer kalau peluru ini hasil daur ulang dari Object Pool
             // Biar gak ngebentuk "laser" dari posisi matinya peluru balik ke ujung laras
-            TrailRenderer tr = GetComponent<TrailRenderer>();
-            if (tr != null)
+            if (_trailRenderer != null)
             {
-                tr.Clear();
+                _trailRenderer.Clear();
             }
         }
 
