@@ -158,6 +158,12 @@ namespace Weapons
             if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
         }
 
+        // Dipanggil oleh tombol "X" atau "Back" yang ada di dalam panel Grid Senjata
+        public void CloseWeaponGrid()
+        {
+            if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
+        }
+
         // === GRID SYSTEM ===
         public void OpenWeaponGrid(int slotIndex)
         {

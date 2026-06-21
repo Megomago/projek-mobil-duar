@@ -53,8 +53,17 @@ namespace Weapons
             // Hapus senjata yang sudah ada (untuk preview Lobby saat ganti senjata)
             foreach (var slot in weaponSlots)
             {
-                if (slot.spawnedWeapon != null) Destroy(slot.spawnedWeapon.gameObject);
+                if (slot.pivot != null)
+                {
+                    foreach (Transform child in slot.pivot)
+                    {
+                        Destroy(child.gameObject);
+                    }
+                }
+                
                 if (slot.spawnedHUD != null) Destroy(slot.spawnedHUD);
+                
+                slot.spawnedWeapon = null;
             }
 
             LoadSavedWeapons();

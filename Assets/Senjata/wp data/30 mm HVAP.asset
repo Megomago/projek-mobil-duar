@@ -13,8 +13,11 @@ MonoBehaviour:
   m_Name: 30 mm HVAP
   m_EditorClassIdentifier: 
   weaponName: 30 mm HVAP
-  weapon3DPrefab: {fileID: 0}
-  hudPrefab: {fileID: 0}
+  weaponIcon: {fileID: 0}
+  weapon3DPrefab: {fileID: 8445948922161720217, guid: 56ca18e0745fa934787ef7495c393b9c,
+    type: 3}
+  hudPrefab: {fileID: 6880005277670001014, guid: 173b46495b470c74f97a41a24a558c6b,
+    type: 3}
   muzzleVelocity: 800
   fireRateRPM: 600
   maxAmmo: 30

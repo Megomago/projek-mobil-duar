@@ -12,4 +12,5 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8cb2a2f6dd777e846a37735d440f2c9b, type: 3}
   m_Name: wp db
   m_EditorClassIdentifier: 
-  allWeapons: []
+  allWeapons:
+  - {fileID: 11400000, guid: e736d76b0e83f794ea29e80ba5e437e7, type: 2}
