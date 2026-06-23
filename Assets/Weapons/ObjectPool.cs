@@ -78,5 +78,26 @@ namespace Weapons
                 Destroy(obj);
             }
         }
+
+        /// <summary>
+        /// Mengembalikan objek ke dalam pool setelah jeda waktu tertentu.
+        /// </summary>
+        public void Despawn(GameObject obj, float delay)
+        {
+            if (gameObject.activeInHierarchy)
+            {
+                StartCoroutine(DespawnCoroutine(obj, delay));
+            }
+            else
+            {
+                Despawn(obj);
+            }
+        }
+
+        private System.Collections.IEnumerator DespawnCoroutine(GameObject obj, float delay)
+        {
+            yield return new WaitForSeconds(delay);
+            Despawn(obj);
+        }
     }
 }

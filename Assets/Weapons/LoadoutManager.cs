@@ -110,6 +110,9 @@ namespace Weapons
                     
                     // Supaya HUD tidak muncul menumpuk di Lobby, hilangkan hudContainer
                     _currentPreviewWeaponManager.hudContainer = null;
+                    
+                    // Matikan input player agar senjata tidak bisa menembak di Lobby
+                    _currentPreviewWeaponManager.usePlayerInput = false;
                 }
             }
 

@@ -396,6 +396,9 @@ namespace Weapons
                 casingRb.AddForce(ejectForce, ForceMode.Impulse);
                 casingRb.AddTorque(Random.insideUnitSphere * 10f, ForceMode.Impulse);
             }
+
+            // Despawn/kembalikan ke pool setelah 3 detik
+            ObjectPool.Instance.Despawn(casing, 3f);
         }
 
         private void ApplyVehicleRecoil()
