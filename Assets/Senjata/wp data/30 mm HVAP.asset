@@ -20,9 +20,9 @@ MonoBehaviour:
     type: 3}
   muzzleVelocity: 800
   fireRateRPM: 60
-  maxAmmo: 30
+  maxAmmo: 4
   autoReload: 1
-  reloadTime: 2
+  reloadTime: 4.5
   projectilePrefab: {fileID: 1438585710772045704, guid: a0e9a2e013d833545a1b8c86fda4d850,
     type: 3}
   pelletCount: 1
@@ -32,7 +32,7 @@ MonoBehaviour:
   coolingRate: 15
   maxHeat: 100
   heatDispersionMultiplier: 4
-  recoilForce: 500
+  recoilForce: 200
   cameraShakeMultiplier: 0.0005
   cameraShakeDuration: 0.2
   shootSound: {fileID: 8300000, guid: 43c70cd559d03234188a0a79839aef85, type: 3}

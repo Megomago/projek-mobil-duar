@@ -6,8 +6,8 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/Garasi.unity
-    guid: d2eeb25e487e6d043883be015da3e1f8
+    path: Assets/Scenes/Garasi 2.unity
+    guid: 7d1fb831cb89f1843bf5558a066bc345
   - enabled: 1
     path: Assets/Scenes/Battlefield.unity
     guid: 99c9720ab356a0642a771bea13969a05
