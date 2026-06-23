@@ -43,14 +43,6 @@ MonoBehaviour:
   casingEjectDelay: 0
   casingEjectForce: {x: 0, y: 0, z: 0}
   casingEjectRandomness: {x: 0, y: 0, z: 0}
-  muzzleFlashPrefab: {fileID: 0}
-  muzzleFlashDuration: 0.06
-  muzzleFlashScaleMin: 0.8
-  muzzleFlashScaleMax: 1.3
-  muzzleFlashRotOffset: {x: 0, y: 0, z: 0}
-  muzzleFlashRotX: 0
-  muzzleFlashRotY: 0
-  muzzleFlashRotZ: 1
   enableProceduralRecoil: 1
   isRotaryBarrel: 0
   spinUpTime: 1

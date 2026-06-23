@@ -257,27 +257,26 @@ namespace Weapons
             // Efek suara & flash
             PlaySound(weaponData.shootSound);
             if (muzzleFlash != null) muzzleFlash.Play();
-            
-            // Spawn muzzle flash — Menggunakan Object Pool
+
+            // Spawn prefab muzzle flash tambahan jika ada
             Transform flashSpawnPoint = muzzleFlashTransform != null ? muzzleFlashTransform : muzzleTransform;
             if (weaponData.muzzleFlashPrefab != null && flashSpawnPoint != null)
             {
-                Quaternion flashRot = flashSpawnPoint.rotation * Quaternion.Euler(weaponData.muzzleFlashRotOffset);
                 GameObject flash = ObjectPool.Instance.Spawn(
                     weaponData.muzzleFlashPrefab,
                     flashSpawnPoint.position,
-                    flashRot
+                    flashSpawnPoint.rotation
                 );
                 flash.transform.SetParent(flashSpawnPoint, worldPositionStays: true);
-                float s = Random.Range(weaponData.muzzleFlashScaleMin, weaponData.muzzleFlashScaleMax);
-                flash.transform.localScale = Vector3.one * s;
-                float angle = Random.Range(0f, 360f);
-                flash.transform.Rotate(
-                    weaponData.muzzleFlashRotX * angle,
-                    weaponData.muzzleFlashRotY * angle,
-                    weaponData.muzzleFlashRotZ * angle,
-                    Space.Self
-                );
+
+                // Paksa mainkan semua Particle System di dalam prefab ini
+                ParticleSystem[] pSystems = flash.GetComponentsInChildren<ParticleSystem>();
+                foreach (var ps in pSystems)
+                {
+                    ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+                    ps.Play(true);
+                }
+
                 StartCoroutine(DespawnMuzzleFlashCoroutine(flash, weaponData.muzzleFlashDuration));
             }
 

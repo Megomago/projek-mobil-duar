@@ -96,22 +96,10 @@ namespace Weapons
 
         #region --- 8. MUZZLE FLASH PREFAB ---
         [Header("=== MUZZLE FLASH PREFAB ===")]
-        [Tooltip("Prefab muzzle flash (bisa 4-plane, FPS style, atau sprite). Drag langsung dari Project folder.")]
+        [Tooltip("Prefab Muzzle Flash (bisa berisi banyak Particle System). Biarkan kosong jika ingin pakai ParticleSystem bawaan di weapon.")]
         public GameObject muzzleFlashPrefab;
-        [Tooltip("Berapa detik flash hidup sebelum dihancurkan")]
-        public float muzzleFlashDuration = 0.06f;
-        [Tooltip("Ukuran acak minimum")]
-        public float muzzleFlashScaleMin = 0.8f;
-        [Tooltip("Ukuran acak maksimum")]
-        public float muzzleFlashScaleMax = 1.3f;
-        [Tooltip("Koreksi rotasi flash (tweak ini kalau flash kebalik atau miring). Ini offset dari rotasi muzzle.")]
-        public Vector3 muzzleFlashRotOffset = Vector3.zero;
-        [Tooltip("Rotasi acak di sumbu X (0=mati, 1=aktif)")]
-        [Range(0f,1f)] public float muzzleFlashRotX = 0f;
-        [Tooltip("Rotasi acak di sumbu Y (0=mati, 1=aktif)")]
-        [Range(0f,1f)] public float muzzleFlashRotY = 0f;
-        [Tooltip("Rotasi acak di sumbu Z (0=mati, 1=aktif)")]
-        [Range(0f,1f)] public float muzzleFlashRotZ = 1f;
+        [Tooltip("Durasi sebelum prefab muzzle flash dihancurkan/dikembalikan ke pool")]
+        public float muzzleFlashDuration = 1f;
         #endregion
 
         #region --- 9. PROCEDURAL ANIMATION (VISUAL RECOIL) ---
