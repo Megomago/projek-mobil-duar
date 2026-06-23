@@ -544,6 +544,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   vehicleDatabase: {fileID: 11400000, guid: 43dcbc7e01c4f904fb659ee6f3e901c1, type: 2}
   playerSpawnPoint: {fileID: 657698249}
+  mainHUDContainer: {fileID: 1478516475}
 --- !u!114 &657698251
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -946,6 +947,6 @@ SceneRoots:
   - {fileID: 1958515692}
   - {fileID: 659370163}
   - {fileID: 1099410919}
-  - {fileID: 1608052582}
   - {fileID: 68893812}
   - {fileID: 657698249}
+  - {fileID: 1608052582}

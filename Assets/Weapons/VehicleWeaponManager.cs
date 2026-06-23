@@ -163,6 +163,7 @@ namespace Weapons
             if (modularWeapon != null)
             {
                 modularWeapon.weaponData = slot.weaponData;
+                modularWeapon.currentAmmo = slot.weaponData.maxAmmo; // Inisialisasi ammo secepatnya
                 slot.spawnedWeapon = modularWeapon;
             }
             else

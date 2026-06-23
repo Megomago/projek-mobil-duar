@@ -11,6 +11,10 @@ namespace Weapons
         [Tooltip("Titik awal mobil di-spawn saat masuk Battlefield")]
         public Transform playerSpawnPoint;
 
+        [Header("=== UI SETTINGS ===")]
+        [Tooltip("Wadah HUD di Canvas Battlefield. Akan di-assign otomatis ke kendaraan yang di-spawn.")]
+        public RectTransform mainHUDContainer;
+
         private void Start()
         {
             if (vehicleDatabase == null || vehicleDatabase.allVehicles.Count == 0)
@@ -47,6 +51,12 @@ namespace Weapons
             if (weaponManager != null)
             {
                 weaponManager.currentVehicleName = selectedData.vehicleName;
+                
+                // Assign HUD container dari BattlefieldManager ke mobil yang baru di-spawn
+                if (mainHUDContainer != null)
+                {
+                    weaponManager.hudContainer = mainHUDContainer;
+                }
             }
 
             // --- HUBUNGKAN KE KAMERA ---

@@ -22,11 +22,15 @@ public class KlikKananKamera : MonoBehaviour
 
     void Update()
     {
+        // Kalo ada input dari user (keyboard, klik kiri/kanan, mouse gerak, atau scroll), reset waktu nganggur
+        if (Input.anyKey || Input.GetAxis("Mouse X") != 0 || Input.GetAxis("Mouse Y") != 0 || Input.GetAxis("Mouse ScrollWheel") != 0)
+        {
+            waktuNganggur = 0f;
+        }
+
         // Kalo lagi klik kanan...
         if (Input.GetMouseButton(1)) 
         {
-            waktuNganggur = 0f; // Reset stopwatch ke 0
-
             kameraGue.m_XAxis.m_InputAxisName = "Mouse X";
             kameraGue.m_YAxis.m_InputAxisName = "Mouse Y";
         }

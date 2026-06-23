@@ -32,7 +32,7 @@ namespace Weapons
             }
             else
             {
-                if (nameText != null) nameText.text = "Kosong (Lepas Senjata)";
+                if (nameText != null) nameText.text = "Lepas";
                 if (iconImage != null) iconImage.gameObject.SetActive(false);
             }
         }
