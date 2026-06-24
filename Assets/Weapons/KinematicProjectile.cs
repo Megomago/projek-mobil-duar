@@ -81,7 +81,7 @@ namespace Weapons
             // 4. Lakukan Raycast dari posisi saat ini ke posisi berikutnya
             if (Physics.Raycast(_currentPosition, directionToNext.normalized, out RaycastHit hit, distanceToNext, hitMask))
             {
-                // JIKA KENA SESUATU!
+                
                 HandleHit(hit);
                 return; // Berhenti memproses posisi, karena peluru sudah hancur
             }
