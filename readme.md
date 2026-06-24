@@ -1,4 +1,4 @@
-# 🚗 VDSO — Vehicle, Drive, Shoot, Shoot Outside
+# VDSO — Vehicle, Drive, Shoot, Shoot Outside
 > *"Vidiso"* — Action Shooter Vehicle Game
 
 [![Status](https://img.shields.io/badge/status-in%20development-yellow)]()
@@ -7,16 +7,18 @@
 
 ---
 
-## 📋 Daftar Isi
-- [Gambaran Umum](#-gambaran-umum)
-- [Sistem Kendaraan (Vehicle Physics)](#-sistem-kendaraan-vehicle-physics)
-- [Sistem Senjata Modular](#-sistem-senjata-modular)
-- [Sistem Loadout \& Garasi](#-sistem-loadout--garasi)
-- [Struktur Scene](#-struktur-scene)
+[Balanctool v2 Simulator](https://balanctoolv2.netlify.app/)
+
+## Daftar Isi
+- [Gambaran Umum](#gambaran-umum)
+- [Sistem Kendaraan (Vehicle Physics)](#sistem-kendaraan-vehicle-physics)
+- [Sistem Senjata Modular](#sistem-senjata-modular)
+- [Sistem Loadout & Garasi](#sistem-loadout--garasi)
+- [Struktur Scene](#struktur-scene)
 
 ---
 
-## 🎯 Gambaran Umum
+## Gambaran Umum
 
 **VDSO** (dibaca: Vidiso) adalah game **Action Shooter Vehicle** di mana pemain mengendalikan kendaraan bersenjata. Game ini berfokus pada simulasi fisika kendaraan yang mendalam (advanced vehicle physics) dipadukan dengan sistem persenjataan modular yang kaya akan kustomisasi.
 
@@ -29,7 +31,7 @@
 
 ---
 
-## 🚙 Sistem Kendaraan (Vehicle Physics)
+## Sistem Kendaraan (Vehicle Physics)
 
 Sistem kendaraan dibangun menggunakan *custom controller* berbasis fisika yang mendetail, memberikan keseimbangan antara simulasi realistis dan keseruan aksi *arcade*.
 
@@ -48,7 +50,7 @@ Sistem kendaraan dibangun menggunakan *custom controller* berbasis fisika yang m
 
 ---
 
-## 🔫 Sistem Senjata Modular
+## Sistem Senjata Modular
 
 Setiap kendaraan memiliki *slot* untuk dipasangi berbagai jenis senjata secara modular. Sistem ini didorong oleh arsitektur berbasis Data (`ScriptableObject` / `WeaponData`).
 
@@ -71,7 +73,7 @@ Sistem animasi tidak bergantung penuh pada file *Animator*, melainkan menggerakk
 
 ---
 
-## 🛠️ Sistem Loadout \& Garasi
+## Sistem Loadout & Garasi
 
 Sistem antarmuka di mana pemain dapat memodifikasi kendaraan pertempuran mereka.
 
@@ -81,7 +83,7 @@ Sistem antarmuka di mana pemain dapat memodifikasi kendaraan pertempuran mereka.
 
 ---
 
-## 🗺️ Struktur Scene
+## Struktur Scene
 
 - **`Garasi` \& `Garasi 2`**: Scene untuk menu utama, pemilihan kendaraan, dan pemasangan *loadout*. Kendaraan di-spawn tanpa input kendali aktif untuk visualisasi estetis.
 - **`Battlefield`**: Arena pertempuran utama di mana sistem fisika kendaraan dan simulasi pertempuran aktif.

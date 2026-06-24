@@ -13,4 +13,4 @@ MonoBehaviour:
   m_Name: wp db
   m_EditorClassIdentifier: 
   allWeapons:
-  - {fileID: 11400000, guid: e736d76b0e83f794ea29e80ba5e437e7, type: 2}
+  - {fileID: 11400000, guid: a155f4d0bba35d54da9f340a35fabc6b, type: 2}
