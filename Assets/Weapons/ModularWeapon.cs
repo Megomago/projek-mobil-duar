@@ -1,5 +1,6 @@
 using System;
 using System.Collections;
+using System.Collections.Generic;
 using UnityEngine;
 using Random = UnityEngine.Random;
 
@@ -26,7 +27,7 @@ namespace Weapons
 
         // Runtime state (otomatis, tidak perlu diisi)
         [HideInInspector] public Vector3 originalLocalPos;
-        [HideInInspector] public Vector3 targetLocalPos;
+        [HideInInspector] public Vector3 currentVelocity;
     }
 
     /// <summary>
@@ -81,7 +82,9 @@ namespace Weapons
         [Header("=== RUNTIME STATE ===")]
         public int currentAmmo;
         private bool _isReloading;
-        private float _reloadEndTime;
+        private float _reloadTimer;
+        private float _pendingMagDrop = -1f;
+        private Queue<float> _pendingCasings = new Queue<float>();
         private float _fireCooldown;
         [SerializeField] private float _currentHeat = 0f;
         private float _currentSpinLerp = 0f;
@@ -96,6 +99,8 @@ namespace Weapons
         public Transform muzzleFlashTransform;
         [Tooltip("Titik lontaran selongsong peluru (Opsional)")]
         public Transform ejectionPortTransform;
+        [Tooltip("Titik awal jatuhnya magazine saat reload (Opsional)")]
+        public Transform magazineDropPoint;
 
         [Header("=== RECOIL PARTS (BISA BANYAK) ===")]
         [Tooltip("Semua bagian senjata yang bergerak mundur saat menembak. Masing-masing punya arah & jarak sendiri.")]
@@ -138,7 +143,7 @@ namespace Weapons
                     if (part.mesh != null)
                     {
                         part.originalLocalPos = part.mesh.localPosition;
-                        part.targetLocalPos = part.originalLocalPos;
+                        part.currentVelocity = Vector3.zero;
                     }
                 }
             }
@@ -193,6 +198,7 @@ namespace Weapons
 
             if (_fireCooldown > 0) _fireCooldown -= Time.deltaTime;
 
+            HandleTimers();
             HandleCooling();
             HandleProceduralRecoilAnimation();
             HandleRotatableAnimation();
@@ -269,15 +275,13 @@ namespace Weapons
                 );
                 flash.transform.SetParent(flashSpawnPoint, worldPositionStays: true);
 
-                // Paksa mainkan semua Particle System di dalam prefab ini
-                ParticleSystem[] pSystems = flash.GetComponentsInChildren<ParticleSystem>();
-                foreach (var ps in pSystems)
+                MuzzleFlashFX mfFX = flash.GetComponent<MuzzleFlashFX>();
+                if (mfFX != null)
                 {
-                    ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                    ps.Play(true);
+                    mfFX.Play();
                 }
 
-                StartCoroutine(DespawnMuzzleFlashCoroutine(flash, weaponData.muzzleFlashDuration));
+                ObjectPool.Instance.Despawn(flash, weaponData.muzzleFlashDuration);
             }
 
             // Hitung multiplier dispersi dari kepanasan
@@ -293,7 +297,7 @@ namespace Weapons
             // Lontarkan selongsong peluru dengan delay atau langsung
             if (weaponData.casingEjectDelay > 0f)
             {
-                StartCoroutine(EjectCasingCoroutine());
+                _pendingCasings.Enqueue(Time.time + weaponData.casingEjectDelay);
             }
             else
             {
@@ -316,7 +320,8 @@ namespace Weapons
                 {
                     if (part.mesh != null)
                     {
-                        part.targetLocalPos = part.originalLocalPos - (part.recoilAxis.normalized * part.recoilDistance);
+                        // Snap mundur secara instan (menghentak)
+                        part.mesh.localPosition -= part.recoilAxis.normalized * part.recoilDistance;
                     }
                 }
             }
@@ -331,15 +336,6 @@ namespace Weapons
                         part.targetAngle += part.anglePerShot;
                     }
                 }
-            }
-        }
-
-        private IEnumerator DespawnMuzzleFlashCoroutine(GameObject flash, float delay)
-        {
-            yield return new WaitForSeconds(delay);
-            if (flash != null && flash.activeInHierarchy)
-            {
-                ObjectPool.Instance.Despawn(flash);
             }
         }
 
@@ -366,12 +362,6 @@ namespace Weapons
                     kp.Initialize(muzzleTransform.position, randomDirection, weaponData.muzzleVelocity);
                 }
             }
-        }
-
-        private IEnumerator EjectCasingCoroutine()
-        {
-            yield return new WaitForSeconds(weaponData.casingEjectDelay);
-            EjectCasing();
         }
 
         private void EjectCasing()
@@ -426,11 +416,14 @@ namespace Weapons
             {
                 if (part.mesh == null) continue;
 
-                // Kembalikan target perlahan ke posisi semula
-                part.targetLocalPos = Vector3.Lerp(part.targetLocalPos, part.originalLocalPos, Time.deltaTime * part.returnSpeed);
-                
-                // Snap mesh ke posisi target
-                part.mesh.localPosition = Vector3.Lerp(part.mesh.localPosition, part.targetLocalPos, Time.deltaTime * part.snapSpeed);
+                // Gunakan SmoothDamp untuk pantulan ala pegas/spring yang lebih mulus dan natural (bebas double-lerp)
+                float smoothTime = part.returnSpeed > 0f ? (1f / part.returnSpeed) : 0.1f;
+                part.mesh.localPosition = Vector3.SmoothDamp(
+                    part.mesh.localPosition, 
+                    part.originalLocalPos, 
+                    ref part.currentVelocity, 
+                    smoothTime
+                );
             }
         }
 
@@ -473,14 +466,8 @@ namespace Weapons
         {
             if (_isReloading || weaponData.maxAmmo <= 0 || currentAmmo == weaponData.maxAmmo) return;
             
-            OnReloadStart?.Invoke();
-            StartCoroutine(ReloadCoroutine());
-        }
-
-        private IEnumerator ReloadCoroutine()
-        {
             _isReloading = true;
-            _reloadEndTime = Time.time + weaponData.reloadTime;
+            _reloadTimer = weaponData.reloadTime;
             PlaySound(weaponData.reloadSound);
             
             if (hideDuringReload != null)
@@ -491,20 +478,65 @@ namespace Weapons
                 }
             }
 
-            yield return new WaitForSeconds(weaponData.reloadTime);
-
-            currentAmmo = weaponData.maxAmmo;
-            _isReloading = false;
-            OnAmmoChanged?.Invoke(currentAmmo, weaponData.maxAmmo);
-            OnReloadFinished?.Invoke();
-
-            if (hideDuringReload != null)
+            // Magazine drop dijadwalkan pakai timer (bukan langsung spawn)
+            if (weaponData.magazineDropPrefab != null && magazineDropPoint != null)
             {
-                foreach (var obj in hideDuringReload)
+                _pendingMagDrop = Time.time + weaponData.magazineDropDelay;
+            }
+
+            OnReloadStart?.Invoke();
+        }
+
+        private void HandleTimers()
+        {
+            if (_isReloading)
+            {
+                _reloadTimer -= Time.deltaTime;
+                if (_reloadTimer <= 0f)
                 {
-                    if (obj != null) obj.SetActive(true);
+                    currentAmmo = weaponData.maxAmmo;
+                    _isReloading = false;
+                    OnAmmoChanged?.Invoke(currentAmmo, weaponData.maxAmmo);
+                    OnReloadFinished?.Invoke();
+
+                    if (hideDuringReload != null)
+                    {
+                        foreach (var obj in hideDuringReload)
+                        {
+                            if (obj != null) obj.SetActive(true);
+                        }
+                    }
                 }
             }
+
+            while (_pendingCasings.Count > 0 && Time.time >= _pendingCasings.Peek())
+            {
+                _pendingCasings.Dequeue();
+                EjectCasing();
+            }
+
+            // Timer magazine drop
+            if (_pendingMagDrop >= 0f && Time.time >= _pendingMagDrop)
+            {
+                _pendingMagDrop = -1f;
+                SpawnDroppedMagazine();
+            }
+        }
+
+        private void SpawnDroppedMagazine()
+        {
+            if (weaponData.magazineDropPrefab == null || magazineDropPoint == null) return;
+
+            GameObject mag = ObjectPool.Instance.Spawn(weaponData.magazineDropPrefab, magazineDropPoint.position, magazineDropPoint.rotation);
+            Rigidbody magRb = mag.GetComponent<Rigidbody>();
+            if (magRb != null)
+            {
+                magRb.velocity = Vector3.zero;
+                magRb.AddForce(Vector3.down * 1.5f, ForceMode.Impulse);
+                magRb.AddTorque(Random.insideUnitSphere * 2f, ForceMode.Impulse);
+            }
+
+            ObjectPool.Instance.Despawn(mag, weaponData.magazineDespawnTime);
         }
 
         private void PlaySound(AudioClip clip)
@@ -521,7 +553,7 @@ namespace Weapons
         public float GetRemainingReloadTime()
         {
             if (!_isReloading) return 0f;
-            return Mathf.Max(0f, _reloadEndTime - Time.time);
+            return Mathf.Max(0f, _reloadTimer);
         }
     }
 }

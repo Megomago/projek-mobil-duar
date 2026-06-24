@@ -13,6 +13,13 @@ namespace Weapons
         private Dictionary<GameObject, Queue<GameObject>> poolDictionary = new Dictionary<GameObject, Queue<GameObject>>();
         private Dictionary<GameObject, GameObject> instanceToPrefabMap = new Dictionary<GameObject, GameObject>();
 
+        private struct DelayedDespawnData
+        {
+            public GameObject Obj;
+            public float DespawnTime;
+        }
+        private List<DelayedDespawnData> delayedDespawns = new List<DelayedDespawnData>();
+
         private void Awake()
         {
             if (Instance == null)
@@ -63,6 +70,9 @@ namespace Weapons
         {
             if (obj == null) return;
 
+            // Mencegah duplicate enqueue jika object sudah despawn/inactive
+            if (!obj.activeSelf) return;
+
             obj.SetActive(false);
 
             if (instanceToPrefabMap.TryGetValue(obj, out GameObject prefab))
@@ -86,7 +96,7 @@ namespace Weapons
         {
             if (gameObject.activeInHierarchy)
             {
-                StartCoroutine(DespawnCoroutine(obj, delay));
+                delayedDespawns.Add(new DelayedDespawnData { Obj = obj, DespawnTime = Time.time + delay });
             }
             else
             {
@@ -94,10 +104,16 @@ namespace Weapons
             }
         }
 
-        private System.Collections.IEnumerator DespawnCoroutine(GameObject obj, float delay)
+        private void Update()
         {
-            yield return new WaitForSeconds(delay);
-            Despawn(obj);
+            for (int i = delayedDespawns.Count - 1; i >= 0; i--)
+            {
+                if (Time.time >= delayedDespawns[i].DespawnTime)
+                {
+                    Despawn(delayedDespawns[i].Obj);
+                    delayedDespawns.RemoveAt(i);
+                }
+            }
         }
     }
 }

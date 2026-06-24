@@ -59,9 +59,9 @@ namespace Weapons
             }
         }
 
-        private void FixedUpdate()
+        private void Update()
         {
-            _aliveTime += Time.fixedDeltaTime;
+            _aliveTime += Time.deltaTime;
 
             // 1. Cek umur peluru (lifetime)
             if (_aliveTime >= maxLifetime)
@@ -71,10 +71,10 @@ namespace Weapons
             }
 
             // 2. Terapkan gaya gravitasi ke kecepatan saat ini
-            _currentVelocity += _gravity * Time.fixedDeltaTime;
+            _currentVelocity += _gravity * Time.deltaTime;
 
             // 3. Prediksi posisi berikutnya
-            Vector3 nextPosition = _currentPosition + (_currentVelocity * Time.fixedDeltaTime);
+            Vector3 nextPosition = _currentPosition + (_currentVelocity * Time.deltaTime);
             Vector3 directionToNext = nextPosition - _currentPosition;
             float distanceToNext = directionToNext.magnitude;
 
