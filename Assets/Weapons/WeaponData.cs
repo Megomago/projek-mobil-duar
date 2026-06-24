@@ -49,6 +49,8 @@ namespace Weapons
         [Header("=== DISPERSION & ACCURACY ===")]
         [Tooltip("Penyebaran dasar peluru dalam derajat (0 = Lurus presisi)")]
         [Range(0f, 15f)] public float baseDispersion = 0.5f;
+        [Tooltip("Pengali keketatan sebaran (Choke). 1.0 = Normal, 0.5 = Sangat rapat ke tengah. Bisa dimodifikasi oleh modul item.")]
+        [Range(0.1f, 2f)] public float chokeMultiplier = 1f;
         #endregion
 
         #region --- 4. OVERHEAT SYSTEM ---

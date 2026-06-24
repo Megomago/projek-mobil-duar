@@ -343,14 +343,28 @@ namespace Weapons
         {
             if (weaponData.projectilePrefab == null || muzzleTransform == null) return;
 
-            Vector3 randomDirection = muzzleTransform.forward;
+            Vector3 finalDirection = muzzleTransform.forward;
+
             if (dispersionAngle > 0f)
             {
-                randomDirection = Quaternion.Euler(
-                    Random.Range(-dispersionAngle, dispersionAngle),
-                    Random.Range(-dispersionAngle, dispersionAngle),
-                    Random.Range(-dispersionAngle, dispersionAngle)
-                ) * muzzleTransform.forward;
+                // Gaussian Circular Cone Spread (Box-Muller Transform)
+                // Menghasilkan sebaran pellet realistis: padat di tengah, jarang di pinggir
+                float sigma = dispersionAngle * weaponData.chokeMultiplier;
+
+                // Box-Muller: konversi 2 uniform random -> 2 gaussian random
+                float u1 = Mathf.Max(Random.value, 0.0001f); // hindari log(0)
+                float u2 = Random.value;
+                float gaussMagnitude = Mathf.Sqrt(-2f * Mathf.Log(u1)) * sigma;
+                float angle = u2 * 2f * Mathf.PI;
+
+                float deviationX = gaussMagnitude * Mathf.Cos(angle);
+                float deviationY = gaussMagnitude * Mathf.Sin(angle);
+
+                // Terapkan deviasi ke arah tembak (cone spread)
+                Quaternion deviation = Quaternion.AngleAxis(deviationX, muzzleTransform.up) *
+                                       Quaternion.AngleAxis(deviationY, muzzleTransform.right);
+
+                finalDirection = deviation * muzzleTransform.forward;
             }
 
             GameObject projObj = ObjectPool.Instance.Spawn(weaponData.projectilePrefab, muzzleTransform.position, Quaternion.identity);
@@ -359,7 +373,7 @@ namespace Weapons
                 KinematicProjectile kp = projObj.GetComponent<KinematicProjectile>();
                 if (kp != null)
                 {
-                    kp.Initialize(muzzleTransform.position, randomDirection, weaponData.muzzleVelocity);
+                    kp.Initialize(muzzleTransform.position, finalDirection, weaponData.muzzleVelocity);
                 }
             }
         }
