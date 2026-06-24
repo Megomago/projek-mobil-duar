@@ -18,15 +18,15 @@ MonoBehaviour:
     type: 3}
   hudPrefab: {fileID: 6880005277670001014, guid: 173b46495b470c74f97a41a24a558c6b,
     type: 3}
-  muzzleVelocity: 800
-  fireRateRPM: 60
-  maxAmmo: 4
+  muzzleVelocity: 950
+  fireRateRPM: 75
+  maxAmmo: 400
   autoReload: 1
   reloadTime: 4.5
   projectilePrefab: {fileID: 1438585710772045704, guid: a0e9a2e013d833545a1b8c86fda4d850,
     type: 3}
   pelletCount: 1
-  baseDispersion: 0.5
+  baseDispersion: 5
   enableOverheat: 0
   heatPerShot: 5
   coolingRate: 15
@@ -43,6 +43,9 @@ MonoBehaviour:
   casingEjectDelay: 0
   casingEjectForce: {x: 0, y: 0, z: 0}
   casingEjectRandomness: {x: 0, y: 0, z: 0}
+  muzzleFlashPrefab: {fileID: 733088583581516313, guid: 9763a107b50bed844a88ecf7d92294d6,
+    type: 3}
+  muzzleFlashDuration: 1
   enableProceduralRecoil: 1
   isRotaryBarrel: 0
   spinUpTime: 1

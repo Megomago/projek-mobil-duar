@@ -95,7 +95,9 @@ namespace Weapons
         private void HandleHit(RaycastHit hit)
         {
             // DEBUG: Biar ketauan nabrak apa di frame pertama
+#if UNITY_EDITOR
             Debug.Log($"[DEBUG] Peluru nabrak: {hit.collider.gameObject.name} (Layer: {LayerMask.LayerToName(hit.collider.gameObject.layer)})");
+#endif
 
             // Spawn efek ledakan/percikan api
             if (hitImpactPrefab != null)
