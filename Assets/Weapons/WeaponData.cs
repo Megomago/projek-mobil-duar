@@ -115,5 +115,15 @@ namespace Weapons
         [Tooltip("Kecepatan putar maksimal laras (derajat per detik)")]
         public float maxSpinSpeed = 1000f;
         #endregion
+
+        #region --- 11. RELOAD EFFECTS ---
+        [Header("=== RELOAD EFFECTS ===")]
+        [Tooltip("Prefab magazine fisik (dengan Rigidbody) yang akan jatuh saat reload")]
+        public GameObject magazineDropPrefab;
+        [Tooltip("Delay sebelum magazine jatuh saat reload (detik). Sesuaikan dengan timing animasi.")]
+        public float magazineDropDelay = 0.3f;
+        [Tooltip("Waktu despawn magazine yang jatuh (detik)")]
+        public float magazineDespawnTime = 3f;
+        #endregion
     }
 }
