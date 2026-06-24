@@ -272,7 +272,7 @@
         /* Visualization Charts */
         .charts-row {
             display: grid;
-            grid-template-columns: 1.5fr 1fr 1fr;
+            grid-template-columns: 1fr 1fr;
             gap: 25px;
         }
 
@@ -280,6 +280,54 @@
             .charts-row {
                 grid-template-columns: 1fr;
             }
+        }
+
+        /* Balance Score Panel */
+        .balance-panel {
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 20px;
+            margin-bottom: 25px;
+        }
+        .balance-score-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+        }
+        .balance-overall {
+            font-size: 32px;
+            font-weight: 900;
+            color: var(--accent);
+        }
+        .balance-items {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+        .balance-item {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            background: rgba(0,0,0,0.2);
+            padding: 10px 15px;
+            border-radius: 8px;
+            border-left: 4px solid var(--border-color);
+        }
+        .balance-item.critical { border-left-color: #ff4a5a; }
+        .balance-item.warning { border-left-color: #fcca46; }
+        .balance-item.good { border-left-color: #00ff87; }
+
+        /* Tag Badge */
+        .tag-badge {
+            font-size: 11px;
+            padding: 3px 8px;
+            border-radius: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            background: rgba(255,255,255,0.1);
         }
 
         .chart-wrapper {
@@ -367,6 +415,56 @@
             width: 26px;
             height: 26px;
             border-radius: 4px;
+        }
+
+        /* Toggle Switch */
+        .toggle-switch {
+            position: relative;
+            width: 38px;
+            height: 20px;
+            flex-shrink: 0;
+        }
+        .toggle-switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .toggle-slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background-color: #3a3a4a;
+            border-radius: 20px;
+            transition: all 0.3s ease;
+        }
+        .toggle-slider::before {
+            content: '';
+            position: absolute;
+            height: 14px;
+            width: 14px;
+            left: 3px;
+            bottom: 3px;
+            background-color: #888;
+            border-radius: 50%;
+            transition: all 0.3s ease;
+        }
+        .toggle-switch input:checked + .toggle-slider {
+            background-color: var(--accent-color, var(--accent));
+            box-shadow: 0 0 8px color-mix(in srgb, var(--accent-color, var(--accent)) 50%, transparent);
+        }
+        .toggle-switch input:checked + .toggle-slider::before {
+            transform: translateX(18px);
+            background-color: #fff;
+        }
+
+        /* Disabled Card */
+        .weapon-card.disabled {
+            opacity: 0.35;
+            filter: grayscale(0.6);
+        }
+        .weapon-card.disabled .card-body,
+        .weapon-card.disabled .card-readouts {
+            pointer-events: none;
         }
 
         /* Form Controls in Card */
@@ -604,6 +702,10 @@
             </div>
             <div class="global-controls">
                 <div class="control-group">
+                    <label>Target HP</label>
+                    <input type="number" id="targetHP" value="1000" min="1" onchange="updateSimulation()">
+                </div>
+                <div class="control-group">
                     <label>Target Distance (m)</label>
                     <input type="number" id="targetDist" value="300" min="10" max="2000" onchange="updateSimulation()">
                 </div>
@@ -614,6 +716,17 @@
                 <div class="control-group">
                     <label>Simulation Duration (s)</label>
                     <input type="number" id="simTime" value="10" min="1" max="60" onchange="updateSimulation()">
+                </div>
+                <div class="control-group">
+                    <label>Scatter Viz Mode</label>
+                    <select id="scatterMode" onchange="updateSimulation()">
+                        <option value="sim">Full Simulation (Auto)</option>
+                        <option value="manual">Manual Burst (Shots)</option>
+                    </select>
+                </div>
+                <div class="control-group" id="manualShotsGroup" style="display: none;">
+                    <label>Burst Shot Count</label>
+                    <input type="number" id="manualShots" value="5" min="1" max="500" onchange="updateSimulation()">
                 </div>
                 <div class="control-group" style="margin-left: auto;">
                     <button class="btn-primary" onclick="addEmptyWeapon()">+ Add Empty Weapon</button>
@@ -631,9 +744,11 @@
                     <thead>
                         <tr>
                             <th>Senjata</th>
+                            <th>Tag</th>
                             <th>Tipe Mekanis</th>
                             <th>Raw DPS (Ideal)</th>
                             <th>Simulated Avg DPS</th>
+                            <th>TTK (s)</th>
                             <th>Time of Flight (TOF)</th>
                             <th>Gravity Drop</th>
                             <th>Akurasi Awal (Hit %)</th>
@@ -678,6 +793,27 @@
                     <canvas id="trajectoryChart"></canvas>
                 </div>
             </div>
+
+            <!-- 4. Range Effectiveness Curve -->
+            <div class="panel">
+                <div class="panel-header">
+                    <h2>📏 Range Effectiveness (DPS vs Dist)</h2>
+                </div>
+                <div class="chart-wrapper">
+                    <canvas id="rangeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- BALANCE SCORE SECTION -->
+        <div class="balance-panel">
+            <div class="balance-score-header">
+                <h2>⚖️ Balance Analysis (Z-Score)</h2>
+                <div class="balance-overall" id="overall-balance-score">A+ (95/100)</div>
+            </div>
+            <div class="balance-items" id="balance-items-container">
+                <!-- Filled by JS -->
+            </div>
         </div>
 
         <!-- WEAPONS EDITOR SECTION -->
@@ -715,6 +851,7 @@
         let combatChartInst = null;
         let trajectoryChartInst = null;
         let spreadChartInst = null;
+        let rangeChartInst = null;
 
         // Load data from LocalStorage on initialization
         function init() {
@@ -885,23 +1022,27 @@
             return points;
         }
 
-        // Generate 100 scattered points using Box-Muller Gaussian transform (matches Unity SpawnProjectile)
-        function generateGaussianScatter(spreadDegrees, chokeMult, targetDist) {
+        // Generate scatter points for a single shot based on Box-Muller Gaussian transform
+        function generateGaussianScatterForShot(spreadDegrees, chokeMult, targetDist, pelletCount) {
             let points = [];
             let sigmaDegrees = spreadDegrees * chokeMult;
             let sigmaMeters = targetDist * Math.tan(sigmaDegrees * Math.PI / 180);
 
-            for (let i = 0; i < 100; i++) {
-                // Box-Muller Transform
-                let u1 = Math.max(Math.random(), 0.0001); // avoid log(0)
-                let u2 = Math.random();
-                let gaussMagnitude = Math.sqrt(-2 * Math.log(u1)) * sigmaMeters;
-                let angle = u2 * 2 * Math.PI;
+            for (let i = 0; i < pelletCount; i++) {
+                if (sigmaDegrees <= 0 || sigmaMeters <= 0) {
+                    points.push({ x: 0, y: 0 });
+                } else {
+                    // Box-Muller Transform
+                    let u1 = Math.max(Math.random(), 0.0001); // avoid log(0)
+                    let u2 = Math.random();
+                    let gaussMagnitude = Math.sqrt(-2 * Math.log(u1)) * sigmaMeters;
+                    let angle = u2 * 2 * Math.PI;
 
-                points.push({
-                    x: gaussMagnitude * Math.cos(angle),
-                    y: gaussMagnitude * Math.sin(angle)
-                });
+                    points.push({
+                        x: gaussMagnitude * Math.cos(angle),
+                        y: gaussMagnitude * Math.sin(angle)
+                    });
+                }
             }
             return points;
         }
@@ -928,12 +1069,24 @@
                 }
 
                 const card = document.createElement('div');
-                card.className = 'weapon-card';
+                card.className = 'weapon-card' + (w.enabled === false ? ' disabled' : '');
                 card.style.setProperty('--accent-color', w.color);
                 card.innerHTML = `
                     <div class="card-top">
-                        <input type="text" value="${w.name}" onchange="updateWeapon(${index}, 'name', this.value)">
+                        <div style="display:flex; flex-direction:column; gap:5px; width:60%;">
+                            <input type="text" value="${w.name}" onchange="updateWeapon(${index}, 'name', this.value)" style="width:100%;">
+                            <select onchange="updateWeapon(${index}, 'tag', this.value)" style="padding:2px 4px; font-size:11px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:var(--text-primary); border-radius:4px;">
+                                <option value="Primary" ${w.tag === 'Primary' ? 'selected' : ''}>Primary</option>
+                                <option value="Secondary" ${w.tag === 'Secondary' ? 'selected' : ''}>Secondary</option>
+                                <option value="Heavy/Turret" ${w.tag === 'Heavy/Turret' ? 'selected' : ''}>Heavy/Turret</option>
+                                <option value="Experimental" ${w.tag === 'Experimental' ? 'selected' : ''}>Experimental</option>
+                            </select>
+                        </div>
                         <div class="card-top-controls">
+                            <label class="toggle-switch" title="Toggle visibility in charts">
+                                <input type="checkbox" ${w.enabled !== false ? 'checked' : ''} onchange="updateWeapon(${index}, 'enabled', this.checked)">
+                                <span class="toggle-slider"></span>
+                            </label>
                             <input type="color" value="${w.color}" onchange="updateWeapon(${index}, 'color', this.value)">
                             <button class="btn-danger" style="padding: 4px 8px;" onclick="removeWeapon(${index})">✕</button>
                         </div>
@@ -965,8 +1118,8 @@
                         <div class="card-input-wrapper">
                             <label>Trigger Mechanics</label>
                             <select onchange="updateWeapon(${index}, 'type', this.value)">
-                                <option value="mag" ${w.type === 'mag' ? 'selected' : ''}>Magazine Base</option>
-                                <option value="heat" ${w.type === 'heat' ? 'selected' : ''}>Overheat Base</option>
+                                <option value="mag" ${w.type === 'mag' ? 'selected' : ''}>Magazine Only</option>
+                                <option value="heat" ${w.type === 'heat' ? 'selected' : ''}>Hybrid (Mag + Overheat)</option>
                             </select>
                         </div>
                         <div class="card-input-wrapper">
@@ -985,16 +1138,15 @@
                         <div class="section-divider"></div>
 
                         <!-- CONDITIONAL SYSTEMS -->
-                        ${w.type === 'mag' ? `
                         <div class="card-input-wrapper">
-                            <label>Magazine Size</label>
-                            <input type="number" min="1" value="${w.mag}" oninput="updateWeapon(${index}, 'mag', this.value)">
+                            <label>Magazine Size (0 = Inf)</label>
+                            <input type="number" min="0" value="${w.mag}" oninput="updateWeapon(${index}, 'mag', this.value)">
                         </div>
                         <div class="card-input-wrapper">
                             <label>Reload Time (s)</label>
                             <input type="number" step="0.1" value="${w.reload}" oninput="updateWeapon(${index}, 'reload', this.value)">
                         </div>
-                        ` : `
+                        ${w.type === 'heat' ? `
                         <div class="card-input-wrapper">
                             <label>Heat Per Shot</label>
                             <input type="number" step="0.1" value="${w.heatPerShot}" oninput="updateWeapon(${index}, 'heatPerShot', this.value)">
@@ -1015,7 +1167,7 @@
                             <label style="cursor:pointer;" for="rest-chk-${index}">Simulate Cooldown Rest (Release Trigger)</label>
                             <input type="checkbox" id="rest-chk-${index}" ${w.rest ? 'checked' : ''} onchange="updateWeapon(${index}, 'rest', this.checked)">
                         </div>
-                        `}
+                        ` : ''}
                     </div>
 
                     <div class="card-readouts">
@@ -1034,7 +1186,7 @@
         }
 
         function updateWeapon(index, field, value) {
-            if (field === 'rest') {
+            if (field === 'rest' || field === 'enabled') {
                 weapons[index][field] = value;
             } else if (field !== 'name' && field !== 'color' && field !== 'type') {
                 value = parseFloat(value) || 0;
@@ -1046,7 +1198,7 @@
             saveToLocalStorage();
 
             // Re-render only if critical UI fields are modified (like toggle triggers)
-            if (field === 'type' || field === 'name' || field === 'color') {
+            if (field === 'type' || field === 'name' || field === 'color' || field === 'enabled') {
                 renderWeaponCards();
             }
             
@@ -1220,7 +1372,7 @@
             
             // Header Row
             let headers = ["Time (s)"];
-            weapons.forEach(w => {
+            weapons.filter(w => w.enabled !== false).forEach(w => {
                 headers.push(`${w.name} (CumDamage)`);
             });
             csvContent += headers.join(",") + "\n";
@@ -1249,12 +1401,23 @@
             const maxTime = parseFloat(document.getElementById('simTime').value) || 10;
             const targetDist = parseFloat(document.getElementById('targetDist').value) || 300;
             const targetRadius = parseFloat(document.getElementById('targetRadius').value) || 2.5;
+            const targetHP = parseFloat(document.getElementById('targetHP').value) || 1000;
             const dt = 0.05; // 50ms time-steps
             const timeLabels = [];
             
             let combatDatasets = [];
             let trajectoryDatasets = [];
+            let rangeDatasets = [];
+            let dpsArray = [];
             
+            const scatterMode = document.getElementById('scatterMode').value;
+            const manualShotsGroup = document.getElementById('manualShotsGroup');
+            if (scatterMode === 'manual') {
+                manualShotsGroup.style.display = 'flex';
+            } else {
+                manualShotsGroup.style.display = 'none';
+            }
+
             // Redraw table body
             const tableBody = document.getElementById('comparison-table-body');
             tableBody.innerHTML = '';
@@ -1274,25 +1437,67 @@
             let maxSpreadRadius = targetRadius + 1.0; 
             let simulationTimeSeries = []; // clear cache
 
-            weapons.forEach((w, i) => {
+            weapons.filter(w => w.enabled !== false).forEach((w, i) => {
                 let ballistics = calculateBallistics(w.vel, w.drag, targetDist);
                 let tof = typeof ballistics.tof === "number" ? ballistics.tof : 0; 
                 let baseHitProb = calculateHitProbability(w.spread, w.choke || 1.0, targetDist, targetRadius);
 
                 // --- 1. Spread Scatter Gaussian Data Points ---
-                let sigmaDegrees = w.spread * (w.choke || 1.0);
-                let spreadRad = targetDist * Math.tan(sigmaDegrees * Math.PI / 180);
-                if (spreadRad > maxSpreadRadius) maxSpreadRadius = spreadRad;
-                
-                // Add scatter points to simulate Gaussian bullet hits (Box-Muller)
-                spreadDatasets.push({
-                    label: w.name + ' Hits Scatter',
-                    data: generateGaussianScatter(w.spread, w.choke || 1.0, targetDist),
-                    borderColor: w.color,
-                    backgroundColor: w.color + 'aa', // add transparency
-                    pointRadius: 3,
-                    showLine: false
-                });
+                let scatterPoints = [];
+
+                if (scatterMode === 'manual') {
+                    // Simulasikan tembakan manual sejumlah N tembakan
+                    const numShots = parseInt(document.getElementById('manualShots').value) || 5;
+                    let heat = 0;
+                    let ammo = w.mag;
+                    let reloading = false;
+                    let interval = 60 / (w.rpm || 1);
+                    let shotsFiredCount = 0;
+                    let simT = 0;
+                    let safetyCount = 2000;
+                    
+                    while (shotsFiredCount < numShots && safetyCount > 0) {
+                        safetyCount--;
+                        if (reloading) {
+                            reloading = false;
+                            ammo = w.mag;
+                        }
+                        
+                        let currentSpread = w.spread;
+                        if (w.type === 'heat') {
+                            let heatFactor = (w.maxHeat > 0) ? (heat / w.maxHeat) : 0;
+                            if (heatFactor > 1.0) heatFactor = 1.0;
+                            currentSpread = w.spread + (w.spread * w.heatMult - w.spread) * heatFactor;
+                        }
+
+                        let pts = generateGaussianScatterForShot(currentSpread, w.choke || 1.0, targetDist, w.pellets);
+                        scatterPoints = scatterPoints.concat(pts);
+                        shotsFiredCount++;
+
+                        if (w.type === 'heat') {
+                            heat += w.heatPerShot;
+                            if (heat >= w.maxHeat) {
+                                heat = w.maxHeat;
+                                if (w.rest) {
+                                    heat = 0; // Cooled down
+                                    simT += (w.maxHeat / w.coolRate);
+                                }
+                            }
+                        }
+
+                        if (w.mag > 0) {
+                            ammo--;
+                            if (ammo <= 0) {
+                                reloading = true;
+                                simT += w.reload;
+                            } else {
+                                simT += interval;
+                            }
+                        } else {
+                            simT += interval;
+                        }
+                    }
+                }
 
                 // --- 2. Ballistic Trajectory Curve ---
                 trajectoryDatasets.push({
@@ -1317,9 +1522,6 @@
                 };
 
                 for (let t = 0; t <= maxTime; t += dt) {
-                    // Update heat cooling (only mendingin jika tidak menembak/holding trigger)
-                    // Di simulasi: jika overheat cooldown rest menyala dan kita sedang cooling, kita mendingin.
-                    // Jika tidak sedang rest, trigger ditahan terus = tidak mendingin sama sekali (sama seperti Unity)
                     if (w.type === 'heat' && w.maxHeat > 0) {
                         if (state.overheated && w.rest) {
                             state.heat = Math.max(state.heat - (w.coolRate * dt), 0);
@@ -1329,24 +1531,46 @@
                         }
                     }
 
-                    if (w.type === 'mag') {
-                        // Magazine Reload Logic
-                        if (state.reloading) {
-                            state.timer -= dt;
-                            if (state.timer <= 0) { 
-                                state.reloading = false; 
-                                state.ammo = w.mag; 
-                                state.timer = 0; 
+                    if (state.reloading) {
+                        state.timer -= dt;
+                        if (state.timer <= 0) { 
+                            state.reloading = false; 
+                            state.ammo = w.mag; 
+                            state.timer = 0; 
+                        }
+                        if (w.type === 'heat' && w.maxHeat > 0 && !w.rest) {
+                            state.heat = Math.max(state.heat - (w.coolRate * dt), 0);
+                        }
+                    } else if (state.overheated && w.rest) {
+                        state.timer = state.interval;
+                    } else {
+                        if (state.timer <= 0) {
+                            let heatFactor = (w.type === 'heat' && w.maxHeat > 0) ? (state.heat / w.maxHeat) : 0;
+                            if (heatFactor > 1.0) heatFactor = 1.0;
+                            let currentSpread = w.type === 'heat' ? w.spread + (w.spread * w.heatMult - w.spread) * heatFactor : w.spread;
+                            
+                            let currentHitProb = calculateHitProbability(currentSpread, w.choke || 1.0, targetDist, targetRadius);
+                            let expectedShotDmg = (w.dmg * w.pellets) * currentHitProb;
+                            
+                            dmgEvents.push({ time: t + tof, dmg: expectedShotDmg }); 
+                            
+                            if (scatterMode === 'sim' && scatterPoints.length < 1000) {
+                                let pts = generateGaussianScatterForShot(currentSpread, w.choke || 1.0, targetDist, w.pellets);
+                                scatterPoints = scatterPoints.concat(pts);
                             }
-                        } else {
-                            if (state.timer <= 0) {
-                                // Hit Probability is dynamically calculated
-                                let currentHitProb = calculateHitProbability(w.spread, w.choke || 1.0, targetDist, targetRadius);
-                                let expectedShotDmg = (w.dmg * w.pellets) * currentHitProb;
-                                
-                                dmgEvents.push({ time: t + tof, dmg: expectedShotDmg }); 
+
+                            if (w.type === 'heat') {
+                                state.heat += w.heatPerShot;
+                                if (state.heat >= w.maxHeat) {
+                                    state.heat = w.maxHeat;
+                                    if (w.rest) {
+                                        state.overheated = true;
+                                    }
+                                }
+                            }
+
+                            if (w.mag > 0) {
                                 state.ammo--;
-                                
                                 if (state.ammo <= 0) { 
                                     state.reloading = true; 
                                     state.timer = w.reload; 
@@ -1354,36 +1578,12 @@
                                     state.timer = state.interval;
                                 }
                             } else {
-                                state.timer -= dt;
-                            }
-                        }
-                    } else if (w.type === 'heat') {
-                        // Overheating / Cooling Logic
-                        if (state.overheated && w.rest) {
-                            // Firing paused during rest cooldown
-                            state.timer = state.interval;
-                        } else {
-                            if (state.timer <= 0) {
-                                let heatFactor = (w.maxHeat > 0) ? (state.heat / w.maxHeat) : 0;
-                                if (heatFactor > 1.0) heatFactor = 1.0;
-                                
-                                // Gaussian Spread is widened by overheat multiplier
-                                let currentSpread = w.spread + (w.spread * w.heatMult - w.spread) * heatFactor;
-                                let currentHitProb = calculateHitProbability(currentSpread, w.choke || 1.0, targetDist, targetRadius);
-                                let dynamicEffectiveDmg = (w.dmg * w.pellets) * currentHitProb;
-                                
-                                dmgEvents.push({ time: t + tof, dmg: dynamicEffectiveDmg });
-                                
-                                state.heat += w.heatPerShot;
-                                if (state.heat >= w.maxHeat) {
-                                    state.heat = w.maxHeat;
-                                    if (w.rest) {
-                                        state.overheated = true; // Trigger rest cooldown
-                                    }
-                                }
                                 state.timer = state.interval;
-                            } else {
-                                state.timer -= dt;
+                            }
+                        } else {
+                            state.timer -= dt;
+                            if (w.type === 'heat' && w.maxHeat > 0 && !w.rest && !state.reloading) {
+                                state.heat = Math.max(state.heat - (w.coolRate * dt), 0);
                             }
                         }
                     }
@@ -1393,6 +1593,7 @@
                 let plotData = [];
                 let seriesCache = [];
                 let cumulativeDmg = 0;
+                let ttk = null;
                 
                 for (let t = 0; t <= maxTime + 0.01; t += dt) {
                     if (i === 0) timeLabels.push(t.toFixed(1) + "s");
@@ -1402,6 +1603,11 @@
                             cumulativeDmg += ev.dmg; 
                         }
                     });
+
+                    if (ttk === null && cumulativeDmg >= targetHP) {
+                        ttk = t;
+                    }
+
                     plotData.push(cumulativeDmg);
                     seriesCache.push({ time: t, dmg: cumulativeDmg });
                 }
@@ -1419,12 +1625,27 @@
                     tension: w.type === 'mag' ? 0 : 0.1 
                 });
 
+                // Auto-zoom bounds chart berdasarkan titik sebaran yang terbentuk
+                scatterPoints.forEach(p => {
+                    let r = Math.sqrt(p.x*p.x + p.y*p.y);
+                    if (r > maxSpreadRadius) maxSpreadRadius = r;
+                });
+
+                spreadDatasets.push({
+                    label: w.name + ' Hits Scatter',
+                    data: scatterPoints,
+                    borderColor: w.color,
+                    backgroundColor: w.color + 'aa', 
+                    pointRadius: 3,
+                    showLine: false
+                });
+
                 // Calculations for Comparison Table
                 let totalDamageSimulated = cumulativeDmg;
                 let simulatedAvgDps = totalDamageSimulated / maxTime;
                 
                 let rawIdealDps = ((w.dmg * w.pellets * w.rpm) / 60);
-                if (w.type === 'mag') {
+                if (w.mag > 0) {
                     // Factoring in magazine reload time for Ideal DPS
                     let secondsPerMag = (w.mag - 1) * (60 / w.rpm);
                     let cycleTime = secondsPerMag + w.reload;
@@ -1441,6 +1662,26 @@
                     hitProbOverheatPct = (hitProbWorst * 100).toFixed(1) + "%";
                 }
 
+                // Range Curve Calculation
+                let rangeData = [];
+                for(let dist = 50; dist <= 1000; dist += 50) {
+                    let hp = calculateHitProbability(w.spread, w.choke || 1.0, dist, targetRadius);
+                    let edps = rawIdealDps * hp;
+                    rangeData.push({x: dist, y: edps});
+                }
+                rangeDatasets.push({
+                    label: w.name,
+                    data: rangeData,
+                    borderColor: w.color,
+                    backgroundColor: w.color,
+                    borderWidth: 2,
+                    pointRadius: 2,
+                    fill: false,
+                    tension: 0.2
+                });
+
+                dpsArray.push({ weapon: w, dps: simulatedAvgDps });
+
                 const tableRow = document.createElement('tr');
                 tableRow.innerHTML = `
                     <td>
@@ -1449,9 +1690,11 @@
                             ${w.name}
                         </div>
                     </td>
-                    <td>${w.type === 'mag' ? 'Magazine Loader' : 'Overheat (Thermodynamic)'}</td>
+                    <td><span class="tag-badge">${w.tag || 'Primary'}</span></td>
+                    <td>${w.type === 'mag' ? 'Magazine Only' : (w.mag > 0 ? 'Hybrid (Mag+Heat)' : 'Overheat Only')}</td>
                     <td style="font-family:'JetBrains Mono', monospace">${rawIdealDps.toFixed(1)}</td>
                     <td class="text-accent" style="font-family:'JetBrains Mono', monospace; font-weight: 700;">${simulatedAvgDps.toFixed(1)}</td>
+                    <td style="font-family:'JetBrains Mono', monospace">${ttk !== null ? ttk.toFixed(2) + 's' : '> ' + maxTime + 's'}</td>
                     <td style="font-family:'JetBrains Mono', monospace">${tofText}</td>
                     <td style="font-family:'JetBrains Mono', monospace" class="text-danger">${dropText}</td>
                     <td style="font-family:'JetBrains Mono', monospace" class="text-success">${hitProbPct}</td>
@@ -1460,12 +1703,57 @@
                 tableBody.appendChild(tableRow);
             });
 
+            // Balance Analysis Calculation
+            let dpsArrayValues = dpsArray.map(item => item.dps);
+            if(dpsArrayValues.length > 0) {
+                let mean = dpsArrayValues.reduce((a, b) => a + b, 0) / dpsArrayValues.length;
+                let variance = dpsArrayValues.reduce((a, b) => a + Math.pow(b - mean, 2), 0) / dpsArrayValues.length;
+                let stdDev = Math.sqrt(variance);
+                
+                let balanceContainer = document.getElementById('balance-items-container');
+                balanceContainer.innerHTML = '';
+                
+                dpsArray.forEach(item => {
+                    let zScore = stdDev === 0 ? 0 : (item.dps - mean) / stdDev;
+                    let absZ = Math.abs(zScore);
+                    let statusClass = 'good';
+                    let statusText = 'Balanced';
+                    if(absZ > 2.0) { statusClass = 'critical'; statusText = zScore > 0 ? 'Critically Overpowered' : 'Critically Underpowered'; }
+                    else if (absZ > 1.2) { statusClass = 'warning'; statusText = zScore > 0 ? 'Borderline OP' : 'Borderline Weak'; }
+                    
+                    balanceContainer.innerHTML += `
+                        <div class="balance-item ${statusClass}">
+                            <div style="font-weight:700;">
+                                <span class="color-indicator" style="background-color:${item.weapon.color}; display:inline-block; width:12px; height:12px; border-radius:3px; margin-right:8px;"></span>
+                                ${item.weapon.name}
+                            </div>
+                            <div style="font-family:'JetBrains Mono', monospace;">
+                                Z-Score: ${zScore > 0 ? '+' : ''}${zScore.toFixed(2)} (${statusText})
+                            </div>
+                        </div>
+                    `;
+                });
+                
+                // Overall score based on max deviation
+                let maxAbsZ = Math.max(...dpsArrayValues.map(v => Math.abs((v - mean) / stdDev)));
+                if(isNaN(maxAbsZ) || !isFinite(maxAbsZ)) maxAbsZ = 0;
+                let score = Math.max(0, 100 - (maxAbsZ * 20));
+                let grade = 'A+';
+                if(score < 90) grade = 'A';
+                if(score < 80) grade = 'B';
+                if(score < 60) grade = 'C';
+                if(score < 40) grade = 'D';
+                if(score < 20) grade = 'F';
+                
+                document.getElementById('overall-balance-score').innerText = `${grade} (${score.toFixed(0)}/100)`;
+            }
+
             lastSimulationTimeSeries = simulationTimeSeries; // Cache for CSV exports
-            drawCharts(timeLabels, combatDatasets, trajectoryDatasets, spreadDatasets, maxSpreadRadius);
+            drawCharts(timeLabels, combatDatasets, trajectoryDatasets, spreadDatasets, maxSpreadRadius, rangeDatasets);
         }
 
         // Draw and refresh all ChartJS elements
-        function drawCharts(timeLabels, combatDatasets, trajectoryDatasets, spreadDatasets, maxSpreadRadius) {
+        function drawCharts(timeLabels, combatDatasets, trajectoryDatasets, spreadDatasets, maxSpreadRadius, rangeDatasets) {
             
             // 1. Combat Cumulative Damage Chart
             if (combatChartInst) combatChartInst.destroy();
@@ -1539,6 +1827,39 @@
                         },
                         y: { 
                             title: { display: true, text: 'Drop Height (Meters)', color: '#aaa' }, 
+                            ticks: { color: '#aaa' }, 
+                            grid: { color: 'rgba(255,255,255,0.05)' } 
+                        }
+                    }
+                }
+            });
+
+            // 4. Range Effectiveness Curve
+            if (rangeChartInst) rangeChartInst.destroy();
+            rangeChartInst = new Chart(document.getElementById('rangeChart').getContext('2d'), {
+                type: 'line', 
+                data: { datasets: rangeDatasets },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: { 
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `${ctx.dataset.label}: ${ctx.parsed.y.toFixed(1)} DPS`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: { 
+                            type: 'linear', 
+                            position: 'bottom', 
+                            title: { display: true, text: 'Range (Meters)', color: '#aaa' }, 
+                            ticks: { color: '#aaa', stepSize: 100 }, 
+                            grid: { color: 'rgba(255,255,255,0.05)' } 
+                        },
+                        y: { 
+                            title: { display: true, text: 'Effective DPS', color: '#aaa' }, 
                             ticks: { color: '#aaa' }, 
                             grid: { color: 'rgba(255,255,255,0.05)' } 
                         }
