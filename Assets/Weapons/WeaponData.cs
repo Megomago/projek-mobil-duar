@@ -126,6 +126,10 @@ namespace Weapons
         public float magazineDropDelay = 0.3f;
         [Tooltip("Waktu despawn magazine yang jatuh (detik)")]
         public float magazineDespawnTime = 3f;
+        [Tooltip("Gaya lemparan magazine saat dijatuhkan (relatif terhadap arah Drop Point)")]
+        public Vector3 magazineDropForce = new Vector3(0f, -1.5f, 0f);
+        [Tooltip("Kekuatan acak putaran (torque) magazine saat jatuh")]
+        public float magazineDropTorque = 2f;
         #endregion
     }
 }

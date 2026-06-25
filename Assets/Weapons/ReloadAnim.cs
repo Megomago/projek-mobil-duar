@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 namespace Weapons
@@ -15,6 +16,9 @@ namespace Weapons
         
         [Tooltip("Nama trigger parameter di Animator untuk memulai reload")]
         public string reloadTriggerName = "Reload";
+
+        [Tooltip("Delay (dalam detik) sebelum trigger animasi dijalankan")]
+        public float animationDelay = 0f;
 
         private void Awake()
         {
@@ -47,6 +51,22 @@ namespace Weapons
         private void TriggerReloadAnimation()
         {
             if (weaponAnimator != null && !string.IsNullOrEmpty(reloadTriggerName))
+            {
+                if (animationDelay > 0f && gameObject.activeInHierarchy)
+                {
+                    StartCoroutine(DelayedTrigger());
+                }
+                else
+                {
+                    weaponAnimator.SetTrigger(reloadTriggerName);
+                }
+            }
+        }
+
+        private IEnumerator DelayedTrigger()
+        {
+            yield return new WaitForSeconds(animationDelay);
+            if (weaponAnimator != null)
             {
                 weaponAnimator.SetTrigger(reloadTriggerName);
             }

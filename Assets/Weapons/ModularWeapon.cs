@@ -24,10 +24,15 @@ namespace Weapons
         public float snapSpeed = 50f;
         [Tooltip("Kecepatan kembali ke posisi semula")]
         public float returnSpeed = 10f;
+        [Tooltip("Centang ini jika bagian ini digerakkan juga oleh Animator (misal: Reload)")]
+        public bool isAnimated = false;
 
         // Runtime state (otomatis, tidak perlu diisi)
         [HideInInspector] public Vector3 originalLocalPos;
         [HideInInspector] public Vector3 currentVelocity;
+        [HideInInspector] public Vector3 currentOffset;
+        [HideInInspector] public Vector3 savedBasePos;
+        [HideInInspector] public bool hasSavedBasePos;
     }
 
     /// <summary>
@@ -196,6 +201,9 @@ namespace Weapons
         {
             if (weaponData == null) return;
 
+            // Kembalikan posisi asli sebelum Animator mengevaluasi frame ini (untuk part yang di-animate)
+            RestoreAnimatedParts();
+
             if (_fireCooldown > 0) _fireCooldown -= Time.deltaTime;
 
             HandleTimers();
@@ -203,6 +211,18 @@ namespace Weapons
             HandleProceduralRecoilAnimation();
             HandleRotatableAnimation();
             HandleRotaryBarrel();
+        }
+
+        private void RestoreAnimatedParts()
+        {
+            if (!weaponData.enableProceduralRecoil || recoilParts == null) return;
+            foreach (var part in recoilParts)
+            {
+                if (part.mesh != null && part.isAnimated && part.hasSavedBasePos)
+                {
+                    part.mesh.localPosition = part.savedBasePos;
+                }
+            }
         }
 
         public void StopFiring()
@@ -320,8 +340,16 @@ namespace Weapons
                 {
                     if (part.mesh != null)
                     {
-                        // Snap mundur secara instan (menghentak)
-                        part.mesh.localPosition -= part.recoilAxis.normalized * part.recoilDistance;
+                        if (part.isAnimated)
+                        {
+                            // Tambahkan ke offset (bukan langsung ke posisi lokal)
+                            part.currentOffset -= part.recoilAxis.normalized * part.recoilDistance;
+                        }
+                        else
+                        {
+                            // Snap mundur secara instan (menghentak)
+                            part.mesh.localPosition -= part.recoilAxis.normalized * part.recoilDistance;
+                        }
                     }
                 }
             }
@@ -430,14 +458,47 @@ namespace Weapons
             {
                 if (part.mesh == null) continue;
 
-                // Gunakan SmoothDamp untuk pantulan ala pegas/spring yang lebih mulus dan natural (bebas double-lerp)
                 float smoothTime = part.returnSpeed > 0f ? (1f / part.returnSpeed) : 0.1f;
-                part.mesh.localPosition = Vector3.SmoothDamp(
-                    part.mesh.localPosition, 
-                    part.originalLocalPos, 
-                    ref part.currentVelocity, 
-                    smoothTime
-                );
+
+                if (part.isAnimated)
+                {
+                    // Untuk part yang di-animasikan, kita hanya menghaluskan nilai offset-nya menuju nol
+                    part.currentOffset = Vector3.SmoothDamp(
+                        part.currentOffset, 
+                        Vector3.zero, 
+                        ref part.currentVelocity, 
+                        smoothTime
+                    );
+                }
+                else
+                {
+                    // Gunakan SmoothDamp untuk pantulan ala pegas/spring yang lebih mulus dan natural (bebas double-lerp)
+                    part.mesh.localPosition = Vector3.SmoothDamp(
+                        part.mesh.localPosition, 
+                        part.originalLocalPos, 
+                        ref part.currentVelocity, 
+                        smoothTime
+                    );
+                }
+            }
+        }
+
+        private void LateUpdate()
+        {
+            if (weaponData == null || !weaponData.enableProceduralRecoil || recoilParts == null) return;
+
+            foreach (var part in recoilParts)
+            {
+                if (part.mesh != null && part.isAnimated)
+                {
+                    // Animator sudah berjalan (setelah Update, sebelum LateUpdate).
+                    // Simpan posisi yang di-set oleh Animator (sebagai base pos bersih untuk frame berikutnya).
+                    part.savedBasePos = part.mesh.localPosition;
+                    part.hasSavedBasePos = true;
+
+                    // Aplikasikan offset prosedural di atas animasi Animator
+                    part.mesh.localPosition += part.currentOffset;
+                }
             }
         }
 
@@ -546,8 +607,12 @@ namespace Weapons
             if (magRb != null)
             {
                 magRb.velocity = Vector3.zero;
-                magRb.AddForce(Vector3.down * 1.5f, ForceMode.Impulse);
-                magRb.AddTorque(Random.insideUnitSphere * 2f, ForceMode.Impulse);
+                // Force sekarang relatif terhadap arah/rotasi dari magazineDropPoint
+                Vector3 localForce = magazineDropPoint.TransformDirection(weaponData.magazineDropForce);
+                magRb.AddForce(localForce, ForceMode.Impulse);
+                
+                // Rotasi acak
+                magRb.AddTorque(Random.insideUnitSphere * weaponData.magazineDropTorque, ForceMode.Impulse);
             }
 
             ObjectPool.Instance.Despawn(mag, weaponData.magazineDespawnTime);

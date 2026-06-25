@@ -19,14 +19,14 @@ MonoBehaviour:
   hudPrefab: {fileID: 6880005277670001014, guid: 173b46495b470c74f97a41a24a558c6b,
     type: 3}
   muzzleVelocity: 950
-  fireRateRPM: 75
+  fireRateRPM: 120
   maxAmmo: 4
   autoReload: 1
   reloadTime: 4.5
   projectilePrefab: {fileID: 1438585710772045704, guid: a0e9a2e013d833545a1b8c86fda4d850,
     type: 3}
   pelletCount: 1
-  baseDispersion: 0.3
+  baseDispersion: 0.5
   chokeMultiplier: 1
   enableOverheat: 0
   heatPerShot: 5
@@ -53,5 +53,7 @@ MonoBehaviour:
   maxSpinSpeed: 1000
   magazineDropPrefab: {fileID: 5582752271261687072, guid: bcfe72ded042e784cb7a5e915051216d,
     type: 3}
-  magazineDropDelay: 0.3
+  magazineDropDelay: 0.5
   magazineDespawnTime: 3
+  magazineDropForce: {x: 0, y: 0, z: 0}
+  magazineDropTorque: 0

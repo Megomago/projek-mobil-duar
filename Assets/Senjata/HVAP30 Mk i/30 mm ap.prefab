@@ -472,6 +472,7 @@ MonoBehaviour:
   targetWeapon: {fileID: 8095516906712986808}
   weaponAnimator: {fileID: 1556288548636626759}
   reloadTriggerName: Reload
+  animationDelay: 0.5
 --- !u!1 &8445948922161720217
 GameObject:
   m_ObjectHideFlags: 0
@@ -531,8 +532,23 @@ MonoBehaviour:
     recoilDistance: 0.3
     snapSpeed: 8
     returnSpeed: 3
+    isAnimated: 0
     originalLocalPos: {x: 0, y: 0, z: 0}
     currentVelocity: {x: 0, y: 0, z: 0}
+    currentOffset: {x: 0, y: 0, z: 0}
+    savedBasePos: {x: 0, y: 0, z: 0}
+    hasSavedBasePos: 0
+  - mesh: {fileID: 2075248951083217726}
+    recoilAxis: {x: 0, y: -1, z: 0}
+    recoilDistance: 0.27
+    snapSpeed: 8
+    returnSpeed: 8
+    isAnimated: 1
+    originalLocalPos: {x: 0, y: 0, z: 0}
+    currentVelocity: {x: 0, y: 0, z: 0}
+    currentOffset: {x: 0, y: 0, z: 0}
+    savedBasePos: {x: 0, y: 0, z: 0}
+    hasSavedBasePos: 0
   rotaryParts: []
   rotatableParts: []
   hideDuringReload: []
