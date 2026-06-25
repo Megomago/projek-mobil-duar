@@ -649,6 +649,69 @@
             width: fit-content;
             margin-top: 2px;
         }
+        /* Floating Calculator */
+        .floating-calc {
+            position: fixed;
+            bottom: 80px;
+            right: 20px;
+            background-color: var(--bg-panel);
+            border: 1px solid var(--border-color);
+            border-radius: 12px;
+            padding: 15px;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+            z-index: 1000;
+            width: 200px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            transition: transform 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275), opacity 0.3s ease;
+            transform-origin: bottom right;
+        }
+        .floating-calc.hidden {
+            transform: scale(0.5) translateY(100px);
+            opacity: 0;
+            pointer-events: none;
+        }
+        .calc-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            font-size: 12px;
+            font-weight: 700;
+            color: var(--text-primary);
+            margin-bottom: 5px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+        }
+        .calc-close {
+            cursor: pointer;
+            color: var(--text-secondary);
+            font-size: 16px;
+        }
+        .calc-close:hover { color: var(--accent); }
+        .calc-toggle-btn {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            background-color: var(--accent);
+            color: #111;
+            border: none;
+            border-radius: 50%;
+            width: 45px;
+            height: 45px;
+            font-size: 20px;
+            cursor: pointer;
+            box-shadow: 0 4px 10px rgba(0,0,0,0.3);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
+            transition: transform 0.2s;
+        }
+        .calc-toggle-btn:hover {
+            transform: scale(1.1);
+        }
     </style>
 </head>
 <body onload="init()">
@@ -1866,6 +1929,50 @@
                     }
                 }
             });
+        }
+    </script>
+    <!-- Floating Calculator -->
+    <button class="calc-toggle-btn" id="calcToggleBtn" onclick="toggleCalc()">🖩</button>
+    <div class="floating-calc hidden" id="floatingCalc">
+        <div class="calc-header">
+            <span>RPM ⇄ RPS</span>
+            <span class="calc-close" onclick="toggleCalc()">✕</span>
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+            <label style="color:var(--text-secondary); font-size:10px; text-transform:uppercase; font-weight:600;">RPM (Rounds/Min)</label>
+            <input type="number" id="calcRPM" placeholder="600" oninput="calcConvert('rpm')" style="padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; font-family:'JetBrains Mono', monospace;">
+        </div>
+        <div style="display:flex; flex-direction:column; gap:4px;">
+            <label style="color:var(--text-secondary); font-size:10px; text-transform:uppercase; font-weight:600;">RPS (Rounds/Sec)</label>
+            <input type="number" id="calcRPS" placeholder="10" step="0.1" oninput="calcConvert('rps')" style="padding: 8px; border-radius: 4px; border: 1px solid var(--border-color); background: var(--bg-input); color: #fff; font-family:'JetBrains Mono', monospace;">
+        </div>
+    </div>
+
+    <script>
+        function toggleCalc() {
+            const calc = document.getElementById('floatingCalc');
+            calc.classList.toggle('hidden');
+        }
+
+        function calcConvert(source) {
+            const rpmInput = document.getElementById('calcRPM');
+            const rpsInput = document.getElementById('calcRPS');
+            
+            if (source === 'rpm') {
+                const rpm = parseFloat(rpmInput.value);
+                if (!isNaN(rpm)) {
+                    rpsInput.value = Number.isInteger(rpm / 60) ? (rpm / 60) : (rpm / 60).toFixed(2);
+                } else {
+                    rpsInput.value = '';
+                }
+            } else {
+                const rps = parseFloat(rpsInput.value);
+                if (!isNaN(rps)) {
+                    rpmInput.value = Math.round(rps * 60);
+                } else {
+                    rpmInput.value = '';
+                }
+            }
         }
     </script>
 </body>
