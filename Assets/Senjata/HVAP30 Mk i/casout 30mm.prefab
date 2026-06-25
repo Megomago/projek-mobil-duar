@@ -220,7 +220,8 @@ MonoBehaviour:
   hitMask:
     serializedVersion: 2
     m_Bits: 4294967295
-  hitImpactPrefab: {fileID: 100002, guid: cfcd690db7ce26548af4f6d7bb536b02, type: 3}
+  hitImpactPrefab: {fileID: 4881476404690857524, guid: f5cd64863b4be404392490d08119b0fd,
+    type: 3}
 --- !u!96 &7840288911385111723
 TrailRenderer:
   serializedVersion: 3
