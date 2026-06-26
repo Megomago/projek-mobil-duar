@@ -22,8 +22,8 @@ namespace Weapons
 
             foreach (var ps in _particleSystems)
             {
-                ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
-                ps.Play(true);
+                ps.Stop(false, ParticleSystemStopBehavior.StopEmittingAndClear);
+                ps.Play(false);
             }
         }
     }

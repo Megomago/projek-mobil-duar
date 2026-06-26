@@ -183,7 +183,7 @@ public class VehicleController : MonoBehaviour
     public float downforceMultiplier = 0.02f;
 
     [Header("=== DEBUG & HUD ===")]
-    public bool showDebugGUI = true;
+    public bool showDebugGUI = false;
     [Tooltip("Gunakan RPM berdasarkan kecepatan nyata mobil (mencegah RPM fluktuatif karena roda slip / ngepot)")]
     public bool preventWheelSlipRPM = true;
 

@@ -293,7 +293,6 @@ namespace Weapons
                     flashSpawnPoint.position,
                     flashSpawnPoint.rotation
                 );
-                flash.transform.SetParent(flashSpawnPoint, worldPositionStays: true);
 
                 MuzzleFlashFX mfFX = flash.GetComponent<MuzzleFlashFX>();
                 if (mfFX != null)

@@ -57,6 +57,7 @@ namespace Weapons
             else
             {
                 objectToSpawn = Instantiate(prefab, position, rotation);
+                objectToSpawn.transform.SetParent(transform); // Pastikan child dari Object Pool
                 instanceToPrefabMap[objectToSpawn] = prefab; // Ingat asalnya
             }
 
@@ -74,6 +75,7 @@ namespace Weapons
             if (!obj.activeSelf) return;
 
             obj.SetActive(false);
+            obj.transform.SetParent(transform); // Tarik kembali ke Object Pool agar aman dari Destroy parent
 
             if (instanceToPrefabMap.TryGetValue(obj, out GameObject prefab))
             {
