@@ -19,8 +19,8 @@ MonoBehaviour:
   hudPrefab: {fileID: 6880005277670001014, guid: 173b46495b470c74f97a41a24a558c6b,
     type: 3}
   muzzleVelocity: 950
-  fireRateRPM: 800
-  maxAmmo: 400
+  fireRateRPM: 120
+  maxAmmo: 4
   autoReload: 1
   reloadTime: 4.5
   projectilePrefab: {fileID: 1438585710772045704, guid: a0e9a2e013d833545a1b8c86fda4d850,
