@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Sedan AK data
   m_EditorClassIdentifier: 
   vehicleName: Camaro Mod Mk.II
-  baseMass: 1900
+  baseMass: 1400
   bodyHealth: 1300
   bodyArmor: 230
   wheelHealth: 50

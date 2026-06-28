@@ -985,7 +985,7 @@ GameObject:
   - component: {fileID: 179251259502191177}
   - component: {fileID: 8874008394217940311}
   - component: {fileID: 6019478609709458165}
-  - component: {fileID: -5029817690136308447}
+  - component: {fileID: 6321340214497921229}
   m_Layer: 2
   m_Name: Sedan AK
   m_TagString: Player
@@ -1285,7 +1285,7 @@ MonoBehaviour:
   hudContainer: {fileID: 0}
   usePlayerInput: 1
   currentVehicleName: 
---- !u!114 &-5029817690136308447
+--- !u!114 &6321340214497921229
 MonoBehaviour:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -1294,14 +1294,20 @@ MonoBehaviour:
   m_GameObject: {fileID: 8859394471345475044}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: de460c5b32e1217468c7a26d4e561ad0, type: 3}
+  m_Script: {fileID: 11500000, guid: ca88c73e77ffc20479fec5317af66eba, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  enableSkidMarks: 1
-  skidThreshold: 1
-  tireSmokeSystems:
-  - {fileID: 0}
-  smokeThreshold: 0.4
-  tireSquealSource: {fileID: 0}
-  squealMinVolume: 0
-  squealMaxVolume: 0.8
+  baseData: {fileID: 11400000, guid: 3bbb624cd1d4f4f4fae546a5b15ae041, type: 2}
+  gridCapacity: {x: 4, y: 8}
+  gridOrigin: {fileID: 0}
+  cellSize: 0.25
+  installedModules: []
+  currentTotalMass: 0
+  currentPowerConsumption: 0
+  currentPowerGeneration: 0
+  currentBatteryCapacity: 0
+  currentFuelCapacity: 0
+  currentMaxOutput: 0
+  currentCapacitorCapacity: 0
+  currentCapacitorChargeRate: 0
+  hud: {fileID: 0}
