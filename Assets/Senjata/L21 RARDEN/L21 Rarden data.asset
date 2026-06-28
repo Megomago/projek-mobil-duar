@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe49559cf43e52a4d8be128c37864496, type: 3}
+  m_Name: L21 Rarden data
+  m_EditorClassIdentifier: 
+  weaponName: L21 RARDEN
+  weaponIcon: {fileID: 0}
+  weapon3DPrefab: {fileID: 7099321997086278707, guid: 649c83af9317f984f8953bb234a8a9fb,
+    type: 3}
+  hudPrefab: {fileID: 6880005277670001014, guid: 173b46495b470c74f97a41a24a558c6b,
+    type: 3}
+  muzzleVelocity: 1200
+  fireRateRPM: 90
+  maxAmmo: 3
+  autoReload: 1
+  reloadTime: 2.85
+  projectilePrefab: {fileID: 7714716819573549247, guid: b1f4d9caf67163f4aa806ab700d7abbb,
+    type: 3}
+  pelletCount: 1
+  baseDispersion: 0.15
+  chokeMultiplier: 1
+  enableOverheat: 0
+  heatPerShot: 5
+  coolingRate: 15
+  maxHeat: 100
+  heatDispersionMultiplier: 4
+  recoilForce: 2500
+  cameraShakeMultiplier: 0.0005
+  cameraShakeDuration: 0.2
+  shootSound: {fileID: 8300000, guid: d74d2ed14c3aedc4d8d196c6f4747eed, type: 3}
+  reloadSound: {fileID: 0}
+  emptyClickSound: {fileID: 0}
+  casingPrefab: {fileID: 8861373467729997680, guid: 07d19cd4efd487741a4e81b47f37da44,
+    type: 3}
+  casingEjectDelay: 0
+  casingEjectForce: {x: 0, y: 0, z: 0}
+  casingEjectRandomness: {x: 0, y: 0, z: 0}
+  muzzleFlashPrefab: {fileID: 2950257127342656793, guid: bec8b60f5a2e1e0428474d8c89aef38b,
+    type: 3}
+  muzzleFlashDuration: 1
+  enableProceduralRecoil: 1
+  isRotaryBarrel: 0
+  spinUpTime: 1
+  maxSpinSpeed: 1000
+  magazineDropPrefab: {fileID: 1137557374570446126, guid: 83215d59eb20aa4479d379a7d95db8e8,
+    type: 3}
+  magazineDropDelay: 2.28
+  magazineDespawnTime: 3
+  magazineDropForce: {x: 0, y: 1, z: 0}
+  magazineDropTorque: 1

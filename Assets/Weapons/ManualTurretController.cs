@@ -6,11 +6,8 @@ namespace Weapons
     {
         [Header("=== REFERENSI (BEBAS STRES SUMBU BLENDER) ===")]
         public Camera playerCamera;
-        [Tooltip("Pivot putaran kiri-kanan (Base Yaw)")]
         public Transform turretBase;
-        [Tooltip("Pivot putaran atas-bawah (Gun Body Pitch)")]
         public Transform gunBarrel;
-        [Tooltip("Wajib: Objek empty 'muz' di ujung laras! Pastikan panah BIRU (Z) lurus ke depan laras!")]
         public Transform aimOrigin;
 
         [Header("=== SETTING AIMING ===")]
@@ -23,10 +20,13 @@ namespace Weapons
         public float maxPitch = 45f;
 
         [Header("=== INPUT SETTINGS ===")]
-        [Tooltip("Jika menyala, turret akan mengikuti crosshair layar (Player). Jika mati, turret dikendalikan script lain lewat SetAimTarget().")]
         public bool usePlayerInput = true;
+        
+        [Tooltip("Tombol untuk Free Look (Kamera muter tapi turret diam)")]
+        public KeyCode freeLookKey = KeyCode.C; // <-- INI HOTKEY-NYA
 
         private Vector3 _currentTargetPoint;
+        private bool _isFreeLooking = false;
 
         public void SetAimTarget(Vector3 targetPoint)
         {
@@ -39,26 +39,48 @@ namespace Weapons
             if (aimOrigin == null) Debug.LogError("Tolong assign objek 'muz' ke aimOrigin!");
         }
 
+        // Gw pindahin cek input ke Update biar lebih responsif dibanding LateUpdate
+        void Update() 
+        {
+            if (usePlayerInput && playerCamera != null)
+            {
+                // Ngecek apakah tombol 'C' lagi ditekan
+                _isFreeLooking = Input.GetKey(freeLookKey);
+            }
+        }
+
         void LateUpdate()
         {
             if (turretBase == null || gunBarrel == null || aimOrigin == null) return;
 
             if (usePlayerInput && playerCamera != null)
             {
-                _currentTargetPoint = GetCrosshairTarget();
+                // Kalo LAGI GAK NEKAN 'C', update titik aim ke arah crosshair kamera.
+                // Tapi kalo LAGI NEKAN 'C', biarin aja, jangan di-update!
+                if (!_isFreeLooking) 
+                {
+                    _currentTargetPoint = GetCrosshairTarget();
+                }
             }
 
-            // 1. Arahkan Yaw (Kiri/Kanan)
-            AimTurretYaw(_currentTargetPoint);
+            // --- INI PERUBAHAN PENTING ---
+            // Turret cuma boleh muter ngikutin titik aim JIKA GAK LAGI FREE LOOK!
+            // (Jadi pas nekan C, laras meriamnya bener-bener diem membeku di tempat)
+            if (!_isFreeLooking)
+            {
+                // 1. Arahkan Yaw (Kiri/Kanan)
+                AimTurretYaw(_currentTargetPoint);
 
-            // 2. Arahkan Pitch (Atas/Bawah)
-            AimBarrelPitch(_currentTargetPoint);
+                // 2. Arahkan Pitch (Atas/Bawah)
+                AimBarrelPitch(_currentTargetPoint);
+            }
         }
 
         private RaycastHit[] _raycastHits = new RaycastHit[10];
 
         private Vector3 GetCrosshairTarget()
         {
+            // (Sama persis kayak script lu sebelumnya)
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
             int hitCount = Physics.RaycastNonAlloc(ray, _raycastHits, maxAimDistance, aimMask);
             
@@ -68,8 +90,6 @@ namespace Weapons
             for (int i = 0; i < hitCount; i++)
             {
                 RaycastHit hit = _raycastHits[i];
-                
-                // Abaikan jika yang ditabrak adalah bagian dari kendaraan kita sendiri (root yang sama)
                 if (hit.transform.root == transform.root) continue;
 
                 if (hit.distance < closestDistance)
@@ -78,7 +98,6 @@ namespace Weapons
                     targetPoint = hit.point;
                 }
             }
-
             return targetPoint;
         }
 

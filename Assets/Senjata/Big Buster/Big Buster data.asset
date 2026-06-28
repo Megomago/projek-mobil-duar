@@ -1,0 +1,58 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: fe49559cf43e52a4d8be128c37864496, type: 3}
+  m_Name: Big Buster data
+  m_EditorClassIdentifier: 
+  weaponName: BIg Buster 50
+  weaponIcon: {fileID: 0}
+  weapon3DPrefab: {fileID: 7133440297363014158, guid: 9ec46e7abf023e145b05bf5d4f65e6cf,
+    type: 3}
+  hudPrefab: {fileID: 6880005277670001014, guid: 173b46495b470c74f97a41a24a558c6b,
+    type: 3}
+  muzzleVelocity: 320
+  fireRateRPM: 600
+  maxAmmo: 1
+  autoReload: 1
+  reloadTime: 7
+  projectilePrefab: {fileID: 8680127872553205067, guid: c39673d2bc131f143830ad11f6c161f9,
+    type: 3}
+  pelletCount: 50
+  baseDispersion: 2
+  chokeMultiplier: 1
+  enableOverheat: 0
+  heatPerShot: 5
+  coolingRate: 15
+  maxHeat: 100
+  heatDispersionMultiplier: 4
+  recoilForce: 5000
+  cameraShakeMultiplier: 0.0005
+  cameraShakeDuration: 0.2
+  shootSound: {fileID: 8300000, guid: 43c70cd559d03234188a0a79839aef85, type: 3}
+  reloadSound: {fileID: 0}
+  emptyClickSound: {fileID: 0}
+  casingPrefab: {fileID: 6428558085314955693, guid: 81ffa24a43ebf9a42896898bba6d7b95,
+    type: 3}
+  casingEjectDelay: 0
+  casingEjectForce: {x: 4, y: 1.5, z: -0.75}
+  casingEjectRandomness: {x: 1, y: 0.5, z: 0.25}
+  muzzleFlashPrefab: {fileID: 733088583581516313, guid: 9763a107b50bed844a88ecf7d92294d6,
+    type: 3}
+  muzzleFlashDuration: 1
+  enableProceduralRecoil: 1
+  isRotaryBarrel: 0
+  spinUpTime: 1
+  maxSpinSpeed: 1000
+  magazineDropPrefab: {fileID: 0}
+  magazineDropDelay: 0.3
+  magazineDespawnTime: 3
+  magazineDropForce: {x: 0, y: -1.5, z: 0}
+  magazineDropTorque: 2
