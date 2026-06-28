@@ -482,8 +482,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   target: {fileID: 0}
-  distance: 5
-  height: 3
+  distance: 6
+  height: 2.5
   mouseSensitivity: 2
 --- !u!1 &410087039
 GameObject:
