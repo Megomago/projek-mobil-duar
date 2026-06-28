@@ -1,3 +1,5 @@
+--- START OF FILE Paste June 29, 2026 - 2:15AM ---
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -962,6 +964,7 @@
                     spread: 0.25,
                     choke: 1.0,
                     heatMult: 4.0,
+                    overheatDispersionThreshold: 0.8, // Nilai default threshold
                     rest: true
                 },
                 {
@@ -982,6 +985,7 @@
                     spread: 3.2,
                     choke: 0.8,
                     heatMult: 2.0,
+                    overheatDispersionThreshold: 0.8,
                     rest: false
                 },
                 {
@@ -1002,6 +1006,7 @@
                     spread: 0.8,
                     choke: 1.0,
                     heatMult: 3.5,
+                    overheatDispersionThreshold: 0.5, // Minigun mulai goyang lebih cepet di 50%
                     rest: true // Rest simulates player releasing trigger to cool down
                 }
             ];
@@ -1012,13 +1017,13 @@
             let wp = null;
             let now = Date.now();
             if (type === 'autocannon') {
-                wp = { id: now, name: "30mm HVAP Autocannon Mk II", color: "#fcca46", type: "mag", dmg: 90, pellets: 1, rpm: 500, mag: 40, reload: 2.0, heatPerShot: 3.0, maxHeat: 100, coolRate: 20, vel: 820, drag: 0, spread: 0.2, choke: 1.0, heatMult: 4.0, rest: true };
+                wp = { id: now, name: "30mm HVAP Autocannon Mk II", color: "#fcca46", type: "mag", dmg: 90, pellets: 1, rpm: 500, mag: 40, reload: 2.0, heatPerShot: 3.0, maxHeat: 100, coolRate: 20, vel: 820, drag: 0, spread: 0.2, choke: 1.0, heatMult: 4.0, overheatDispersionThreshold: 0.8, rest: true };
             } else if (type === 'shotgun') {
-                wp = { id: now, name: "12g Shredder Shotgun", color: "#00d2c4", type: "mag", dmg: 15, pellets: 12, rpm: 150, mag: 8, reload: 3.5, heatPerShot: 25, maxHeat: 100, coolRate: 15, vel: 380, drag: 0, spread: 4.0, choke: 0.7, heatMult: 2.0, rest: false };
+                wp = { id: now, name: "12g Shredder Shotgun", color: "#00d2c4", type: "mag", dmg: 15, pellets: 12, rpm: 150, mag: 8, reload: 3.5, heatPerShot: 25, maxHeat: 100, coolRate: 15, vel: 380, drag: 0, spread: 4.0, choke: 0.7, heatMult: 2.0, overheatDispersionThreshold: 0.8, rest: false };
             } else if (type === 'minigun') {
-                wp = { id: now, name: "Viper 20mm Rotary Cannon", color: "#ff4a5a", type: "heat", dmg: 55, pellets: 1, rpm: 1500, mag: 0, reload: 0, heatPerShot: 1.2, maxHeat: 150, coolRate: 25, vel: 900, drag: 0, spread: 1.1, choke: 1.1, heatMult: 3.0, rest: true };
+                wp = { id: now, name: "Viper 20mm Rotary Cannon", color: "#ff4a5a", type: "heat", dmg: 55, pellets: 1, rpm: 1500, mag: 0, reload: 0, heatPerShot: 1.2, maxHeat: 150, coolRate: 25, vel: 900, drag: 0, spread: 1.1, choke: 1.1, heatMult: 3.0, overheatDispersionThreshold: 0.6, rest: true };
             } else if (type === 'railgun') {
-                wp = { id: now, name: "Magnetic Gauss Railgun", color: "#00ff87", type: "mag", dmg: 650, pellets: 1, rpm: 20, mag: 1, reload: 4.0, heatPerShot: 80, maxHeat: 100, coolRate: 10, vel: 1800, drag: 0, spread: 0.02, choke: 0.5, heatMult: 1.0, rest: false };
+                wp = { id: now, name: "Magnetic Gauss Railgun", color: "#00ff87", type: "mag", dmg: 650, pellets: 1, rpm: 20, mag: 1, reload: 4.0, heatPerShot: 80, maxHeat: 100, coolRate: 10, vel: 1800, drag: 0, spread: 0.02, choke: 0.5, heatMult: 1.0, overheatDispersionThreshold: 0.8, rest: false };
             }
 
             if (wp) {
@@ -1038,7 +1043,25 @@
             }
         }
 
-        // --- Core Physics & Math Engine (Synchronized with Unity) ---
+        // --- Core Ballistics & Overheat Dispersion Engine ---
+
+        // Fungsi pembantu untuk kalkulasi spread berdasarkan threshold (Sinkron sama Unity)
+        function calculateOverheatSpread(w, currentHeat) {
+            if (w.type !== 'heat' || !w.maxHeat) return w.spread;
+            
+            let heatFactor = currentHeat / w.maxHeat;
+            if (heatFactor > 1.0) heatFactor = 1.0;
+            
+            let threshold = w.overheatDispersionThreshold !== undefined ? w.overheatDispersionThreshold : 0.8;
+            
+            if (heatFactor >= threshold) {
+                let divisor = 1.0 - threshold;
+                // Jika threshold diset 1.0, langsung loncat ke dispersi terburuk pas 100% heat
+                let normalizedFactor = divisor > 0 ? (heatFactor - threshold) / divisor : 1.0;
+                return w.spread + (w.spread * w.heatMult - w.spread) * normalizedFactor;
+            }
+            return w.spread;
+        }
 
         // Integrasi Fisika Proyektil (Euler integration mirip Unity)
         function calculateBallistics(v0, dragCoeff, targetX) {
@@ -1065,7 +1088,6 @@
         }
 
         // Hit Probability under Gaussian (Rayleigh Radial) Distribution (Synchronized with Unity Box-Muller)
-        // Rincian matematis di weapon_system_analysis.md
         function calculateHitProbability(spreadDegrees, chokeMult, targetDist, targetRadius) {
             if (spreadDegrees <= 0) return 1.0;
             let sigmaDegrees = spreadDegrees * chokeMult;
@@ -1226,7 +1248,15 @@
                             <label>Heat Disp. Multiplier</label>
                             <input type="number" step="0.1" value="${w.heatMult || 1.0}" oninput="updateWeapon(${index}, 'heatMult', this.value)">
                         </div>
-                        <div class="card-input-wrapper span-2" style="flex-direction:row; justify-content:space-between; align-items:center;">
+                        <!-- SLOT BARU: OVERHEAT THRESHOLD -->
+                        <div class="card-input-wrapper">
+                            <label>Overheat Disp. Threshold</label>
+                            <input type="number" step="0.05" min="0" max="1" value="${w.overheatDispersionThreshold !== undefined ? w.overheatDispersionThreshold : 0.8}" oninput="updateWeapon(${index}, 'overheatDispersionThreshold', this.value)">
+                        </div>
+                        <div class="card-input-wrapper" style="opacity: 0; pointer-events: none;">
+                            <!-- Placeholder spacing -->
+                        </div>
+                        <div class="card-input-wrapper span-2" style="flex-direction:row; justify-content:space-between; align-items:center; margin-top: 5px;">
                             <label style="cursor:pointer;" for="rest-chk-${index}">Simulate Cooldown Rest (Release Trigger)</label>
                             <input type="checkbox" id="rest-chk-${index}" ${w.rest ? 'checked' : ''} onchange="updateWeapon(${index}, 'rest', this.checked)">
                         </div>
@@ -1294,6 +1324,7 @@
                 spread: 0.5,
                 choke: 1.0,
                 heatMult: 3.0,
+                overheatDispersionThreshold: 0.8,
                 rest: true
             });
             saveToLocalStorage();
@@ -1322,7 +1353,6 @@
             
             // SMART PARSER: Handles Unity's native .asset YAML format OR pure JSON
             if (input.startsWith('%YAML') || input.includes('MonoBehaviour:')) {
-                // FIXED: Ganti split('\\n') menjadi split('\n') agar berjalan di browser
                 let lines = input.split('\n');
                 lines.forEach(line => {
                     let parts = line.split(':');
@@ -1376,6 +1406,7 @@
                 spread: data.baseDispersion !== undefined ? data.baseDispersion : 0.5,
                 choke: data.chokeMultiplier !== undefined ? data.chokeMultiplier : 1.0,
                 heatMult: data.heatDispersionMultiplier !== undefined ? data.heatDispersionMultiplier : 4.0,
+                overheatDispersionThreshold: data.overheatDispersionThreshold !== undefined ? data.overheatDispersionThreshold : 0.8,
                 rest: true
             };
             
@@ -1526,12 +1557,8 @@
                             ammo = w.mag;
                         }
                         
-                        let currentSpread = w.spread;
-                        if (w.type === 'heat') {
-                            let heatFactor = (w.maxHeat > 0) ? (heat / w.maxHeat) : 0;
-                            if (heatFactor > 1.0) heatFactor = 1.0;
-                            currentSpread = w.spread + (w.spread * w.heatMult - w.spread) * heatFactor;
-                        }
+                        // HITUNG SPREAD PAKE LOGIKA THRESHOLD BARU
+                        let currentSpread = calculateOverheatSpread(w, heat);
 
                         let pts = generateGaussianScatterForShot(currentSpread, w.choke || 1.0, targetDist, w.pellets);
                         scatterPoints = scatterPoints.concat(pts);
@@ -1608,9 +1635,8 @@
                         state.timer = state.interval;
                     } else {
                         if (state.timer <= 0) {
-                            let heatFactor = (w.type === 'heat' && w.maxHeat > 0) ? (state.heat / w.maxHeat) : 0;
-                            if (heatFactor > 1.0) heatFactor = 1.0;
-                            let currentSpread = w.type === 'heat' ? w.spread + (w.spread * w.heatMult - w.spread) * heatFactor : w.spread;
+                            // HITUNG SPREAD DINAMIS PAKE LOGIKA THRESHOLD BARU
+                            let currentSpread = calculateOverheatSpread(w, state.heat);
                             
                             let currentHitProb = calculateHitProbability(currentSpread, w.choke || 1.0, targetDist, targetRadius);
                             let expectedShotDmg = (w.dmg * w.pellets) * currentHitProb;
@@ -1721,6 +1747,7 @@
                 let hitProbPct = (baseHitProb * 100).toFixed(1) + "%";
                 let hitProbOverheatPct = "N/A";
                 if (w.type === 'heat') {
+                    // Hit prob worst dihitung pake dispersi maksimal (heat ratio = 1.0)
                     let hitProbWorst = calculateHitProbability(w.spread * w.heatMult, w.choke || 1.0, targetDist, targetRadius);
                     hitProbOverheatPct = (hitProbWorst * 100).toFixed(1) + "%";
                 }
