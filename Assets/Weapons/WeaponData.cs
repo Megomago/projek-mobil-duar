@@ -5,7 +5,6 @@ namespace Weapons
     /// <summary>
     /// ScriptableObject berisi SEMUA data/value konfigurasi senjata.
     /// Buat asset baru: Right Click → Create → Weapons → Weapon Data.
-    /// Lalu drag ke slot "weaponData" di ModularWeapon.
     /// </summary>
     [CreateAssetMenu(fileName = "New WeaponData", menuName = "Weapons/Weapon Data")]
     public class WeaponData : ScriptableObject
@@ -64,6 +63,10 @@ namespace Weapons
         public float maxHeat = 100f;
         [Tooltip("Saat overheat 100%, dispersi tembakan dikali berapa? (Bikin akurasi sangat buruk)")]
         public float heatDispersionMultiplier = 4f;
+
+        // --- INI BARANG BARU YANG GUE TAMBAHIN BIAR BISA DI-STEL ---
+        [Tooltip("Ambang batas panas (0.0 - 1.0) sebelum akurasi mulai memburuk. Contoh: 0.8 berarti mulai goyang saat panas 80%")]
+        [Range(0f, 1f)] public float overheatDispersionThreshold = 0.8f;
         #endregion
 
         #region --- 5. RECOIL (VEHICLE PHYSICS) ---

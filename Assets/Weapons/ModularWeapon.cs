@@ -305,7 +305,20 @@ namespace Weapons
 
             // Hitung multiplier dispersi dari kepanasan
             float heatFactor = weaponData.enableOverheat ? (_currentHeat / weaponData.maxHeat) : 0f;
-            float currentDispersion = Mathf.Lerp(weaponData.baseDispersion, weaponData.baseDispersion * weaponData.heatDispersionMultiplier, heatFactor);
+            float currentDispersion = weaponData.baseDispersion;
+
+            if (weaponData.enableOverheat)
+            {
+                // Namanya diganti 'heatRatio' biar gak bentrok sama variabel lama lu yang belum kehapus
+                float heatRatio = _currentHeat / weaponData.maxHeat; 
+                float threshold = 0.8f; // 80% ambang batas
+
+                if (heatRatio >= threshold)
+                {
+                    float normalizedFactor = (heatRatio - threshold) / (1f - threshold);
+                    currentDispersion = Mathf.Lerp(weaponData.baseDispersion, weaponData.baseDispersion * weaponData.heatDispersionMultiplier, normalizedFactor);
+                }
+            }
 
             // Tembakkan peluru (Loop untuk Shotgun Pellet)
             for (int i = 0; i < weaponData.pelletCount; i++)
@@ -625,7 +638,7 @@ namespace Weapons
             }
         }
 
-        // --- PUBLIC GETTERS UNTUK UI ---
+// --- PUBLIC GETTERS UNTUK UI ---
         public bool IsReloading() => _isReloading;
         
         public float GetRemainingReloadTime()
@@ -633,5 +646,10 @@ namespace Weapons
             if (!_isReloading) return 0f;
             return Mathf.Max(0f, _reloadTimer);
         }
+
+        // --- TAMBAHAN GETTER UNTUK OVERHEAT (BIAR UI BISA BACA) ---
+        public bool IsOverheatEnabled() => weaponData != null && weaponData.enableOverheat;
+        public float GetCurrentHeat() => _currentHeat;
+        public float GetMaxHeat() => weaponData != null ? weaponData.maxHeat : 1f;
     }
 }

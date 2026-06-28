@@ -1,5 +1,6 @@
 using UnityEngine;
-using TMPro; // Membutuhkan TextMeshPro
+using UnityEngine.UI; // Butuh ini untuk Slider dan Image
+using TMPro;
 
 namespace Weapons
 {
@@ -10,12 +11,24 @@ namespace Weapons
         public ModularWeapon targetWeapon;
 
         [Header("=== UI ELEMENTS ===")]
-        [Tooltip("Teks untuk menampilkan nama senjata (diambil otomatis dari nama prefab)")]
+        [Tooltip("Teks untuk menampilkan nama senjata")]
         public TextMeshProUGUI weaponNameText;
-        [Tooltip("Teks untuk menampilkan jumlah amunisi (contoh: 30 / 30)")]
+        [Tooltip("Teks untuk menampilkan jumlah amunisi")]
         public TextMeshProUGUI ammoText;
-        [Tooltip("Teks untuk menampilkan status reload (contoh: Reloading... 1.5s)")]
+        [Tooltip("Teks untuk menampilkan status reload")]
         public TextMeshProUGUI reloadText;
+
+        [Header("=== OVERHEAT UI ===")]
+        [Tooltip("Slider visual untuk bar overheat")]
+        public Slider overheatSlider;
+        [Tooltip("Container utama bar overheat (akan otomatis disembunyikan jika senjata tidak menggunakan sistem overheat)")]
+        public GameObject overheatContainer;
+        [Tooltip("Bagian Fill dari Slider untuk efek transisi warna panas (opsional)")]
+        public Image overheatFillImage;
+        [Tooltip("Warna bar saat senjata dingin")]
+        public Color coldColor = Color.cyan;
+        [Tooltip("Warna bar saat senjata hampir overheat")]
+        public Color hotColor = Color.red;
 
         private bool _isReloadingActive = false;
 
@@ -39,16 +52,21 @@ namespace Weapons
                 targetWeapon.OnReloadStart += HandleReloadStart;
                 targetWeapon.OnReloadFinished += HandleReloadFinished;
 
-                // Setup tampilan awal
+                // Setup tampilan awal ammo & reload
                 HandleAmmoChanged(targetWeapon.currentAmmo, targetWeapon.weaponData.maxAmmo);
                 _isReloadingActive = targetWeapon.IsReloading();
                 UpdateReloadUIVisibility();
+
+                // Tampilkan/sembunyikan bar overheat sesuai spec senjata
+                if (overheatContainer != null)
+                {
+                    overheatContainer.SetActive(targetWeapon.IsOverheatEnabled());
+                }
             }
         }
 
         private void OnDestroy()
         {
-            // Pastikan tidak ada memory leak
             if (targetWeapon != null)
             {
                 targetWeapon.OnAmmoChanged -= HandleAmmoChanged;
@@ -59,10 +77,18 @@ namespace Weapons
 
         private void Update()
         {
+            if (targetWeapon == null) return;
+
             // Teks reload hanya di-update tiap frame SAAT sedang reload
-            if (_isReloadingActive && targetWeapon != null)
+            if (_isReloadingActive)
             {
                 UpdateReloadTimer();
+            }
+
+            // Update nilai slider overheat tiap frame jika senjatanya memang bisa panas
+            if (targetWeapon.IsOverheatEnabled())
+            {
+                UpdateOverheatUI();
             }
         }
 
@@ -80,7 +106,7 @@ namespace Weapons
 
             if (maxAmmo <= 0)
             {
-                ammoText.text = "Ammo: &infin;"; // Simbol infinity
+                ammoText.text = "Ammo: &infin;";
                 ammoText.color = Color.white;
             }
             else
@@ -89,7 +115,6 @@ namespace Weapons
                 ammoText.color = currentAmmo <= 0 ? Color.red : Color.white;
             }
 
-            // Saat tembak / peluru berubah, pastikan pesan "Press R" update
             UpdateReloadUIVisibility();
         }
 
@@ -113,7 +138,7 @@ namespace Weapons
             {
                 reloadText.gameObject.SetActive(true);
                 reloadText.color = Color.white;
-                UpdateReloadTimer(); // Segera tampilkan angkanya
+                UpdateReloadTimer();
             }
             else if (targetWeapon.weaponData != null && targetWeapon.weaponData.maxAmmo > 0 && targetWeapon.currentAmmo <= 0)
             {
@@ -132,6 +157,25 @@ namespace Weapons
             if (reloadText == null) return;
             float remainingTime = targetWeapon.GetRemainingReloadTime();
             reloadText.text = $"Reloading... {remainingTime:F1}s";
+        }
+
+        private void UpdateOverheatUI()
+        {
+            if (overheatSlider == null) return;
+
+            float currentHeat = targetWeapon.GetCurrentHeat();
+            float maxHeat = targetWeapon.GetMaxHeat();
+
+            // Cegah error pembagian dengan nol kalau lu bego ngisi Max Heat = 0 di ScriptableObject
+            float heatRatio = maxHeat > 0f ? (currentHeat / maxHeat) : 0f;
+
+            overheatSlider.value = heatRatio;
+
+            // Transisi warna dari dingin ke panas biar keliatan dinamis
+            if (overheatFillImage != null)
+            {
+                overheatFillImage.color = Color.Lerp(coldColor, hotColor, heatRatio);
+            }
         }
     }
 }
