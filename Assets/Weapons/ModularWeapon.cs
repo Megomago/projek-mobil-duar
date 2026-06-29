@@ -63,11 +63,18 @@ namespace Weapons
         public float anglePerShot = 60f;
         [Tooltip("Kecepatan snap ke sudut baru")]
         public float snapSpeed = 20f;
+        [Tooltip("Delay sebelum bagian ini mulai berputar setelah tembakan (dalam detik)")]
+        public float rotationDelay = 0f;
+        [Tooltip("Centang ini jika bagian ini digerakkan juga oleh Animator (misal: Reload)")]
+        public bool isAnimated = false;
 
         // Runtime state
         [HideInInspector] public Quaternion originalLocalRot;
         [HideInInspector] public float currentAngle;
         [HideInInspector] public float targetAngle;
+        [HideInInspector] public Quaternion savedBaseRot;
+        [HideInInspector] public bool hasSavedBaseRot;
+        [HideInInspector] public Queue<float> pendingRotationTimes;
     }
 
     /// <summary>
@@ -163,6 +170,7 @@ namespace Weapons
                         part.originalLocalRot = part.mesh.localRotation;
                         part.currentAngle = 0f;
                         part.targetAngle = 0f;
+                        part.pendingRotationTimes = new Queue<float>();
                     }
                 }
             }
@@ -201,7 +209,7 @@ namespace Weapons
         {
             if (weaponData == null) return;
 
-            // Kembalikan posisi asli sebelum Animator mengevaluasi frame ini (untuk part yang di-animate)
+            // Kembalikan posisi/rotasi asli sebelum Animator mengevaluasi frame ini (untuk part yang di-animate)
             RestoreAnimatedParts();
 
             if (_fireCooldown > 0) _fireCooldown -= Time.deltaTime;
@@ -215,12 +223,25 @@ namespace Weapons
 
         private void RestoreAnimatedParts()
         {
-            if (!weaponData.enableProceduralRecoil || recoilParts == null) return;
-            foreach (var part in recoilParts)
+            if (weaponData.enableProceduralRecoil && recoilParts != null)
             {
-                if (part.mesh != null && part.isAnimated && part.hasSavedBasePos)
+                foreach (var part in recoilParts)
                 {
-                    part.mesh.localPosition = part.savedBasePos;
+                    if (part.mesh != null && part.isAnimated && part.hasSavedBasePos)
+                    {
+                        part.mesh.localPosition = part.savedBasePos;
+                    }
+                }
+            }
+
+            if (rotatableParts != null)
+            {
+                foreach (var part in rotatableParts)
+                {
+                    if (part.mesh != null && part.isAnimated && part.hasSavedBaseRot)
+                    {
+                        part.mesh.localRotation = part.savedBaseRot;
+                    }
                 }
             }
         }
@@ -281,7 +302,7 @@ namespace Weapons
             }
 
             // Efek suara & flash
-            PlaySound(weaponData.shootSound);
+            PlaySound(weaponData.shootSound, true);
             if (muzzleFlash != null) muzzleFlash.Play();
 
             // Spawn prefab muzzle flash tambahan jika ada
@@ -309,7 +330,6 @@ namespace Weapons
 
             if (weaponData.enableOverheat)
             {
-                // Namanya diganti 'heatRatio' biar gak bentrok sama variabel lama lu yang belum kehapus
                 float heatRatio = _currentHeat / weaponData.maxHeat; 
                 float threshold = 0.8f; // 80% ambang batas
 
@@ -366,14 +386,21 @@ namespace Weapons
                 }
             }
 
-            // Picu rotasi SEMUA rotatable part (revolver cylinder, dll)
+            // Picu rotasi SEMUA rotatable part (revolver cylinder, dll) dengan dukungan delay
             if (rotatableParts != null)
             {
                 foreach (var part in rotatableParts)
                 {
                     if (part.mesh != null)
                     {
-                        part.targetAngle += part.anglePerShot;
+                        if (part.rotationDelay > 0f)
+                        {
+                            part.pendingRotationTimes.Enqueue(Time.time + part.rotationDelay);
+                        }
+                        else
+                        {
+                            part.targetAngle += part.anglePerShot;
+                        }
                     }
                 }
             }
@@ -387,12 +414,9 @@ namespace Weapons
 
             if (dispersionAngle > 0f)
             {
-                // Gaussian Circular Cone Spread (Box-Muller Transform)
-                // Menghasilkan sebaran pellet realistis: padat di tengah, jarang di pinggir
                 float sigma = dispersionAngle * weaponData.chokeMultiplier;
 
-                // Box-Muller: konversi 2 uniform random -> 2 gaussian random
-                float u1 = Mathf.Max(Random.value, 0.0001f); // hindari log(0)
+                float u1 = Mathf.Max(Random.value, 0.0001f);
                 float u2 = Random.value;
                 float gaussMagnitude = Mathf.Sqrt(-2f * Mathf.Log(u1)) * sigma;
                 float angle = u2 * 2f * Mathf.PI;
@@ -400,7 +424,6 @@ namespace Weapons
                 float deviationX = gaussMagnitude * Mathf.Cos(angle);
                 float deviationY = gaussMagnitude * Mathf.Sin(angle);
 
-                // Terapkan deviasi ke arah tembak (cone spread)
                 Quaternion deviation = Quaternion.AngleAxis(deviationX, muzzleTransform.up) *
                                        Quaternion.AngleAxis(deviationY, muzzleTransform.right);
 
@@ -440,7 +463,6 @@ namespace Weapons
                 casingRb.AddTorque(Random.insideUnitSphere * 10f, ForceMode.Impulse);
             }
 
-            // Despawn/kembalikan ke pool setelah 3 detik
             ObjectPool.Instance.Despawn(casing, 3f);
         }
 
@@ -474,7 +496,6 @@ namespace Weapons
 
                 if (part.isAnimated)
                 {
-                    // Untuk part yang di-animasikan, kita hanya menghaluskan nilai offset-nya menuju nol
                     part.currentOffset = Vector3.SmoothDamp(
                         part.currentOffset, 
                         Vector3.zero, 
@@ -484,7 +505,6 @@ namespace Weapons
                 }
                 else
                 {
-                    // Gunakan SmoothDamp untuk pantulan ala pegas/spring yang lebih mulus dan natural (bebas double-lerp)
                     part.mesh.localPosition = Vector3.SmoothDamp(
                         part.mesh.localPosition, 
                         part.originalLocalPos, 
@@ -497,19 +517,33 @@ namespace Weapons
 
         private void LateUpdate()
         {
-            if (weaponData == null || !weaponData.enableProceduralRecoil || recoilParts == null) return;
+            if (weaponData == null) return;
 
-            foreach (var part in recoilParts)
+            // Recoil Parts
+            if (weaponData.enableProceduralRecoil && recoilParts != null)
             {
-                if (part.mesh != null && part.isAnimated)
+                foreach (var part in recoilParts)
                 {
-                    // Animator sudah berjalan (setelah Update, sebelum LateUpdate).
-                    // Simpan posisi yang di-set oleh Animator (sebagai base pos bersih untuk frame berikutnya).
-                    part.savedBasePos = part.mesh.localPosition;
-                    part.hasSavedBasePos = true;
+                    if (part.mesh != null && part.isAnimated)
+                    {
+                        part.savedBasePos = part.mesh.localPosition;
+                        part.hasSavedBasePos = true;
+                        part.mesh.localPosition += part.currentOffset;
+                    }
+                }
+            }
 
-                    // Aplikasikan offset prosedural di atas animasi Animator
-                    part.mesh.localPosition += part.currentOffset;
+            // Rotatable Parts (diaplikasikan di LateUpdate setelah Animator selesai mengevaluasi frame)
+            if (rotatableParts != null)
+            {
+                foreach (var part in rotatableParts)
+                {
+                    if (part.mesh != null && part.isAnimated)
+                    {
+                        part.savedBaseRot = part.mesh.localRotation;
+                        part.hasSavedBaseRot = true;
+                        part.mesh.localRotation = part.savedBaseRot * Quaternion.AngleAxis(part.currentAngle, part.rotationAxis);
+                    }
                 }
             }
         }
@@ -522,11 +556,21 @@ namespace Weapons
             {
                 if (part.mesh == null) continue;
 
+                // Memproses antrean rotasi yang tertunda akibat delay
+                while (part.pendingRotationTimes != null && part.pendingRotationTimes.Count > 0 && Time.time >= part.pendingRotationTimes.Peek())
+                {
+                    part.pendingRotationTimes.Dequeue();
+                    part.targetAngle += part.anglePerShot;
+                }
+
                 // Lerp sudut saat ini menuju target
                 part.currentAngle = Mathf.Lerp(part.currentAngle, part.targetAngle, Time.deltaTime * part.snapSpeed);
 
-                // Terapkan rotasi: originalRot + rotasi tambahan di sumbu yang ditentukan
-                part.mesh.localRotation = part.originalLocalRot * Quaternion.AngleAxis(part.currentAngle, part.rotationAxis);
+                // Jika tidak di-animate oleh Animator, terapkan rotasi secara langsung di Update
+                if (!part.isAnimated)
+                {
+                    part.mesh.localRotation = part.originalLocalRot * Quaternion.AngleAxis(part.currentAngle, part.rotationAxis);
+                }
             }
         }
 
@@ -534,13 +578,11 @@ namespace Weapons
         {
             if (!weaponData.isRotaryBarrel || rotaryParts == null || rotaryParts.Length == 0) return;
 
-            // Hitung akselerasi putaran (0 sampai 1)
             float lerpTarget = _isHoldingTrigger ? 1f : 0f;
             float spinAccelRate = 1f / weaponData.spinUpTime;
             
             _currentSpinLerp = Mathf.MoveTowards(_currentSpinLerp, lerpTarget, spinAccelRate * Time.deltaTime);
 
-            // Putar SEMUA rotary part
             float currentSpinSpeed = _currentSpinLerp * weaponData.maxSpinSpeed;
             foreach (var part in rotaryParts)
             {
@@ -565,7 +607,6 @@ namespace Weapons
                 }
             }
 
-            // Magazine drop dijadwalkan pakai timer (bukan langsung spawn)
             if (weaponData.magazineDropPrefab != null && magazineDropPoint != null)
             {
                 _pendingMagDrop = Time.time + weaponData.magazineDropDelay;
@@ -619,26 +660,35 @@ namespace Weapons
             if (magRb != null)
             {
                 magRb.velocity = Vector3.zero;
-                // Force sekarang relatif terhadap arah/rotasi dari magazineDropPoint
                 Vector3 localForce = magazineDropPoint.TransformDirection(weaponData.magazineDropForce);
                 magRb.AddForce(localForce, ForceMode.Impulse);
-                
-                // Rotasi acak
                 magRb.AddTorque(Random.insideUnitSphere * weaponData.magazineDropTorque, ForceMode.Impulse);
             }
 
             ObjectPool.Instance.Despawn(mag, weaponData.magazineDespawnTime);
         }
 
-        private void PlaySound(AudioClip clip)
+        private void PlaySound(AudioClip clip, bool randomize = false)
         {
             if (weaponAudioSource != null && clip != null)
             {
+                if (randomize)
+                {
+                    // Acak dikit pitch & volume biar gak mendem pas ditiup/dispam
+                    weaponAudioSource.pitch = Random.Range(0.85f, 0.98f); // Suara bakal lebih berat & ngebass
+                    weaponAudioSource.volume = Random.Range(0.9f, 1.0f);
+                }
+                else
+                {
+                    // Kembalikan ke normal untuk suara lain (reload, dll)
+                    weaponAudioSource.pitch = 1f;
+                    weaponAudioSource.volume = 1f;
+                }
+                
                 weaponAudioSource.PlayOneShot(clip);
             }
         }
 
-// --- PUBLIC GETTERS UNTUK UI ---
         public bool IsReloading() => _isReloading;
         
         public float GetRemainingReloadTime()
@@ -647,7 +697,6 @@ namespace Weapons
             return Mathf.Max(0f, _reloadTimer);
         }
 
-        // --- TAMBAHAN GETTER UNTUK OVERHEAT (BIAR UI BISA BACA) ---
         public bool IsOverheatEnabled() => weaponData != null && weaponData.enableOverheat;
         public float GetCurrentHeat() => _currentHeat;
         public float GetMaxHeat() => weaponData != null ? weaponData.maxHeat : 1f;
