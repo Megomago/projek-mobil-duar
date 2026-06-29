@@ -18,36 +18,34 @@ MonoBehaviour:
     type: 3}
   hudPrefab: {fileID: 425762758837386588, guid: 0cb07b3f10995974397d77987abfbd17,
     type: 3}
-  gridWidth: 2
-  gridHeight: 8
   muzzleVelocity: 800
   fireRateRPM: 450
-  maxAmmo: 300
+  maxAmmo: 150
   autoReload: 1
   reloadTime: 8
   projectilePrefab: {fileID: 1438585710772045704, guid: a0e9a2e013d833545a1b8c86fda4d850,
     type: 3}
   pelletCount: 1
-  baseDispersion: 0.2
+  baseDispersion: 0.3
   chokeMultiplier: 1
   enableOverheat: 1
-  heatPerShot: 5
-  coolingRate: 25
-  maxHeat: 100
+  heatPerShot: 2
+  coolingRate: 15
+  maxHeat: 125
   heatDispersionMultiplier: 4
   overheatDispersionThreshold: 0.8
-  recoilForce: 250
+  recoilForce: 150
   cameraShakeMultiplier: 0.0001
   cameraShakeDuration: 0.2
-  shootSound: {fileID: 8300000, guid: 43c70cd559d03234188a0a79839aef85, type: 3}
+  shootSound: {fileID: 8300000, guid: d74d2ed14c3aedc4d8d196c6f4747eed, type: 3}
   reloadSound: {fileID: 0}
   emptyClickSound: {fileID: 0}
   casingPrefab: {fileID: 78784092414082019, guid: 99c5ff25f20b6144f9297993931ad0ba,
     type: 3}
-  casingEjectDelay: 0
+  casingEjectDelay: 0.05
   casingEjectForce: {x: 0, y: 0, z: 0}
   casingEjectRandomness: {x: 0, y: 0, z: 0}
-  muzzleFlashPrefab: {fileID: 733088583581516313, guid: 9763a107b50bed844a88ecf7d92294d6,
+  muzzleFlashPrefab: {fileID: 2950257127342656793, guid: bec8b60f5a2e1e0428474d8c89aef38b,
     type: 3}
   muzzleFlashDuration: 1
   enableProceduralRecoil: 1
@@ -57,6 +55,6 @@ MonoBehaviour:
   magazineDropPrefab: {fileID: 3166832277002570856, guid: 7acd8b399b6081c46b344429ce115727,
     type: 3}
   magazineDropDelay: 0
-  magazineDespawnTime: 2.95
+  magazineDespawnTime: 3
   magazineDropForce: {x: 0, y: 0, z: 0}
-  magazineDropTorque: 0
+  magazineDropTorque: 2
