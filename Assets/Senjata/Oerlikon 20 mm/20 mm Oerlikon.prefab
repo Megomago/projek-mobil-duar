@@ -182,7 +182,7 @@ Animator:
   m_GameObject: {fileID: 651525132752894334}
   m_Enabled: 1
   m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 9100000, guid: 5baa338a8d076ec40bf33dc201538394, type: 2}
+  m_Controller: {fileID: 9100000, guid: 1730160e136f1d447ad15fbca4825be7, type: 2}
   m_CullingMode: 0
   m_UpdateMode: 0
   m_ApplyRootMotion: 0
@@ -206,7 +206,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   targetWeapon: {fileID: 5294549450918527993}
-  weaponAnimator: {fileID: 0}
+  weaponAnimator: {fileID: 7397339616389670890}
   reloadTriggerName: Reload
   animationDelay: 0
 --- !u!114 &1443456780978675209

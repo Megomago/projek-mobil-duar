@@ -33,6 +33,7 @@ MonoBehaviour:
   coolingRate: 15
   maxHeat: 100
   heatDispersionMultiplier: 4
+  overheatDispersionThreshold: 0.8
   recoilForce: 5000
   cameraShakeMultiplier: 0.0005
   cameraShakeDuration: 0.2
