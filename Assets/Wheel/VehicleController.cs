@@ -348,33 +348,59 @@ public class VehicleController : MonoBehaviour
 
     private void GatherInput()
     {
-        float verticalRaw = Input.GetAxis("Vertical");
+        // Ambil input horizontal (A/D atau Panah Kanan/Kiri)
         steerInput     = Input.GetAxis("Horizontal");
         handbrakeInput = Input.GetKey(KeyCode.Space) ? 1f : 0f;
 
+        // Input W/S atau Panah Atas/Bawah (Positif = W, Negatif = S)
+        float verticalRaw = Input.GetAxis("Vertical");
+
+        // Batas kecepatan di bawah 1 km/h dianggap mobil berhenti total
+        float stoppedThreshold = 1.0f;
+
+        // =========================================================================
+        // SISTEM TRANSMISI OTOMATIS ARCADE (AUTO REVERSE SHIFTER)
+        // =========================================================================
+        if (speedKmh <= stoppedThreshold)
+        {
+            // Jika mobil berhenti dan player nahan W (Maju)
+            if (verticalRaw > 0.1f)
+            {
+                isReverse = false;
+                currentGearIndex = 1; // Otomatis masuk Gigi 1
+            }
+            // Jika mobil berhenti dan player nahan S (Mundur)
+            else if (verticalRaw < -0.1f)
+            {
+                isReverse = true;
+                currentGearIndex = 0; // Otomatis masuk Gigi Mundur (R)
+            }
+        }
+
+        // Tentukan fungsi gas (throttle) dan rem (brake) berdasarkan arah gigi
         if (isReverse)
         {
-            // Saat reverse: S (negatif) = gas mundur, W (positif) = rem
-            throttleInput = verticalRaw < 0 ? -verticalRaw : 0f;
-            brakeInput    = verticalRaw > 0 ?  verticalRaw : 0f;
+            // Saat di gigi mundur (R):
+            // S (negatif) = Gas mundur, W (positif) = Rem/Deselerasi
+            throttleInput = verticalRaw < 0f ? -verticalRaw : 0f;
+            brakeInput    = verticalRaw > 0f ?  verticalRaw : 0f;
         }
         else
         {
-            // Normal: W (positif) = gas, S (negatif) = rem
-            throttleInput = verticalRaw > 0 ?  verticalRaw : 0f;
-            brakeInput    = verticalRaw < 0 ? -verticalRaw : 0f;
+            // Saat di gigi maju (D):
+            // W (positif) = Gas maju, S (negatif) = Rem/Deselerasi
+            throttleInput = verticalRaw > 0f ?  verticalRaw : 0f;
+            brakeInput    = verticalRaw < 0f ? -verticalRaw : 0f;
         }
+        // =========================================================================
 
-        // Manual transmission
+        // Transmisi manual (tetap lu pertahankan jika ingin opsional)
         if (transmissionType == TransmissionType.Manual)
         {
             clutchInput = Input.GetKey(KeyCode.LeftShift);
             if (Input.GetKeyDown(KeyCode.E) && _shiftCooldown <= 0f) ShiftUp();
             if (Input.GetKeyDown(KeyCode.Q) && _shiftCooldown <= 0f) ShiftDown();
         }
-
-        // Reverse
-        if (Input.GetKeyDown(KeyCode.R)) ToggleReverse();
     }
 
     #endregion
@@ -476,6 +502,29 @@ public class VehicleController : MonoBehaviour
 
         float gearRatio      = GetCurrentGearRatio();
         float totalDriveTorque = currentTorqueNm * gearRatio * finalDriveRatio * transmissionEfficiency;
+
+        // =========================================================================
+        // JURUS ANTI BOCOR / SOFT REV-LIMITER (BIAR MOBIL GAK BISA MELEBIHI TOP SPEED GIGI)
+        // =========================================================================
+        // Hitung berapa RPM mesin yang "seharusnya" jika mengikuti putaran roda saat ini
+        float gearR = Mathf.Abs(gearRatio);
+        float realEngineRPM = Mathf.Abs(_wheelRPM) * gearR * finalDriveRatio;
+
+        float revLimiterFactor = 1f;
+        if (realEngineRPM >= engine.maxRPM)
+        {
+            // Jika putaran roda sudah melewati batas RPM maksimal mesin, potong torsi jadi NOL
+            revLimiterFactor = 0f; 
+        }
+        else if (realEngineRPM > engine.maxRPM * 0.98f)
+        {
+            // Sunat torsi secara mulus dari 98% menuju 100% RPM maksimal
+            revLimiterFactor = Mathf.InverseLerp(engine.maxRPM, engine.maxRPM * 0.98f, realEngineRPM);
+        }
+
+        // Kalikan torsi total dengan faktor pembatas
+        totalDriveTorque *= revLimiterFactor;
+        // =========================================================================
 
         // Bagi torque ke drive wheels
         float torquePerWheel = _driveWheelCount > 0 ? totalDriveTorque / _driveWheelCount : 0f;
