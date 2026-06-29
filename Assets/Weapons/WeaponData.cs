@@ -17,8 +17,13 @@ namespace Weapons
         public Sprite weaponIcon;
         [Tooltip("Prefab 3D senjata yang memiliki script ModularWeapon. Akan di-spawn di pivot mobil.")]
         public GameObject weapon3DPrefab;
-        [Tooltip("Prefab HUD khusus senjata ini (Panel berisi WeaponUIManager + Teks). BUKAN Canvas, cukup Panel/Empty.")]
         public GameObject hudPrefab;
+
+        [Header("=== INVENTORY GRID SETTINGS ===")]
+        [Tooltip("Lebar item di grid (Horizontal)")]
+        [Min(1)] public int gridWidth = 1;
+        [Tooltip("Tinggi item di grid (Vertikal)")]
+        [Min(1)] public int gridHeight = 1;
         #endregion
 
         #region --- 1. CORE SETTINGS ---

@@ -18,6 +18,8 @@ MonoBehaviour:
     type: 3}
   hudPrefab: {fileID: 6880005277670001014, guid: 173b46495b470c74f97a41a24a558c6b,
     type: 3}
+  gridWidth: 3
+  gridHeight: 8
   muzzleVelocity: 1200
   fireRateRPM: 90
   maxAmmo: 3
@@ -33,6 +35,7 @@ MonoBehaviour:
   coolingRate: 15
   maxHeat: 100
   heatDispersionMultiplier: 4
+  overheatDispersionThreshold: 0.8
   recoilForce: 2500
   cameraShakeMultiplier: 0.0005
   cameraShakeDuration: 0.2

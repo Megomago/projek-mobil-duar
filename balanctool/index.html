@@ -1,11 +1,9 @@
---- START OF FILE Paste June 29, 2026 - 2:15AM ---
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>VDSO | Weapon Balancing Suite & Ballistics Simulator</title>
+    <title>VDSO Simulator</title>
     <!-- Import Google Fonts: Inter & JetBrains Mono -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -378,53 +376,22 @@
             background-color: var(--accent-color);
         }
 
-        .card-top {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 10px;
-            padding-left: 5px;
+        /* Disabled Card */
+        .weapon-card.disabled {
+            opacity: 0.35;
+            filter: grayscale(0.6);
+        }
+        .weapon-card.disabled .card-body,
+        .weapon-card.disabled .card-readouts {
+            pointer-events: none;
         }
 
-        .card-top input[type="text"] {
-            background: transparent;
-            border: 1px dashed var(--border-color);
-            color: var(--text-primary);
-            font-size: 16px;
-            font-weight: 700;
-            padding: 4px 8px;
-            border-radius: 4px;
-            width: 60%;
-            transition: all 0.2s;
-        }
-
-        .card-top input[type="text"]:focus {
-            border-color: var(--accent);
-            outline: none;
-            background-color: var(--bg-input);
-        }
-
-        .card-top-controls {
-            display: flex;
-            align-items: center;
-            gap: 8px;
-        }
-
-        .card-top input[type="color"] {
-            border: none;
-            background: transparent;
-            cursor: pointer;
-            width: 26px;
-            height: 26px;
-            border-radius: 4px;
-        }
-
-        /* Toggle Switch */
+        /* Custom Toggle Switch */
         .toggle-switch {
             position: relative;
-            width: 38px;
+            display: inline-block;
+            width: 36px;
             height: 20px;
-            flex-shrink: 0;
         }
         .toggle-switch input {
             opacity: 0;
@@ -435,38 +402,29 @@
             position: absolute;
             cursor: pointer;
             top: 0; left: 0; right: 0; bottom: 0;
-            background-color: #3a3a4a;
+            background-color: var(--bg-input);
+            border: 1px solid var(--border-color);
+            transition: .3s;
             border-radius: 20px;
-            transition: all 0.3s ease;
         }
-        .toggle-slider::before {
-            content: '';
+        .toggle-slider:before {
             position: absolute;
-            height: 14px;
-            width: 14px;
+            content: "";
+            height: 12px;
+            width: 12px;
             left: 3px;
             bottom: 3px;
-            background-color: #888;
+            background-color: var(--text-secondary);
+            transition: .3s;
             border-radius: 50%;
-            transition: all 0.3s ease;
         }
-        .toggle-switch input:checked + .toggle-slider {
-            background-color: var(--accent-color, var(--accent));
-            box-shadow: 0 0 8px color-mix(in srgb, var(--accent-color, var(--accent)) 50%, transparent);
+        input:checked + .toggle-slider {
+            background-color: var(--accent-glow);
+            border-color: var(--accent);
         }
-        .toggle-switch input:checked + .toggle-slider::before {
-            transform: translateX(18px);
-            background-color: #fff;
-        }
-
-        /* Disabled Card */
-        .weapon-card.disabled {
-            opacity: 0.35;
-            filter: grayscale(0.6);
-        }
-        .weapon-card.disabled .card-body,
-        .weapon-card.disabled .card-readouts {
-            pointer-events: none;
+        input:checked + .toggle-slider:before {
+            transform: translateX(16px);
+            background-color: var(--accent);
         }
 
         /* Form Controls in Card */
@@ -721,13 +679,13 @@
     <!-- HEADER PANEL -->
     <header>
         <div class="header-title">
-            <h1>🚗 VDSO | Balistics & Balancing Suite</h1>
-            <p>Simulasikan Balistik Proyektil (Tanpa Drag / Dengan Drag), Deviasi Gaussian (Box-Muller), Overheat, dan Kurva DPS Efektif Kendaraan.</p>
+            <h1>Balancing Simulator </h1>
+
         </div>
         <div class="header-actions">
             <!-- Preset Selector -->
             <select id="presetSelector" class="preset-select" onchange="loadPresetWeapon(this.value)">
-                <option value="" disabled selected>⚡ Load Preset Weapon...</option>
+                <option value="" disabled selected>Load Preset Weapon...</option>
                 <option value="autocannon">30mm HVAP Autocannon (Standard)</option>
                 <option value="shotgun">12-Gauge Heavy Shotgun (CQB)</option>
                 <option value="minigun">Rotary Vulcan Minigun (Overheat)</option>
@@ -793,9 +751,6 @@
                     <label>Burst Shot Count</label>
                     <input type="number" id="manualShots" value="5" min="1" max="500" onchange="updateSimulation()">
                 </div>
-                <div class="control-group" style="margin-left: auto;">
-                    <button class="btn-primary" onclick="addEmptyWeapon()">+ Add Empty Weapon</button>
-                </div>
             </div>
         </div>
 
@@ -809,7 +764,7 @@
                     <thead>
                         <tr>
                             <th>Senjata</th>
-                            <th>Tag</th>
+                            <th>Tags</th>
                             <th>Tipe Mekanis</th>
                             <th>Raw DPS (Ideal)</th>
                             <th>Simulated Avg DPS</th>
@@ -881,6 +836,27 @@
             </div>
         </div>
 
+        <!-- SPAWN & WEAPON BLUEPRINT LIBRARY PANEL -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>Spawn & Blueprint Library Suite</h2>
+            </div>
+            <div style="display: flex; flex-wrap: wrap; gap: 15px; align-items: center;">
+                <button class="btn-primary" onclick="addEmptyWeapon()">+ Spawn Clean Empty Weapon</button>
+                
+                <div style="display: flex; align-items: center; gap: 8px; background: rgba(0,0,0,0.25); padding: 5px 10px; border-radius: 6px; border: 1px solid var(--border-color);">
+                    <select id="spawnTagSelector" class="preset-select" style="padding: 6px 10px; font-size: 12px; outline: none; border-color: var(--border-color);">
+                        <!-- Filled dynamically -->
+                    </select>
+                    <button class="btn" onclick="addPreTaggedWeapon()" style="padding: 6px 12px; font-size: 12px; background: var(--bg-input);">Spawn with Tag</button>
+                </div>
+
+                <button class="btn-primary" onclick="openArchiveLibraryModal()" style="background: var(--accent-secondary); color: #000; border-color: var(--accent-secondary); box-shadow: 0 0 10px var(--accent-sec-glow); font-weight: 700;">
+                     Open Blueprint & Archive Library
+                </button>
+            </div>
+        </div>
+
         <!-- WEAPONS EDITOR SECTION -->
         <div>
             <div class="weapons-section-header">
@@ -906,11 +882,43 @@
         </div>
     </div>
 
+    <!-- FLOATING POPUP: BLUEPRINT & ARCHIVE LIBRARY WINDOW -->
+    <div class="modal-overlay" id="archiveLibraryModal" style="display: none;">
+        <div class="modal" style="width: 750px; max-width: 95%; max-height: 85vh; display: flex; flex-direction: column; overflow: hidden; padding-top: 15px;">
+            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:15px; border-bottom:1px solid var(--border-color); padding-bottom:10px;">
+                <h2 style="margin: 0; color: var(--accent-secondary); font-size: 18px; letter-spacing: 0.5px; display: flex; align-items: center; gap: 8px;">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"></path></svg>
+                    Blueprints & Archive Library
+                </h2>
+                <span onclick="closeArchiveLibraryModal()" style="cursor:pointer; font-size:22px; color:var(--text-secondary); font-weight:bold;">✕</span>
+            </div>
+            
+            <div style="display: flex; gap: 12px; align-items: center; background: rgba(0,0,0,0.25); padding: 12px; border-radius: 8px; border: 1px solid var(--border-color); margin-bottom: 15px; flex-wrap: wrap;">
+                <label style="font-size: 10px; font-weight: 800; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.5px;">Blueprint Filter:</label>
+                <select id="archiveLibraryTagFilter" onchange="filterArchiveLibraryByTag(this.value)" style="background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); padding: 6px 12px; border-radius: 4px; font-weight: 600; font-size:12px; outline:none;">
+                    <option value="ALL">Show All Blueprints</option>
+                </select>
+                <button class="btn-primary" onclick="spawnAllFromFilteredTag()" style="padding: 6px 14px; font-size: 11px; font-weight: 700; background: var(--accent); color: #000; border: none; border-radius:4px; margin-left: auto;">
+                    Spawn All matching Selected Tag
+                </button>
+            </div>
+            
+            <div style="flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; padding-right: 5px;" id="archiveLibraryList">
+                <!-- Diisi dinamis -->
+            </div>
+            
+            <div style="margin-top: 15px; border-top: 1px solid var(--border-color); padding-top: 12px; display: flex; justify-content: flex-end;">
+                <button onclick="closeArchiveLibraryModal()" class="btn-secondary" style="padding: 8px 16px;">Close Library</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const GRAVITY = 9.81;
 
-        // Default Loadout
+        // Default Loadout & Archives
         let weapons = [];
+        let archives = []; 
 
         // ChartJS instances
         let combatChartInst = null;
@@ -918,11 +926,12 @@
         let spreadChartInst = null;
         let rangeChartInst = null;
 
-        // Load data from LocalStorage on initialization
+        let activeArchiveFilter = 'ALL'; 
+
         function init() {
             loadFromLocalStorage();
+            loadArchivesFromLocalStorage(); 
             if (weapons.length === 0) {
-                // Load default presets if local storage is empty
                 loadDefaultPresets();
             }
             renderWeaponCards();
@@ -938,9 +947,176 @@
                 let saved = localStorage.getItem('vdso_weapons');
                 if (saved) {
                     weapons = JSON.parse(saved);
+                    weapons.forEach(w => {
+                        if (!w.tags) {
+                            w.tags = w.tag ? [w.tag] : []; 
+                            delete w.tag; 
+                        }
+                    });
                 }
             } catch(e) {
                 console.error("Failed to load weapons from local storage", e);
+            }
+        }
+
+        // --- SISTEM ARCHIVE BLUEPRINT LIBRARY ---
+        function saveArchivesToLocalStorage() {
+            localStorage.setItem('vdso_archives', JSON.stringify(archives));
+        }
+
+        function loadArchivesFromLocalStorage() {
+            try {
+                let saved = localStorage.getItem('vdso_archives');
+                if (saved) {
+                    archives = JSON.parse(saved);
+                }
+            } catch(e) {
+                console.error("Failed to load archives from local storage", e);
+            }
+        }
+
+        function archiveWeapon(index) {
+            let wp = weapons[index];
+            if (!wp) return;
+
+            let clone = JSON.parse(JSON.stringify(wp));
+            clone.id = Date.now(); 
+
+            let existsIdx = archives.findIndex(a => a.name === clone.name);
+            if (existsIdx !== -1) {
+                if (!confirm(`Blueprint dengan nama "${clone.name}" sudah ada di Archive. Timpa blueprint yang lama?`)) {
+                    return;
+                }
+                archives.splice(existsIdx, 1);
+            }
+
+            archives.push(clone);
+            saveArchivesToLocalStorage();
+            alert(`"${clone.name}" berhasil diarsipkan sebagai Blueprint!`);
+        }
+
+        function getUniqueTagsInArchives() {
+            let unique = new Set();
+            archives.forEach(a => {
+                if (a.tags && Array.isArray(a.tags)) {
+                    a.tags.forEach(t => unique.add(t));
+                }
+            });
+            return Array.from(unique);
+        }
+
+        function openArchiveLibraryModal() {
+            document.getElementById('archiveLibraryModal').style.display = 'flex';
+            populateArchiveFilterOptions();
+            renderArchiveLibraryItems();
+        }
+
+        function closeArchiveLibraryModal() {
+            document.getElementById('archiveLibraryModal').style.display = 'none';
+        }
+
+        function populateArchiveFilterOptions() {
+            const select = document.getElementById('archiveLibraryTagFilter');
+            if (!select) return;
+            select.innerHTML = '<option value="ALL">Show All Blueprints</option>';
+            let tags = getUniqueTagsInArchives();
+            tags.forEach(t => {
+                select.innerHTML += `<option value="${t}" ${activeArchiveFilter === t ? 'selected' : ''}>${t}</option>`;
+            });
+        }
+
+        function filterArchiveLibraryByTag(tag) {
+            activeArchiveFilter = tag;
+            renderArchiveLibraryItems();
+        }
+
+        function renderArchiveLibraryItems() {
+            const listContainer = document.getElementById('archiveLibraryList');
+            if (!listContainer) return;
+            listContainer.innerHTML = '';
+
+            let filtered = archives;
+            if (activeArchiveFilter !== 'ALL') {
+                filtered = archives.filter(a => a.tags && a.tags.includes(activeArchiveFilter));
+            }
+
+            if (filtered.length === 0) {
+                listContainer.innerHTML = `
+                    <div style="text-align:center; padding: 40px; color:var(--text-secondary); font-size:13px; background: rgba(0,0,0,0.15); border-radius: 8px; border:1px dashed var(--border-color);">
+                        Tidak ada Blueprint di arsip dengan tag "${activeArchiveFilter}".
+                    </div>
+                `;
+                return;
+            }
+
+            filtered.forEach((a, index) => {
+                let originalIdx = archives.findIndex(orig => orig.id === a.id);
+                let tagsHtml = (a.tags || []).map(t => `<span class="tag-badge" style="background:rgba(252,202,70,0.1); color:var(--accent); font-size:9px; padding:2px 5px; border:1px solid rgba(252,202,70,0.25);">${t}</span>`).join('');
+                
+                listContainer.innerHTML += `
+                    <div style="display:flex; justify-content:space-between; align-items:center; background:var(--bg-input); padding:12px 16px; border-radius:8px; border:1px solid var(--border-color); border-left: 4px solid ${a.color || '#fff'};">
+                        <div style="display:flex; flex-direction:column; gap:4px;">
+                            <div style="font-weight:700; font-size:14px; display:flex; align-items:center; gap:8px;">
+                                ${a.name}
+                                <span style="font-size:11px; font-family:'JetBrains Mono',monospace; color:var(--accent-secondary);">${a.rpm} RPM | ${a.dmg * (a.pellets || 1)} Dmg</span>
+                            </div>
+                            <div style="display:flex; gap:4px; flex-wrap:wrap;">
+                                ${tagsHtml || '<span style="color:var(--text-secondary); font-size:10px; font-style:italic;">No Tags</span>'}
+                            </div>
+                        </div>
+                        <div style="display:flex; gap:10px;">
+                            <button onclick="spawnSpecificBlueprint(${originalIdx})" style="padding: 6px 12px; font-size:12px; font-weight:700; background:var(--accent-secondary); color:#000; border:none; border-radius:4px; cursor:pointer;">Spawn Copy</button>
+                            <button onclick="deleteSpecificBlueprint(${originalIdx})" style="padding: 6px 12px; font-size:12px; font-weight:700; background:rgba(255,74,90,0.1); color:var(--danger); border:1px solid rgba(255,74,90,0.3); border-radius:4px; cursor:pointer;">✕ Delete</button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function spawnSpecificBlueprint(origIdx) {
+            let blueprint = archives[origIdx];
+            if (!blueprint) return;
+            let clone = JSON.parse(JSON.stringify(blueprint));
+            clone.id = Date.now();
+            clone.enabled = true;
+            weapons.push(clone);
+            saveToLocalStorage();
+            renderWeaponCards();
+            updateSimulation();
+            closeArchiveLibraryModal();
+        }
+
+        function deleteSpecificBlueprint(origIdx) {
+            let blueprint = archives[origIdx];
+            if (!blueprint) return;
+            if (confirm(`Hapus blueprint "${blueprint.name}" permanen dari library?`)) {
+                archives.splice(origIdx, 1);
+                saveArchivesToLocalStorage();
+                populateArchiveFilterOptions();
+                renderArchiveLibraryItems();
+                renderWeaponCards(); 
+            }
+        }
+
+        function spawnAllFromFilteredTag() {
+            if (activeArchiveFilter === 'ALL') {
+                alert("Pilih satu filter tag spesifik terlebih dahulu di dropdown!");
+                return;
+            }
+            let matching = archives.filter(a => a.tags && a.tags.includes(activeArchiveFilter));
+            if (matching.length === 0) return;
+
+            if (confirm(`Spawn salinan dari seluruh ${matching.length} senjata di arsip dengan tag "${activeArchiveFilter}"?`)) {
+                matching.forEach((blueprint, offset) => {
+                    let clone = JSON.parse(JSON.stringify(blueprint));
+                    clone.id = Date.now() + offset; 
+                    clone.enabled = true;
+                    weapons.push(clone);
+                });
+                saveToLocalStorage();
+                renderWeaponCards();
+                updateSimulation();
+                closeArchiveLibraryModal();
             }
         }
 
@@ -960,11 +1136,12 @@
                     maxHeat: 100,
                     coolRate: 15,
                     vel: 800,
-                    drag: 0, // 0 means matches Unity perfectly (no drag)
+                    drag: 0, 
                     spread: 0.25,
                     choke: 1.0,
                     heatMult: 4.0,
-                    overheatDispersionThreshold: 0.8, // Nilai default threshold
+                    overheatDispersionThreshold: 0.8,
+                    tags: ["Autocannon", "Heavy"],
                     rest: true
                 },
                 {
@@ -986,6 +1163,7 @@
                     choke: 0.8,
                     heatMult: 2.0,
                     overheatDispersionThreshold: 0.8,
+                    tags: ["Shotgun", "CQB"],
                     rest: false
                 },
                 {
@@ -996,18 +1174,19 @@
                     dmg: 45,
                     pellets: 1,
                     rpm: 1200,
-                    mag: 0, // infinite / overheat based
+                    mag: 0, 
                     reload: 0,
                     heatPerShot: 1.4,
                     maxHeat: 120,
                     coolRate: 22,
                     vel: 850,
-                    drag: 0.001, // optional drag
+                    drag: 0.001, 
                     spread: 0.8,
                     choke: 1.0,
                     heatMult: 3.5,
-                    overheatDispersionThreshold: 0.5, // Minigun mulai goyang lebih cepet di 50%
-                    rest: true // Rest simulates player releasing trigger to cool down
+                    overheatDispersionThreshold: 0.5, 
+                    tags: ["Minigun", "Overheat"],
+                    rest: true 
                 }
             ];
             saveToLocalStorage();
@@ -1017,13 +1196,13 @@
             let wp = null;
             let now = Date.now();
             if (type === 'autocannon') {
-                wp = { id: now, name: "30mm HVAP Autocannon Mk II", color: "#fcca46", type: "mag", dmg: 90, pellets: 1, rpm: 500, mag: 40, reload: 2.0, heatPerShot: 3.0, maxHeat: 100, coolRate: 20, vel: 820, drag: 0, spread: 0.2, choke: 1.0, heatMult: 4.0, overheatDispersionThreshold: 0.8, rest: true };
+                wp = { id: now, name: "30mm HVAP Autocannon Mk II", color: "#fcca46", type: "mag", dmg: 90, pellets: 1, rpm: 500, mag: 40, reload: 2.0, heatPerShot: 3.0, maxHeat: 100, coolRate: 20, vel: 820, drag: 0, spread: 0.2, choke: 1.0, heatMult: 4.0, overheatDispersionThreshold: 0.8, tags: ["Autocannon", "Tactical"], rest: true };
             } else if (type === 'shotgun') {
-                wp = { id: now, name: "12g Shredder Shotgun", color: "#00d2c4", type: "mag", dmg: 15, pellets: 12, rpm: 150, mag: 8, reload: 3.5, heatPerShot: 25, maxHeat: 100, coolRate: 15, vel: 380, drag: 0, spread: 4.0, choke: 0.7, heatMult: 2.0, overheatDispersionThreshold: 0.8, rest: false };
+                wp = { id: now, name: "12g Shredder Shotgun", color: "#00d2c4", type: "mag", dmg: 15, pellets: 12, rpm: 150, mag: 8, reload: 3.5, heatPerShot: 25, maxHeat: 100, coolRate: 15, vel: 380, drag: 0, spread: 4.0, choke: 0.7, heatMult: 2.0, overheatDispersionThreshold: 0.8, tags: ["Shotgun", "CQC"], rest: false };
             } else if (type === 'minigun') {
-                wp = { id: now, name: "Viper 20mm Rotary Cannon", color: "#ff4a5a", type: "heat", dmg: 55, pellets: 1, rpm: 1500, mag: 0, reload: 0, heatPerShot: 1.2, maxHeat: 150, coolRate: 25, vel: 900, drag: 0, spread: 1.1, choke: 1.1, heatMult: 3.0, overheatDispersionThreshold: 0.6, rest: true };
+                wp = { id: now, name: "Viper 20mm Rotary Cannon", color: "#ff4a5a", type: "heat", dmg: 55, pellets: 1, rpm: 1500, mag: 0, reload: 0, heatPerShot: 1.2, maxHeat: 150, coolRate: 25, vel: 900, drag: 0, spread: 1.1, choke: 1.1, heatMult: 3.0, overheatDispersionThreshold: 0.6, tags: ["Minigun", "Suppressive"], rest: true };
             } else if (type === 'railgun') {
-                wp = { id: now, name: "Magnetic Gauss Railgun", color: "#00ff87", type: "mag", dmg: 650, pellets: 1, rpm: 20, mag: 1, reload: 4.0, heatPerShot: 80, maxHeat: 100, coolRate: 10, vel: 1800, drag: 0, spread: 0.02, choke: 0.5, heatMult: 1.0, overheatDispersionThreshold: 0.8, rest: false };
+                wp = { id: now, name: "Magnetic Gauss Railgun", color: "#00ff87", type: "mag", dmg: 650, pellets: 1, rpm: 20, mag: 1, reload: 4.0, heatPerShot: 80, maxHeat: 100, coolRate: 10, vel: 1800, drag: 0, spread: 0.02, choke: 0.5, heatMult: 1.0, overheatDispersionThreshold: 0.8, tags: ["Railgun", "Experimental"], rest: false };
             }
 
             if (wp) {
@@ -1031,7 +1210,7 @@
                 saveToLocalStorage();
                 renderWeaponCards();
                 updateSimulation();
-                document.getElementById('presetSelector').selectedIndex = 0; // Reset selector
+                document.getElementById('presetSelector').selectedIndex = 0; 
             }
         }
 
@@ -1043,9 +1222,130 @@
             }
         }
 
-        // --- Core Ballistics & Overheat Dispersion Engine ---
+        // --- Core Ballistics Helpers ---
+        function getAllUniqueTags() {
+            let uniqueTags = new Set();
+            weapons.forEach(w => {
+                if (w.tags && Array.isArray(w.tags)) {
+                    w.tags.forEach(t => uniqueTags.add(t));
+                }
+            });
+            if (uniqueTags.size === 0) {
+                return ["Autocannon", "Shotgun", "Minigun", "Railgun", "Heavy"];
+            }
+            return Array.from(uniqueTags);
+        }
 
-        // Fungsi pembantu untuk kalkulasi spread berdasarkan threshold (Sinkron sama Unity)
+        function updateSpawnTagSelector() {
+            const select = document.getElementById('spawnTagSelector');
+            if (!select) return;
+            const uniqueTags = getAllUniqueTags();
+            select.innerHTML = '';
+            uniqueTags.forEach(ut => {
+                select.innerHTML += `<option value="${ut}">${ut}</option>`;
+            });
+        }
+
+        function removeTagFromWeapon(wIdx, tIdx) {
+            if (weapons[wIdx].tags) {
+                weapons[wIdx].tags.splice(tIdx, 1);
+                saveToLocalStorage();
+                renderWeaponCards();
+                updateSimulation();
+            }
+        }
+
+        function addExistingTagToWeapon(wIdx, tag) {
+            if (!tag) return;
+            if (!weapons[wIdx].tags) weapons[wIdx].tags = [];
+            if (!weapons[wIdx].tags.includes(tag)) {
+                weapons[wIdx].tags.push(tag);
+                saveToLocalStorage();
+                renderWeaponCards();
+                updateSimulation();
+            }
+        }
+
+        function addCustomTagToWeapon(wIdx) {
+            const input = document.getElementById(`custom-tag-input-${wIdx}`);
+            if (!input) return;
+            const tag = input.value.trim();
+            if (tag) {
+                if (!weapons[wIdx].tags) weapons[wIdx].tags = [];
+                if (!weapons[wIdx].tags.includes(tag)) {
+                    weapons[wIdx].tags.push(tag);
+                    saveToLocalStorage();
+                    renderWeaponCards();
+                    updateSimulation();
+                }
+                input.value = '';
+            }
+        }
+
+        function addPreTaggedWeapon() {
+            const select = document.getElementById('spawnTagSelector');
+            if (!select) return;
+            const tag = select.value;
+            if (!tag) {
+                alert("Pilih tag terlebih dahulu di dropdown!");
+                return;
+            }
+
+            weapons.push({
+                id: Date.now(),
+                name: "New " + tag + " Weapon",
+                color: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
+                type: "mag",
+                dmg: 50,
+                pellets: 1,
+                rpm: 300,
+                mag: 20,
+                reload: 2.0,
+                heatPerShot: 5,
+                maxHeat: 100,
+                coolRate: 20,
+                vel: 600,
+                drag: 0,
+                spread: 0.5,
+                choke: 1.0,
+                heatMult: 3.0,
+                overheatDispersionThreshold: 0.8,
+                tags: [tag], 
+                rest: true
+            });
+            saveToLocalStorage();
+            renderWeaponCards();
+            updateSimulation();
+        }
+
+        function addEmptyWeapon() {
+            weapons.push({
+                id: Date.now(),
+                name: "New Weapon",
+                color: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
+                type: "mag",
+                dmg: 50,
+                pellets: 1,
+                rpm: 300,
+                mag: 20,
+                reload: 2.0,
+                heatPerShot: 5,
+                maxHeat: 100,
+                coolRate: 20,
+                vel: 600,
+                drag: 0,
+                spread: 0.5,
+                choke: 1.0,
+                heatMult: 3.0,
+                overheatDispersionThreshold: 0.8,
+                tags: [], 
+                rest: true
+            });
+            saveToLocalStorage();
+            renderWeaponCards();
+            updateSimulation();
+        }
+
         function calculateOverheatSpread(w, currentHeat) {
             if (w.type !== 'heat' || !w.maxHeat) return w.spread;
             
@@ -1056,14 +1356,12 @@
             
             if (heatFactor >= threshold) {
                 let divisor = 1.0 - threshold;
-                // Jika threshold diset 1.0, langsung loncat ke dispersi terburuk pas 100% heat
                 let normalizedFactor = divisor > 0 ? (heatFactor - threshold) / divisor : 1.0;
                 return w.spread + (w.spread * w.heatMult - w.spread) * normalizedFactor;
             }
             return w.spread;
         }
 
-        // Integrasi Fisika Proyektil (Euler integration mirip Unity)
         function calculateBallistics(v0, dragCoeff, targetX) {
             let x = 0, y = 0, vx = v0, vy = 0, t = 0, dt = 0.002;
             let path = [{x: 0, y: 0}];
@@ -1071,7 +1369,6 @@
 
             while (x < targetX && t < 10) { 
                 let v = Math.sqrt(vx*vx + vy*vy);
-                // Jika drag = 0, vx konstan seperti di game Unity
                 vx += (-dragCoeff * v * vx) * dt;
                 vy += (-GRAVITY - (dragCoeff * v * vy)) * dt;
                 x += vx * dt; 
@@ -1087,17 +1384,14 @@
             return { tof: t >= 10 ? "Miss" : t, drop: y, path: path };
         }
 
-        // Hit Probability under Gaussian (Rayleigh Radial) Distribution (Synchronized with Unity Box-Muller)
         function calculateHitProbability(spreadDegrees, chokeMult, targetDist, targetRadius) {
             if (spreadDegrees <= 0) return 1.0;
             let sigmaDegrees = spreadDegrees * chokeMult;
             let sigmaMeters = targetDist * Math.tan(sigmaDegrees * Math.PI / 180);
             if (sigmaMeters <= 0) return 1.0;
-            // Rayleigh CDF: P(r <= R) = 1 - e^(-R^2 / (2 * sigma^2))
             return 1.0 - Math.exp(-Math.pow(targetRadius, 2) / (2 * Math.pow(sigmaMeters, 2)));
         }
 
-        // Generating a circle outline for Target Profile
         function generateCircleLine(radius) {
             let points = [];
             for(let a=0; a<=360; a+=5) {
@@ -1107,7 +1401,6 @@
             return points;
         }
 
-        // Generate scatter points for a single shot based on Box-Muller Gaussian transform
         function generateGaussianScatterForShot(spreadDegrees, chokeMult, targetDist, pelletCount) {
             let points = [];
             let sigmaDegrees = spreadDegrees * chokeMult;
@@ -1117,8 +1410,7 @@
                 if (sigmaDegrees <= 0 || sigmaMeters <= 0) {
                     points.push({ x: 0, y: 0 });
                 } else {
-                    // Box-Muller Transform
-                    let u1 = Math.max(Math.random(), 0.0001); // avoid log(0)
+                    let u1 = Math.max(Math.random(), 0.0001); 
                     let u2 = Math.random();
                     let gaussMagnitude = Math.sqrt(-2 * Math.log(u1)) * sigmaMeters;
                     let angle = u2 * 2 * Math.PI;
@@ -1132,12 +1424,15 @@
             return points;
         }
 
+        // REDESIGN TOTAL WEAPONS EDITING CARDS (HERO CARDS)
         function renderWeaponCards() {
             const grid = document.getElementById('weapon-grid');
             grid.innerHTML = '';
             
             const targetDist = parseFloat(document.getElementById('targetDist').value) || 300;
             const targetRadius = parseFloat(document.getElementById('targetRadius').value) || 2.5;
+
+            updateSpawnTagSelector(); 
 
             weapons.forEach((w, index) => {
                 let ballistics = calculateBallistics(w.vel, w.drag, targetDist);
@@ -1153,32 +1448,59 @@
                     if (hitProbWorst < 0.5) isMissing = true;
                 }
 
+                let activeTagsHtml = (w.tags || []).map((t, tIdx) => `
+                    <span class="tag-badge" style="background: rgba(252, 202, 70, 0.12); color: var(--accent); border: 1px solid rgba(252, 202, 70, 0.3); display: inline-flex; align-items: center; gap: 5px; padding: 2px 6px; border-radius: 4px; font-weight:600;">
+                        ${t}
+                        <span onclick="removeTagFromWeapon(${index}, ${tIdx})" style="cursor:pointer; font-weight:900; color:var(--danger); font-size:10px;">✕</span>
+                    </span>
+                `).join('');
+
                 const card = document.createElement('div');
                 card.className = 'weapon-card' + (w.enabled === false ? ' disabled' : '');
                 card.style.setProperty('--accent-color', w.color);
+                
                 card.innerHTML = `
-                    <div class="card-top">
-                        <div style="display:flex; flex-direction:column; gap:5px; width:60%;">
-                            <input type="text" value="${w.name}" onchange="updateWeapon(${index}, 'name', this.value)" style="width:100%;">
-                            <select onchange="updateWeapon(${index}, 'tag', this.value)" style="padding:2px 4px; font-size:11px; background:rgba(0,0,0,0.2); border:1px solid var(--border-color); color:var(--text-primary); border-radius:4px;">
-                                <option value="Primary" ${w.tag === 'Primary' ? 'selected' : ''}>Primary</option>
-                                <option value="Secondary" ${w.tag === 'Secondary' ? 'selected' : ''}>Secondary</option>
-                                <option value="Heavy/Turret" ${w.tag === 'Heavy/Turret' ? 'selected' : ''}>Heavy/Turret</option>
-                                <option value="Experimental" ${w.tag === 'Experimental' ? 'selected' : ''}>Experimental</option>
-                            </select>
+                    <div style="display:flex; flex-direction:column; gap:8px; border-bottom:1px solid rgba(255,255,255,0.05); padding-bottom:12px;">
+                        <!-- BARIS 1: NAMA (Kiri) & KONTROL UTAMA (Kanan) -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; gap:8px;">
+                            <input type="text" value="${w.name}" onchange="updateWeapon(${index}, 'name', this.value)" style="background: transparent; border: 1px dashed var(--border-color); color: var(--text-primary); font-size: 15px; font-weight: 700; padding: 4px 8px; border-radius: 4px; width: 45%; outline:none;">
+                            
+                            <div style="display:flex; align-items:center; gap:6px;">
+                                <button onclick="archiveWeapon(${index})" title="Simpan ke Archive Blueprint" style="padding: 5px 8px; background: rgba(0, 210, 196, 0.12); border: 1px solid rgba(0, 210, 196, 0.35); color: var(--accent-secondary); border-radius: 4px; font-weight: 700; font-size: 10px; cursor: pointer; display: inline-flex; align-items: center; gap: 4px;">
+                                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"></path><polyline points="17 21 17 13 7 13 7 21"></polyline><polyline points="7 3 7 8 15 8"></polyline></svg>
+                                    Archive
+                                </button>
+                                <label class="toggle-switch" title="Toggle visibility in charts">
+                                    <input type="checkbox" ${w.enabled !== false ? 'checked' : ''} onchange="updateWeapon(${index}, 'enabled', this.checked)">
+                                    <span class="toggle-slider"></span>
+                                </label>
+                                <input type="color" value="${w.color}" onchange="updateWeapon(${index}, 'color', this.value)" style="border:1px solid var(--border-color); background:transparent; width:22px; height:22px; border-radius:4px; padding:0; cursor:pointer;">
+                                <button class="btn-danger" style="padding: 4px 8px; border-radius:4px; font-size:11px; font-weight:bold;" onclick="removeWeapon(${index})">✕</button>
+                            </div>
                         </div>
-                        <div class="card-top-controls">
-                            <label class="toggle-switch" title="Toggle visibility in charts">
-                                <input type="checkbox" ${w.enabled !== false ? 'checked' : ''} onchange="updateWeapon(${index}, 'enabled', this.checked)">
-                                <span class="toggle-slider"></span>
-                            </label>
-                            <input type="color" value="${w.color}" onchange="updateWeapon(${index}, 'color', this.value)">
-                            <button class="btn-danger" style="padding: 4px 8px;" onclick="removeWeapon(${index})">✕</button>
+
+                        <!-- BARIS 2: MANAGEMENT TAGS -->
+                        <div style="display:flex; flex-direction:column; gap:6px; background:rgba(0,0,0,0.15); padding:8px; border-radius:6px; border:1px solid rgba(255,255,255,0.02);">
+                            <div style="display:flex; flex-wrap:wrap; gap:4px;">
+                                ${activeTagsHtml || '<span style="color:var(--text-secondary); font-size:10px; font-style:italic; padding-left:3px;">No active tags...</span>'}
+                            </div>
+                            <div style="display:flex; gap:4px; align-items:center; margin-top:2px;">
+                                <select onchange="addExistingTagToWeapon(${index}, this.value); this.selectedIndex = 0;" style="padding: 3px 6px; font-size: 10px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; width: 90px; outline:none;">
+                                    <option value="" disabled selected>Quick Tag</option>
+                                    ${getAllUniqueTags().map(ut => `<option value="${ut}">${ut}</option>`).join('')}
+                                </select>
+                                <input type="text" id="custom-tag-input-${index}" placeholder="New Tag..." style="padding: 3px 6px; font-size: 10px; background: var(--bg-input); border: 1px solid var(--border-color); color: var(--text-primary); border-radius: 4px; width: 80px; outline:none;">
+                                <button onclick="addCustomTagToWeapon(${index})" style="padding: 2px 6px; font-size: 10px; background: var(--bg-input); border-color: var(--border-color); color: var(--text-primary); font-weight:bold; border-radius:4px; border:1px solid var(--border-color); cursor:pointer;">+</button>
+                            </div>
                         </div>
                     </div>
                     
+                    <!-- HERO CARD GROUPED BODY -->
                     <div class="card-body">
-                        <!-- BALLISTICS & ACCURACY -->
+                        
+                        <!-- GROUP 1: BALLISTICS -->
+                        <div class="span-2" style="font-size:10.5px; font-weight:800; color:var(--accent-secondary); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:3px; margin-bottom:2px; margin-top: 5px;">Ballistics & Spread</div>
+                        
                         <div class="card-input-wrapper">
                             <label>Base Dispersion (°)</label>
                             <input type="number" step="0.05" value="${w.spread}" oninput="updateWeapon(${index}, 'spread', this.value)">
@@ -1197,9 +1519,9 @@
                             <input type="number" step="0.0001" min="0" value="${w.drag}" oninput="updateWeapon(${index}, 'drag', this.value)">
                         </div>
 
-                        <div class="section-divider"></div>
+                        <!-- GROUP 2: CORE STATS -->
+                        <div class="span-2" style="font-size:10.5px; font-weight:800; color:var(--accent); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:3px; margin-bottom:2px; margin-top:8px;">Engine & Firepower</div>
 
-                        <!-- CORE SYSTEMS -->
                         <div class="card-input-wrapper">
                             <label>Trigger Mechanics</label>
                             <select onchange="updateWeapon(${index}, 'type', this.value)">
@@ -1220,9 +1542,11 @@
                             <input type="number" min="1" value="${w.pellets}" oninput="updateWeapon(${index}, 'pellets', this.value)">
                         </div>
 
-                        <div class="section-divider"></div>
+                        <!-- GROUP 3: THERMODYNAMICS & AMMO (CONDITIONAL) -->
+                        ${w.type === 'heat' || w.mag > 0 ? `
+                        <div class="span-2" style="font-size:10.5px; font-weight:800; color:var(--danger); text-transform:uppercase; letter-spacing:0.5px; border-bottom:1px solid rgba(255,255,255,0.04); padding-bottom:3px; margin-bottom:2px; margin-top:8px;">Magazine & Thermodynamics</div>
+                        ` : ''}
 
-                        <!-- CONDITIONAL SYSTEMS -->
                         <div class="card-input-wrapper">
                             <label>Magazine Size (0 = Inf)</label>
                             <input type="number" min="0" value="${w.mag}" oninput="updateWeapon(${index}, 'mag', this.value)">
@@ -1231,6 +1555,7 @@
                             <label>Reload Time (s)</label>
                             <input type="number" step="0.1" value="${w.reload}" oninput="updateWeapon(${index}, 'reload', this.value)">
                         </div>
+                        
                         ${w.type === 'heat' ? `
                         <div class="card-input-wrapper">
                             <label>Heat Per Shot</label>
@@ -1248,13 +1573,9 @@
                             <label>Heat Disp. Multiplier</label>
                             <input type="number" step="0.1" value="${w.heatMult || 1.0}" oninput="updateWeapon(${index}, 'heatMult', this.value)">
                         </div>
-                        <!-- SLOT BARU: OVERHEAT THRESHOLD -->
-                        <div class="card-input-wrapper">
-                            <label>Overheat Disp. Threshold</label>
+                        <div class="card-input-wrapper span-2">
+                            <label>Overheat Disp. Threshold (0.0 - 1.0)</label>
                             <input type="number" step="0.05" min="0" max="1" value="${w.overheatDispersionThreshold !== undefined ? w.overheatDispersionThreshold : 0.8}" oninput="updateWeapon(${index}, 'overheatDispersionThreshold', this.value)">
-                        </div>
-                        <div class="card-input-wrapper" style="opacity: 0; pointer-events: none;">
-                            <!-- Placeholder spacing -->
                         </div>
                         <div class="card-input-wrapper span-2" style="flex-direction:row; justify-content:space-between; align-items:center; margin-top: 5px;">
                             <label style="cursor:pointer;" for="rest-chk-${index}">Simulate Cooldown Rest (Release Trigger)</label>
@@ -1290,7 +1611,6 @@
             
             saveToLocalStorage();
 
-            // Re-render only if critical UI fields are modified (like toggle triggers)
             if (field === 'type' || field === 'name' || field === 'color' || field === 'enabled') {
                 renderWeaponCards();
             }
@@ -1300,33 +1620,6 @@
 
         function removeWeapon(index) {
             weapons.splice(index, 1);
-            saveToLocalStorage();
-            renderWeaponCards();
-            updateSimulation();
-        }
-
-        function addEmptyWeapon() {
-            weapons.push({
-                id: Date.now(),
-                name: "New Weapon",
-                color: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
-                type: "mag",
-                dmg: 50,
-                pellets: 1,
-                rpm: 300,
-                mag: 20,
-                reload: 2.0,
-                heatPerShot: 5,
-                maxHeat: 100,
-                coolRate: 20,
-                vel: 600,
-                drag: 0,
-                spread: 0.5,
-                choke: 1.0,
-                heatMult: 3.0,
-                overheatDispersionThreshold: 0.8,
-                rest: true
-            });
             saveToLocalStorage();
             renderWeaponCards();
             updateSimulation();
@@ -1351,7 +1644,6 @@
             
             let data = {};
             
-            // SMART PARSER: Handles Unity's native .asset YAML format OR pure JSON
             if (input.startsWith('%YAML') || input.includes('MonoBehaviour:')) {
                 let lines = input.split('\n');
                 lines.forEach(line => {
@@ -1360,7 +1652,6 @@
                         let key = parts[0].trim();
                         let val = parts.slice(1).join(':').trim();
                         
-                        // Strip quotes if any
                         if(val.startsWith("'") && val.endsWith("'")) val = val.substring(1, val.length-1);
                         if(val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length-1);
                         
@@ -1372,7 +1663,6 @@
                     }
                 });
                 
-                // Fix Unity YAML boolean quirks (1 = true, 0 = false)
                 if(data.enableOverheat === 1) data.enableOverheat = true;
                 if(data.enableOverheat === 0) data.enableOverheat = false;
                 
@@ -1385,7 +1675,6 @@
                 }
             }
             
-            // Mapping parsed parameters to VDSO simulator variables
             let isHeat = data.enableOverheat === true || data.enableOverheat === 'true' || data.enableOverheat === 1;
             
             let newWp = {
@@ -1393,7 +1682,7 @@
                 name: data.weaponName || "Imported Weapon",
                 color: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
                 type: isHeat ? "heat" : "mag",
-                dmg: 100, // default placeholder
+                dmg: 100, 
                 pellets: data.pelletCount !== undefined ? data.pelletCount : 1,
                 rpm: data.fireRateRPM !== undefined ? data.fireRateRPM : 600,
                 mag: data.maxAmmo !== undefined ? data.maxAmmo : 30,
@@ -1402,11 +1691,12 @@
                 maxHeat: data.maxHeat !== undefined ? data.maxHeat : 100,
                 coolRate: data.coolingRate !== undefined ? data.coolingRate : 15,
                 vel: data.muzzleVelocity !== undefined ? data.muzzleVelocity : 800,
-                drag: 0, // Default to 0 matching Unity
+                drag: 0, 
                 spread: data.baseDispersion !== undefined ? data.baseDispersion : 0.5,
                 choke: data.chokeMultiplier !== undefined ? data.chokeMultiplier : 1.0,
                 heatMult: data.heatDispersionMultiplier !== undefined ? data.heatDispersionMultiplier : 4.0,
                 overheatDispersionThreshold: data.overheatDispersionThreshold !== undefined ? data.overheatDispersionThreshold : 0.8,
+                tags: ["Imported"],
                 rest: true
             };
             
@@ -1464,14 +1754,12 @@
 
             let csvContent = "data:text/csv;charset=utf-8,";
             
-            // Header Row
             let headers = ["Time (s)"];
             weapons.filter(w => w.enabled !== false).forEach(w => {
                 headers.push(`${w.name} (CumDamage)`);
             });
             csvContent += headers.join(",") + "\n";
 
-            // Data Rows
             for (let i = 0; i < lastSimulationTimeSeries[0].dataPoints.length; i++) {
                 let row = [lastSimulationTimeSeries[0].dataPoints[i].time.toFixed(2)];
                 lastSimulationTimeSeries.forEach(series => {
@@ -1496,7 +1784,7 @@
             const targetDist = parseFloat(document.getElementById('targetDist').value) || 300;
             const targetRadius = parseFloat(document.getElementById('targetRadius').value) || 2.5;
             const targetHP = parseFloat(document.getElementById('targetHP').value) || 1000;
-            const dt = 0.05; // 50ms time-steps
+            const dt = 0.05; 
             const timeLabels = [];
             
             let combatDatasets = [];
@@ -1512,11 +1800,9 @@
                 manualShotsGroup.style.display = 'none';
             }
 
-            // Redraw table body
             const tableBody = document.getElementById('comparison-table-body');
             tableBody.innerHTML = '';
 
-            // Spread chart default dataset: Target Profile Circle
             let spreadDatasets = [{
                 label: 'Target Profile Hitbox',
                 data: generateCircleLine(targetRadius),
@@ -1529,18 +1815,16 @@
             }];
 
             let maxSpreadRadius = targetRadius + 1.0; 
-            let simulationTimeSeries = []; // clear cache
+            let simulationTimeSeries = []; 
 
             weapons.filter(w => w.enabled !== false).forEach((w, i) => {
                 let ballistics = calculateBallistics(w.vel, w.drag, targetDist);
                 let tof = typeof ballistics.tof === "number" ? ballistics.tof : 0; 
                 let baseHitProb = calculateHitProbability(w.spread, w.choke || 1.0, targetDist, targetRadius);
 
-                // --- 1. Spread Scatter Gaussian Data Points ---
                 let scatterPoints = [];
 
                 if (scatterMode === 'manual') {
-                    // Simulasikan tembakan manual sejumlah N tembakan
                     const numShots = parseInt(document.getElementById('manualShots').value) || 5;
                     let heat = 0;
                     let ammo = w.mag;
@@ -1557,7 +1841,6 @@
                             ammo = w.mag;
                         }
                         
-                        // HITUNG SPREAD PAKE LOGIKA THRESHOLD BARU
                         let currentSpread = calculateOverheatSpread(w, heat);
 
                         let pts = generateGaussianScatterForShot(currentSpread, w.choke || 1.0, targetDist, w.pellets);
@@ -1569,7 +1852,7 @@
                             if (heat >= w.maxHeat) {
                                 heat = w.maxHeat;
                                 if (w.rest) {
-                                    heat = 0; // Cooled down
+                                    heat = 0; 
                                     simT += (w.maxHeat / w.coolRate);
                                 }
                             }
@@ -1589,7 +1872,6 @@
                     }
                 }
 
-                // --- 2. Ballistic Trajectory Curve ---
                 trajectoryDatasets.push({
                     label: w.name,
                     data: ballistics.path.map(p => ({x: p.x, y: p.y})),
@@ -1600,7 +1882,6 @@
                     showLine: true
                 });
 
-                // --- 3. Dynamic Effective DPS Simulation (Euler Time-stepping) ---
                 let dmgEvents = [];
                 let state = { 
                     interval: 60 / (w.rpm || 1), 
@@ -1635,7 +1916,6 @@
                         state.timer = state.interval;
                     } else {
                         if (state.timer <= 0) {
-                            // HITUNG SPREAD DINAMIS PAKE LOGIKA THRESHOLD BARU
                             let currentSpread = calculateOverheatSpread(w, state.heat);
                             
                             let currentHitProb = calculateHitProbability(currentSpread, w.choke || 1.0, targetDist, targetRadius);
@@ -1678,7 +1958,6 @@
                     }
                 }
 
-                // Resolve Damage Events into Cumulative Time Series Plot Data
                 let plotData = [];
                 let seriesCache = [];
                 let cumulativeDmg = 0;
@@ -1714,7 +1993,6 @@
                     tension: w.type === 'mag' ? 0 : 0.1 
                 });
 
-                // Auto-zoom bounds chart berdasarkan titik sebaran yang terbentuk
                 scatterPoints.forEach(p => {
                     let r = Math.sqrt(p.x*p.x + p.y*p.y);
                     if (r > maxSpreadRadius) maxSpreadRadius = r;
@@ -1729,13 +2007,11 @@
                     showLine: false
                 });
 
-                // Calculations for Comparison Table
                 let totalDamageSimulated = cumulativeDmg;
                 let simulatedAvgDps = totalDamageSimulated / maxTime;
                 
                 let rawIdealDps = ((w.dmg * w.pellets * w.rpm) / 60);
                 if (w.mag > 0) {
-                    // Factoring in magazine reload time for Ideal DPS
                     let secondsPerMag = (w.mag - 1) * (60 / w.rpm);
                     let cycleTime = secondsPerMag + w.reload;
                     rawIdealDps = (w.dmg * w.pellets * w.mag) / cycleTime;
@@ -1747,12 +2023,10 @@
                 let hitProbPct = (baseHitProb * 100).toFixed(1) + "%";
                 let hitProbOverheatPct = "N/A";
                 if (w.type === 'heat') {
-                    // Hit prob worst dihitung pake dispersi maksimal (heat ratio = 1.0)
                     let hitProbWorst = calculateHitProbability(w.spread * w.heatMult, w.choke || 1.0, targetDist, targetRadius);
                     hitProbOverheatPct = (hitProbWorst * 100).toFixed(1) + "%";
                 }
 
-                // Range Curve Calculation
                 let rangeData = [];
                 for(let dist = 50; dist <= 1000; dist += 50) {
                     let hp = calculateHitProbability(w.spread, w.choke || 1.0, dist, targetRadius);
@@ -1772,6 +2046,8 @@
 
                 dpsArray.push({ weapon: w, dps: simulatedAvgDps });
 
+                let tableTagsHtml = (w.tags || []).map(t => `<span class="tag-badge" style="background:rgba(252,202,70,0.1); color:var(--accent); font-size:9.5px; padding:2.5px 5px; border:1px solid rgba(252,202,70,0.25); margin-right:2px; display:inline-block;">${t}</span>`).join('');
+
                 const tableRow = document.createElement('tr');
                 tableRow.innerHTML = `
                     <td>
@@ -1780,7 +2056,7 @@
                             ${w.name}
                         </div>
                     </td>
-                    <td><span class="tag-badge">${w.tag || 'Primary'}</span></td>
+                    <td><div style="display:flex; flex-wrap:wrap; gap:3px; max-width:180px;">${tableTagsHtml || '<span style="color:var(--text-secondary); font-size:11px; font-style:italic;">No Tags</span>'}</div></td>
                     <td>${w.type === 'mag' ? 'Magazine Only' : (w.mag > 0 ? 'Hybrid (Mag+Heat)' : 'Overheat Only')}</td>
                     <td style="font-family:'JetBrains Mono', monospace">${rawIdealDps.toFixed(1)}</td>
                     <td class="text-accent" style="font-family:'JetBrains Mono', monospace; font-weight: 700;">${simulatedAvgDps.toFixed(1)}</td>
@@ -1824,8 +2100,7 @@
                     `;
                 });
                 
-                // Overall score based on max deviation
-                let maxAbsZ = Math.max(...dpsArrayValues.map(v => Math.abs((v - mean) / stdDev)));
+                let maxAbsZ = Math.max(...dpsArrayValues.map(v => stdDev === 0 ? 0 : Math.abs((v - mean) / stdDev)));
                 if(isNaN(maxAbsZ) || !isFinite(maxAbsZ)) maxAbsZ = 0;
                 let score = Math.max(0, 100 - (maxAbsZ * 20));
                 let grade = 'A+';
@@ -1838,7 +2113,13 @@
                 document.getElementById('overall-balance-score').innerText = `${grade} (${score.toFixed(0)}/100)`;
             }
 
-            lastSimulationTimeSeries = simulationTimeSeries; // Cache for CSV exports
+            lastSimulationTimeSeries = simulationTimeSeries; 
+            
+            // Safeguard maxSpreadRadius
+            if (isNaN(maxSpreadRadius) || !isFinite(maxSpreadRadius) || maxSpreadRadius <= 0) {
+                maxSpreadRadius = targetRadius + 1.0;
+            }
+            
             drawCharts(timeLabels, combatDatasets, trajectoryDatasets, spreadDatasets, maxSpreadRadius, rangeDatasets);
         }
 
@@ -1959,7 +2240,9 @@
         }
     </script>
     <!-- Floating Calculator -->
-    <button class="calc-toggle-btn" id="calcToggleBtn" onclick="toggleCalc()">🖩</button>
+    <button class="calc-toggle-btn" id="calcToggleBtn" onclick="toggleCalc()">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="display: block; margin: auto;"><rect x="4" y="2" width="16" height="20" rx="2" ry="2"></rect><line x1="8" y1="6" x2="16" y2="6"></line><line x1="16" y1="14" x2="16" y2="18"></line><path d="M16 10h.01M12 10h.01M8 10h.01M12 14h.01M8 14h.01M12 18h.01M8 18h.01"></path></svg>
+    </button>
     <div class="floating-calc hidden" id="floatingCalc">
         <div class="calc-header">
             <span>RPM ⇄ RPS</span>

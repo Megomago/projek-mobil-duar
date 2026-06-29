@@ -1,5 +1,7 @@
 using System.Collections.Generic;
 using UnityEngine;
+using UnityEngine.Serialization;
+using Weapons;
 
 [System.Serializable]
 public class PlacedModule
@@ -38,14 +40,16 @@ public class VehicleStatsManager : MonoBehaviour
     public VehicleBaseData baseData;
 
     [Header("Modular Grid Setup")]
-    [Tooltip("Kapasitas grid mobil (contoh: atap 4x8)")]
-    public Vector2Int gridCapacity = new Vector2Int(4, 8);
+    [Tooltip("Ukuran grid mobil: X = lebar, Y = tinggi")]
+    [FormerlySerializedAs("gridCapacity")]
+    public Vector2Int gridSize = new Vector2Int(6, 4);
     
-    [Tooltip("Titik awal (pojok kiri-bawah) grid di dunia 3D. Taruh empty GameObject di mobil sebagai anchor.")]
+    [Tooltip("Titik awal (pojok kiri-atas) grid di dunia 3D.")]
     public Transform gridOrigin;
     
-    [Tooltip("Ukuran 1 kotak grid dalam meter (default 0.25 = 25cm)")]
-    public float cellSize = 0.25f;
+    [Tooltip("Ukuran 1 kotak grid dalam meter")]
+    [FormerlySerializedAs("cellSize")]
+    [Min(0.01f)] public float gridCellSize = 0.25f;
 
     [Header("Installed Modules")]
     public List<PlacedModule> installedModules = new List<PlacedModule>();
@@ -149,11 +153,9 @@ public class VehicleStatsManager : MonoBehaviour
             // Hitung posisi dunia berdasarkan koordinat grid
             int sizeX = rotated ? template.height : template.width;
             int sizeY = rotated ? template.width : template.height;
-            
-            float offsetX = (position.x + sizeX / 2f) * cellSize;
-            float offsetZ = (position.y + sizeY / 2f) * cellSize;
-            
-            Vector3 localPos = new Vector3(offsetX, 0f, offsetZ);
+
+            Vector3 localPos = VehicleGridUtility.GridToLocalCenter(
+                position.x, position.y, sizeX, sizeY, gridCellSize);
             Vector3 worldPos = gridOrigin.TransformPoint(localPos);
             
             Quaternion rotation = gridOrigin.rotation;

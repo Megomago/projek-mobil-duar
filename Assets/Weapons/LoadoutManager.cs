@@ -22,17 +22,30 @@ namespace Weapons
         public GameObject mainUIPanel;
         public GameObject inventoryUIPanel;
 
-        [Header("=== INVENTORY UI ===")]
-        public List<WeaponSlotUI> slotButtons;
-        public GameObject weaponGridPanel;
+        [Header("=== INVENTORY UI (KATALOG SCROLL) ===")]
+        [Tooltip("Parent/Wadah tempat daftar senjata di-spawn (Biasanya di dalam Content Scroll View)")]
         public Transform gridContainer;
+        [Tooltip("Prefab untuk tombol/item daftar senjata (WeaponGridItemUI)")]
         public GameObject gridItemPrefab;
 
-        private int _activeSlotIndex = -1;
+        [Header("=== PLACEMENT MODE ===")]
+        [Tooltip("Pasang senjata langsung ke grid 3D di mobil (KSP style). Matikan untuk pakai panel Tetris 2D lama.")]
+        public bool use3DGridPlacement = true;
 
         private int _currentVehicleIndex = 0;
         private GameObject _currentPreviewVehicle;
         private VehicleWeaponManager _currentPreviewWeaponManager;
+        private VehicleGrid3DPlacer _currentGridPlacer;
+
+        public TetrisGridUI GetActiveTetrisGrid()
+        {
+            if (inventoryUIPanel == null) return null;
+            return inventoryUIPanel.GetComponentInChildren<TetrisGridUI>(true);
+        }
+
+        public VehicleWeaponManager PreviewWeaponManager => _currentPreviewWeaponManager;
+        public VehicleGrid3DPlacer PreviewGridPlacer => _currentGridPlacer;
+        public bool Use3DGridPlacement => use3DGridPlacement;
 
         private void Start()
         {
@@ -56,6 +69,7 @@ namespace Weapons
                 }
             }
 
+            PopulateWeaponCatalog();
             UpdateVehicleSelection();
         }
 
@@ -92,10 +106,10 @@ namespace Weapons
                 _currentPreviewVehicle = Instantiate(currentData.vehiclePrefab, vehiclePreviewPivot.position, vehiclePreviewPivot.rotation);
                 _currentPreviewVehicle.name = currentData.vehicleName;
                 
-                // Matikan player input agar mobil tidak jalan-jalan, biarkan fisika nyala agar mobil "jatuh" ke lantai
+                // Matikan player input agar mobil tidak jalan-jalan
                 if (_currentPreviewVehicle.TryGetComponent<VehicleController>(out var vc)) vc.enabled = false;
 
-                // Matikan semua suara (mesin, dsb) di mobil agar lobby tidak berisik
+                // Matikan semua suara di lobby
                 AudioSource[] audioSources = _currentPreviewVehicle.GetComponentsInChildren<AudioSource>();
                 foreach (var audio in audioSources)
                 {
@@ -103,46 +117,36 @@ namespace Weapons
                 }
 
                 _currentPreviewWeaponManager = _currentPreviewVehicle.GetComponent<VehicleWeaponManager>();
+                _currentGridPlacer = _currentPreviewVehicle.GetComponent<VehicleGrid3DPlacer>();
+
                 if (_currentPreviewWeaponManager != null)
                 {
-                    // Beritahu manajer nama kendaraannya untuk PlayerPrefs
+                    _currentPreviewWeaponManager.vehicleData = currentData;
                     _currentPreviewWeaponManager.currentVehicleName = currentData.vehicleName;
-                    
-                    // Supaya HUD tidak muncul menumpuk di Lobby, hilangkan hudContainer
                     _currentPreviewWeaponManager.hudContainer = null;
-                    
-                    // Matikan input player agar senjata tidak bisa menembak di Lobby
                     _currentPreviewWeaponManager.usePlayerInput = false;
+                    _currentPreviewWeaponManager.weaponDatabase = weaponDatabase;
+                    _currentPreviewWeaponManager.SyncGridSettings();
+                    _currentPreviewWeaponManager.RefreshGridVisual();
+                    _currentPreviewWeaponManager.RefreshWeapons();
+                }
+
+                if (_currentGridPlacer != null)
+                {
+                    _currentGridPlacer.vehicleData = currentData;
+                    _currentGridPlacer.weaponDatabase = weaponDatabase;
+                    _currentGridPlacer.enabled = false;
                 }
             }
 
-            // --- 2. UPDATE UI SLOT BUTTONS ---
-            int slotCount = currentData.weaponSlotCount;
-            
-            for (int i = 0; i < slotButtons.Count; i++)
+            // Jika Panel Tetris sedang terbuka, kita perlu me-restart-nya untuk mobil baru
+            TetrisGridUI tetrisGrid = inventoryUIPanel.GetComponentInChildren<TetrisGridUI>(true);
+            if (tetrisGrid != null && inventoryUIPanel.activeSelf)
             {
-                WeaponSlotUI slotBtn = slotButtons[i];
-                if (slotBtn == null) continue;
-
-                if (i < slotCount)
-                {
-                    slotBtn.gameObject.SetActive(true);
-                    slotBtn.Setup(i, this);
-                    
-                    // Baca senjata yang terpasang dari PlayerPrefs
-                    string prefKey = $"WeaponSlot_{currentData.vehicleName}_{i}";
-                    string savedWeaponName = PlayerPrefs.GetString(prefKey, "");
-                    WeaponData savedWeapon = weaponDatabase.GetWeaponByName(savedWeaponName);
-                    
-                    slotBtn.UpdateVisual(savedWeapon);
-                }
-                else
-                {
-                    slotBtn.gameObject.SetActive(false);
-                }
+                tetrisGrid.InitializeGrid(currentData);
+                tetrisGrid.RefreshVisualGrid();
             }
-            
-            // Pastikan Mode Utama yang aktif saat ganti mobil
+
             CloseInventoryMode();
         }
 
@@ -150,82 +154,81 @@ namespace Weapons
         public void OpenInventoryMode()
         {
             if (mainUIPanel != null) mainUIPanel.SetActive(false);
-            if (inventoryUIPanel != null) inventoryUIPanel.SetActive(true);
-            if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
+            
+            if (inventoryUIPanel != null) 
+            {
+                inventoryUIPanel.SetActive(true);
+
+                VehicleData currentData = vehicleDatabase.allVehicles[_currentVehicleIndex];
+
+                SetTetrisGrid2DVisible(!use3DGridPlacement);
+
+                if (!use3DGridPlacement)
+                {
+                    TetrisGridUI tetrisGrid = GetActiveTetrisGrid();
+                    if (tetrisGrid != null)
+                    {
+                        tetrisGrid.InitializeGrid(currentData);
+                        tetrisGrid.RefreshVisualGrid();
+                    }
+                }
+
+                if (_currentGridPlacer != null && use3DGridPlacement)
+                {
+                    _currentGridPlacer.placementCamera = Camera.main;
+                    _currentGridPlacer.enabled = true;
+                    _currentGridPlacer.LoadGrid();
+                }
+
+                if (_currentPreviewWeaponManager != null)
+                {
+                    _currentPreviewWeaponManager.RefreshGridVisual();
+                    _currentPreviewWeaponManager.RefreshWeapons();
+                }
+            }
         }
 
         public void CloseInventoryMode()
         {
+            _currentGridPlacer?.CancelPlacing();
+            if (_currentGridPlacer != null) _currentGridPlacer.enabled = false;
+
             if (mainUIPanel != null) mainUIPanel.SetActive(true);
             if (inventoryUIPanel != null) inventoryUIPanel.SetActive(false);
-            if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
         }
 
-        // Dipanggil oleh tombol "X" atau "Back" yang ada di dalam panel Grid Senjata
-        public void CloseWeaponGrid()
+        private void SetTetrisGrid2DVisible(bool visible)
         {
-            if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
+            TetrisGridUI tetrisGrid = GetActiveTetrisGrid();
+            if (tetrisGrid != null)
+            {
+                tetrisGrid.gameObject.SetActive(visible);
+            }
         }
 
-        // === GRID SYSTEM ===
-        public void OpenWeaponGrid(int slotIndex)
+        // === KATALOG SENJATA ===
+        private void PopulateWeaponCatalog()
         {
-            _activeSlotIndex = slotIndex;
-            
-            if (weaponGridPanel != null) weaponGridPanel.SetActive(true);
+            if (gridContainer == null || gridItemPrefab == null || weaponDatabase == null) return;
 
-            // Bersihkan isi grid lama
+            // Bersihkan isi scroll view lama
             foreach (Transform child in gridContainer)
             {
                 Destroy(child.gameObject);
             }
 
-            // Buat tombol "Kosong" (Lepas Senjata)
-            GameObject emptyItem = Instantiate(gridItemPrefab, gridContainer);
-            emptyItem.GetComponent<WeaponGridItemUI>().Initialize(null, this);
-
-            // Buat tombol untuk tiap senjata di database
+            // Munculkan daftar senjata untuk di-drag
             foreach (WeaponData wData in weaponDatabase.allWeapons)
             {
                 if (wData == null) continue;
 
                 GameObject item = Instantiate(gridItemPrefab, gridContainer);
-                item.GetComponent<WeaponGridItemUI>().Initialize(wData, this);
+                WeaponGridItemUI itemUI = item.GetComponent<WeaponGridItemUI>();
+                if (itemUI != null)
+                {
+                    itemUI.Initialize(wData, this);
+                }
             }
-        }
-
-        public void SelectWeaponFromGrid(WeaponData weapon)
-        {
-            if (_activeSlotIndex < 0) return;
-
-            VehicleData currentData = vehicleDatabase.allVehicles[_currentVehicleIndex];
-            string prefKey = $"WeaponSlot_{currentData.vehicleName}_{_activeSlotIndex}";
-
-            if (weapon == null)
-            {
-                PlayerPrefs.SetString(prefKey, ""); // Kosong
-            }
-            else
-            {
-                PlayerPrefs.SetString(prefKey, weapon.weaponName);
-            }
-            
-            PlayerPrefs.Save();
-
-            // Refresh UI Tombol Slot
-            if (_activeSlotIndex < slotButtons.Count)
-            {
-                slotButtons[_activeSlotIndex].UpdateVisual(weapon);
-            }
-
-            // Refresh Visual Senjata di Mobil 3D
-            if (_currentPreviewWeaponManager != null)
-            {
-                _currentPreviewWeaponManager.RefreshWeapons();
-            }
-
-            // Tutup Panel Grid setelah memilih
-            if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
         }
     }
 }
