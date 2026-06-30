@@ -176,7 +176,7 @@ MonoBehaviour:
   m_LookaheadIgnoreY: 0
   m_HorizontalDamping: 0
   m_VerticalDamping: 0
-  m_ScreenX: 0.5
+  m_ScreenX: 0.4999999
   m_ScreenY: 0.55
   m_DeadZoneWidth: 0
   m_DeadZoneHeight: 0
@@ -432,6 +432,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   batasWaktuNganggur: 5
   kecepatanCinematic: 10
+  isInventoryMode: 0
+  screenXInventory: 0.4
+  kecepatanTransisi: 5
 --- !u!114 &243781649
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -546,7 +549,7 @@ Transform:
   m_GameObject: {fileID: 243781647}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.1487706, y: -1.3040347, z: 4.363309}
+  m_LocalPosition: {x: 2.1487708, y: -1.3040347, z: 4.363309}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1470,8 +1473,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 557784988}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.04511027, y: 0.95407504, z: -0.18825698, w: -0.2286161}
-  m_LocalPosition: {x: 0.0000021457672, y: 0, z: -0.0000014305115}
+  m_LocalRotation: {x: -0.045110267, y: 0.95407504, z: -0.18825696, w: -0.2286161}
+  m_LocalPosition: {x: 0.0000019073486, y: 0, z: -0.0000014305115}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1775,7 +1778,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 864789293}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.051639553, y: 0.9482917, z: -0.21550545, w: -0.2272303}
+  m_LocalRotation: {x: -0.051639557, y: 0.9482917, z: -0.21550545, w: -0.2272303}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1956,7 +1959,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1069876909}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.058169495, y: 0.9416842, z: -0.24275659, w: -0.22564699}
+  m_LocalRotation: {x: -0.05816946, y: 0.9416842, z: -0.24275649, w: -0.22564697}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -2636,6 +2639,7 @@ MonoBehaviour:
   vehicleDatabase: {fileID: 11400000, guid: 43dcbc7e01c4f904fb659ee6f3e901c1, type: 2}
   weaponDatabase: {fileID: 11400000, guid: f2ba357f9ca7a3340956770d4a4510cf, type: 2}
   vehiclePreviewPivot: {fileID: 66819363}
+  klikKananKamera: {fileID: 243781648}
   vehicleNameText: {fileID: 1097865256}
   mainUIPanel: {fileID: 415029663}
   inventoryUIPanel: {fileID: 2104241585}
@@ -2713,7 +2717,7 @@ MonoBehaviour:
   m_LookaheadIgnoreY: 0
   m_HorizontalDamping: 0
   m_VerticalDamping: 0
-  m_ScreenX: 0.5
+  m_ScreenX: 0.4999999
   m_ScreenY: 0.6
   m_DeadZoneWidth: 0
   m_DeadZoneHeight: 0
@@ -3221,7 +3225,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1560133212}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.054257303, y: 0.9457427, z: -0.2264285, w: -0.22662099}
+  m_LocalRotation: {x: -0.054257024, y: 0.94574296, z: -0.22642863, w: -0.22661972}
   m_LocalPosition: {x: 2.1487827, y: -1.3040347, z: 4.363303}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -4108,7 +4112,7 @@ MonoBehaviour:
   m_LookaheadIgnoreY: 0
   m_HorizontalDamping: 0
   m_VerticalDamping: 0
-  m_ScreenX: 0.5
+  m_ScreenX: 0.4999999
   m_ScreenY: 0.5
   m_DeadZoneWidth: 0
   m_DeadZoneHeight: 0
