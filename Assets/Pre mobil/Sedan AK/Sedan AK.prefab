@@ -667,6 +667,37 @@ Transform:
   - {fileID: 2225625403772526115}
   m_Father: {fileID: 1884764973182289493}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &6364867299934435857
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 1928401121685851406}
+  m_Layer: 0
+  m_Name: pivotgrid
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &1928401121685851406
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6364867299934435857}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.51, y: 1.41, z: -1.382}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7266497692247356272}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6399130815866509359
 GameObject:
   m_ObjectHideFlags: 0
@@ -984,8 +1015,9 @@ GameObject:
   - component: {fileID: 246316638623364675}
   - component: {fileID: 179251259502191177}
   - component: {fileID: 8874008394217940311}
-  - component: {fileID: 6019478609709458165}
   - component: {fileID: 6321340214497921229}
+  - component: {fileID: 8766319752834695132}
+  - component: {fileID: 124188638354288178}
   m_Layer: 2
   m_Name: Sedan AK
   m_TagString: Player
@@ -1011,6 +1043,7 @@ Transform:
   - {fileID: 1884764973182289493}
   - {fileID: 1481093212916752384}
   - {fileID: 3919853356388755118}
+  - {fileID: 1928401121685851406}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &2784621064803543879
@@ -1260,31 +1293,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &6019478609709458165
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 8859394471345475044}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 10a54067bf8a68a40a40a9258cf8ca47, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  weaponDatabase: {fileID: 11400000, guid: f2ba357f9ca7a3340956770d4a4510cf, type: 2}
-  weaponSlots:
-  - weaponData: {fileID: 0}
-    pivot: {fileID: 1481093212916752384}
-    spawnedWeapon: {fileID: 0}
-    spawnedHUD: {fileID: 0}
-  - weaponData: {fileID: 0}
-    pivot: {fileID: 3919853356388755118}
-    spawnedWeapon: {fileID: 0}
-    spawnedHUD: {fileID: 0}
-  hudContainer: {fileID: 0}
-  usePlayerInput: 1
-  currentVehicleName: 
 --- !u!114 &6321340214497921229
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1298,8 +1306,8 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   baseData: {fileID: 11400000, guid: 3bbb624cd1d4f4f4fae546a5b15ae041, type: 2}
-  gridCapacity: {x: 4, y: 8}
-  gridOrigin: {fileID: 0}
+  gridCapacity: {x: 4, y: 5}
+  gridOrigin: {fileID: 1928401121685851406}
   cellSize: 0.25
   installedModules: []
   currentTotalMass: 0
@@ -1311,3 +1319,34 @@ MonoBehaviour:
   currentCapacitorCapacity: 0
   currentCapacitorChargeRate: 0
   hud: {fileID: 0}
+--- !u!114 &8766319752834695132
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8859394471345475044}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3955582cb80d7974c8fd5133499dfa04, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cellSprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+  sortingLayerName: Default
+  sortingOrder: 0
+--- !u!114 &124188638354288178
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8859394471345475044}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 351b3800a2ad11b4790a13cce1b80f76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hudContainer: {fileID: 6957116981271434197, guid: 695ecd969820f064eb7b275d4f6d055a,
+    type: 3}
+  usePlayerInput: 1

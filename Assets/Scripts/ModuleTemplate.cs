@@ -21,7 +21,12 @@ public class ModuleTemplate : ScriptableObject
     public ModuleType moduleType = ModuleType.Other;
     public Sprite moduleIcon;
     
-    [Tooltip("Prefab 3D model modul ini. Akan di-spawn di kendaraan saat modul dipasang.")]
+    [Header("Weapon Data (Hanya untuk Tipe Senjata)")]
+    [Tooltip("Masukkan WeaponData jika modul ini adalah Senjata. Jika diisi, Nama, Icon, dan Prefab 3D akan otomatis mengambil dari WeaponData.")]
+    public Weapons.WeaponData weaponData;
+    
+    [Header("Visual (Untuk Tipe Non-Senjata)")]
+    [Tooltip("Prefab 3D model modul ini. Jika tipe Weapon, sistem akan memprioritaskan weaponData.weapon3DPrefab.")]
     public GameObject modulePrefab;
 
     [Header("Grid Dimensions (1x1 = 25 cm)")]

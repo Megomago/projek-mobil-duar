@@ -8,7 +8,11 @@ namespace Weapons
     {
         [Header("=== DATABASE ===")]
         public VehicleDatabase vehicleDatabase;
-        public WeaponDatabase weaponDatabase;
+        public ModuleDatabase moduleDatabase; // <-- Database baru untuk semua modul (termasuk senjata)
+        
+        // WeaponDatabase dipertahankan jika masih dibutuhkan sistem lain, 
+        // tapi inventaris akan menggunakan ModuleDatabase
+        public WeaponDatabase weaponDatabase; 
 
         [Header("=== PREVIEW SETTINGS ===")]
         [Tooltip("Titik (Transform) di mana mobil 3D akan dimunculkan di Lobby")]
@@ -26,17 +30,15 @@ namespace Weapons
         public GameObject mainUIPanel;
         public GameObject inventoryUIPanel;
 
-        [Header("=== INVENTORY UI ===")]
-        public List<WeaponSlotUI> slotButtons;
-        public GameObject weaponGridPanel;
-        public Transform gridContainer;
-        public GameObject gridItemPrefab;
-
-        private int _activeSlotIndex = -1;
+        [Header("=== INVENTORY UI (CATALOG) ===")]
+        public GameObject weaponGridPanel; 
+        public Transform gridContainer; // Wadah UI list/grid tombol modul
+        public GameObject uiModuleItemPrefab; // Prefab UIModuleItem
 
         private int _currentVehicleIndex = 0;
         private GameObject _currentPreviewVehicle;
-        private VehicleWeaponManager _currentPreviewWeaponManager;
+        private VehicleStatsManager _currentStatsManager;
+        private GridVisualizer _currentGridVisualizer;
 
         private void Start()
         {
@@ -106,46 +108,20 @@ namespace Weapons
                     audio.enabled = false;
                 }
 
-                _currentPreviewWeaponManager = _currentPreviewVehicle.GetComponent<VehicleWeaponManager>();
-                if (_currentPreviewWeaponManager != null)
+                _currentStatsManager = _currentPreviewVehicle.GetComponent<VehicleStatsManager>();
+                _currentGridVisualizer = _currentPreviewVehicle.GetComponent<GridVisualizer>();
+                if (_currentGridVisualizer == null && _currentStatsManager != null)
                 {
-                    // Beritahu manajer nama kendaraannya untuk PlayerPrefs
-                    _currentPreviewWeaponManager.currentVehicleName = currentData.vehicleName;
-                    
-                    // Supaya HUD tidak muncul menumpuk di Lobby, hilangkan hudContainer
-                    _currentPreviewWeaponManager.hudContainer = null;
-                    
-                    // Matikan input player agar senjata tidak bisa menembak di Lobby
-                    _currentPreviewWeaponManager.usePlayerInput = false;
+                    _currentGridVisualizer = _currentPreviewVehicle.AddComponent<GridVisualizer>();
+                }
+
+                // Load modul yang sudah pernah dipasang sebelumnya dari save
+                if (_currentStatsManager != null && moduleDatabase != null)
+                {
+                    GridSaveSystem.LoadGrid(currentData.vehicleName, _currentStatsManager, moduleDatabase);
                 }
             }
 
-            // --- 2. UPDATE UI SLOT BUTTONS ---
-            int slotCount = currentData.weaponSlotCount;
-            
-            for (int i = 0; i < slotButtons.Count; i++)
-            {
-                WeaponSlotUI slotBtn = slotButtons[i];
-                if (slotBtn == null) continue;
-
-                if (i < slotCount)
-                {
-                    slotBtn.gameObject.SetActive(true);
-                    slotBtn.Setup(i, this);
-                    
-                    // Baca senjata yang terpasang dari PlayerPrefs
-                    string prefKey = $"WeaponSlot_{currentData.vehicleName}_{i}";
-                    string savedWeaponName = PlayerPrefs.GetString(prefKey, "");
-                    WeaponData savedWeapon = weaponDatabase.GetWeaponByName(savedWeaponName);
-                    
-                    slotBtn.UpdateVisual(savedWeapon);
-                }
-                else
-                {
-                    slotBtn.gameObject.SetActive(false);
-                }
-            }
-            
             // Pastikan Mode Utama yang aktif saat ganti mobil
             CloseInventoryMode();
         }
@@ -155,12 +131,40 @@ namespace Weapons
         {
             if (mainUIPanel != null) mainUIPanel.SetActive(false);
             if (inventoryUIPanel != null) inventoryUIPanel.SetActive(true);
-            if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
+            if (weaponGridPanel != null) weaponGridPanel.SetActive(true); // Tampilkan panel katalog
             
+            if (_currentGridVisualizer != null) _currentGridVisualizer.ToggleGrid(true);
+
+            PopulateInventoryCatalog();
+
             // KAMERA MINGGIR SECARA OTOMATIS
             if (klikKananKamera != null)
             {
                 klikKananKamera.ToggleInventoryMode(true);
+            }
+        }
+
+        private void PopulateInventoryCatalog()
+        {
+            if (gridContainer == null || uiModuleItemPrefab == null || moduleDatabase == null) return;
+
+            // Bersihkan isi grid lama
+            foreach (Transform child in gridContainer)
+            {
+                Destroy(child.gameObject);
+            }
+
+            // Buat tombol untuk tiap modul di database
+            foreach (ModuleTemplate template in moduleDatabase.allModules)
+            {
+                if (template == null) continue;
+
+                GameObject itemObj = Instantiate(uiModuleItemPrefab, gridContainer);
+                UIModuleItem uiItem = itemObj.GetComponent<UIModuleItem>();
+                if (uiItem != null)
+                {
+                    uiItem.Initialize(template, _currentStatsManager);
+                }
             }
         }
 
@@ -169,6 +173,8 @@ namespace Weapons
             if (mainUIPanel != null) mainUIPanel.SetActive(true);
             if (inventoryUIPanel != null) inventoryUIPanel.SetActive(false);
             if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
+
+            if (_currentGridVisualizer != null) _currentGridVisualizer.ToggleGrid(false);
 
             // KAMERA KEMBALI KE TENGAH
             if (klikKananKamera != null)
@@ -183,65 +189,7 @@ namespace Weapons
             if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
         }
 
-        // === GRID SYSTEM ===
-        public void OpenWeaponGrid(int slotIndex)
-        {
-            _activeSlotIndex = slotIndex;
-            
-            if (weaponGridPanel != null) weaponGridPanel.SetActive(true);
-
-            // Bersihkan isi grid lama
-            foreach (Transform child in gridContainer)
-            {
-                Destroy(child.gameObject);
-            }
-
-            // Buat tombol "Kosong" (Lepas Senjata)
-            GameObject emptyItem = Instantiate(gridItemPrefab, gridContainer);
-            emptyItem.GetComponent<WeaponGridItemUI>().Initialize(null, this);
-
-            // Buat tombol untuk tiap senjata di database
-            foreach (WeaponData wData in weaponDatabase.allWeapons)
-            {
-                if (wData == null) continue;
-
-                GameObject item = Instantiate(gridItemPrefab, gridContainer);
-                item.GetComponent<WeaponGridItemUI>().Initialize(wData, this);
-            }
-        }
-
-        public void SelectWeaponFromGrid(WeaponData weapon)
-        {
-            if (_activeSlotIndex < 0) return;
-
-            VehicleData currentData = vehicleDatabase.allVehicles[_currentVehicleIndex];
-            string prefKey = $"WeaponSlot_{currentData.vehicleName}_{_activeSlotIndex}";
-
-            if (weapon == null)
-            {
-                PlayerPrefs.SetString(prefKey, ""); // Kosong
-            }
-            else
-            {
-                PlayerPrefs.SetString(prefKey, weapon.weaponName);
-            }
-            
-            PlayerPrefs.Save();
-
-            // Refresh UI Tombol Slot
-            if (_activeSlotIndex < slotButtons.Count)
-            {
-                slotButtons[_activeSlotIndex].UpdateVisual(weapon);
-            }
-
-            // Refresh Visual Senjata di Mobil 3D
-            if (_currentPreviewWeaponManager != null)
-            {
-                _currentPreviewWeaponManager.RefreshWeapons();
-            }
-
-            // Tutup Panel Grid setelah memilih
-            if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
-        }
+        // === GRID SYSTEM LAMA DIHAPUS ===
+        // (Logika Inventory Grid 3D akan menggantikan bagian ini)
     }
 }

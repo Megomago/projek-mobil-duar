@@ -850,6 +850,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   vehicleDatabase: {fileID: 11400000, guid: 43dcbc7e01c4f904fb659ee6f3e901c1, type: 2}
+  moduleDatabase: {fileID: 11400000, guid: 15727de0e3f354249bd24b7e7f197e2f, type: 2}
   playerSpawnPoint: {fileID: 657698249}
   mainHUDContainer: {fileID: 1478516475}
 --- !u!114 &657698251

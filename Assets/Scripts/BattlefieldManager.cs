@@ -6,6 +6,7 @@ namespace Weapons
     {
         [Header("=== DATABASE ===")]
         public VehicleDatabase vehicleDatabase;
+        public ModuleDatabase moduleDatabase;
 
         [Header("=== SPAWN SETTINGS ===")]
         [Tooltip("Titik awal mobil di-spawn saat masuk Battlefield")]
@@ -43,20 +44,30 @@ namespace Weapons
             Quaternion spawnRot = playerSpawnPoint != null ? playerSpawnPoint.rotation : Quaternion.identity;
 
             GameObject spawnedVehicle = Instantiate(selectedData.vehiclePrefab, spawnPos, spawnRot);
-            spawnedVehicle.name = selectedData.vehicleName; // Penting: agar VehicleWeaponManager baca nama ini
-            
-            // Set nama eksplisit di VehicleWeaponManager sebelum Start()-nya dipanggil (meski di Awake sudah ter-Instantiate, Start belum)
-            // Atau cukup biarkan namanya diganti di atas, VehicleWeaponManager akan baca dari gameObject.name.
-            var weaponManager = spawnedVehicle.GetComponent<VehicleWeaponManager>();
-            if (weaponManager != null)
+            spawnedVehicle.name = selectedData.vehicleName;
+
+            // --- LOAD GRID INVENTARIS DARI SAVE ---
+            VehicleStatsManager statsManager = spawnedVehicle.GetComponent<VehicleStatsManager>();
+            if (statsManager != null && moduleDatabase != null)
             {
-                weaponManager.currentVehicleName = selectedData.vehicleName;
-                
-                // Assign HUD container dari BattlefieldManager ke mobil yang baru di-spawn
+                GridSaveSystem.LoadGrid(selectedData.vehicleName, statsManager, moduleDatabase);
+            }
+            
+            // --- SETUP WEAPON TRIGGER ---
+            var weaponTrigger = spawnedVehicle.GetComponent<VehicleGridWeaponTrigger>();
+            if (weaponTrigger == null)
+            {
+                weaponTrigger = spawnedVehicle.AddComponent<VehicleGridWeaponTrigger>();
+            }
+            
+            if (weaponTrigger != null)
+            {
                 if (mainHUDContainer != null)
                 {
-                    weaponManager.hudContainer = mainHUDContainer;
+                    weaponTrigger.hudContainer = mainHUDContainer;
                 }
+                // Inisialisasi senjata setelah grid di-load
+                weaponTrigger.InitializeWeapons();
             }
 
             // --- HUBUNGKAN KE KAMERA ---

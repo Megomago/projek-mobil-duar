@@ -9,8 +9,8 @@ public class PlacedModule
     [Tooltip("Posisi koordinat X, Y di grid")]
     public Vector2Int gridPosition;
     
-    [Tooltip("Apakah modul diputar 90 derajat?")]
-    public bool isRotated;
+    [Tooltip("Rotasi modul dalam derajat (0, 90, 180, 270)")]
+    public int rotationAngle;
     
     [HideInInspector]
     public float currentHealth;
@@ -19,11 +19,11 @@ public class PlacedModule
     [HideInInspector]
     public GameObject spawnedPrefab;
 
-    public PlacedModule(ModuleTemplate template, Vector2Int position, bool rotated)
+    public PlacedModule(ModuleTemplate template, Vector2Int position, int angle)
     {
         moduleTemplate = template;
         gridPosition = position;
-        isRotated = rotated;
+        rotationAngle = angle;
         if (template != null)
         {
             currentHealth = template.maxHealth;
@@ -136,33 +136,91 @@ public class VehicleStatsManager : MonoBehaviour
         }
     }
 
-    // Fungsi untuk menambah modul ke grid dan spawn prefab 3D-nya di kendaraan
-    public bool InstallModule(ModuleTemplate template, Vector2Int position, bool rotated)
+    // Fungsi untuk mendapatkan semua cell yang ditempati sebuah modul
+    public List<Vector2Int> GetOccupiedCells(Vector2Int position, int width, int height, int angle)
     {
-        // TODO: Tambahkan validasi Tetris placement (cek apakah grid kosong)
+        List<Vector2Int> cells = new List<Vector2Int>();
         
-        PlacedModule newModule = new PlacedModule(template, position, rotated);
+        // Sesuaikan ukuran efektif berdasarkan rotasi (0 dan 180 = normal, 90 dan 270 = ditukar)
+        int effectiveWidth = (angle == 90 || angle == 270) ? height : width;
+        int effectiveHeight = (angle == 90 || angle == 270) ? width : height;
+
+        for (int x = 0; x < effectiveWidth; x++)
+        {
+            for (int y = 0; y < effectiveHeight; y++)
+            {
+                cells.Add(new Vector2Int(position.x + x, position.y + y));
+            }
+        }
+        return cells;
+    }
+
+    // Fungsi untuk memvalidasi apakah area grid kosong dan berada di dalam batas
+    public bool IsAreaFree(Vector2Int position, int width, int height, int angle, PlacedModule ignoreModule = null)
+    {
+        List<Vector2Int> targetCells = GetOccupiedCells(position, width, height, angle);
+
+        foreach (var cell in targetCells)
+        {
+            // Cek batas grid (Out of bounds)
+            if (cell.x < 0 || cell.x >= gridCapacity.x || cell.y < 0 || cell.y >= gridCapacity.y)
+            {
+                return false;
+            }
+
+            // Cek tabrakan dengan modul lain yang sudah terpasang
+            foreach (var mod in installedModules)
+            {
+                if (mod == ignoreModule) continue;
+                if (mod.moduleTemplate == null) continue;
+
+                List<Vector2Int> modCells = GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle);
+                if (modCells.Contains(cell))
+                {
+                    return false; // Tabrakan!
+                }
+            }
+        }
+        return true;
+    }
+
+    // Fungsi untuk menambah modul ke grid dan spawn prefab 3D-nya di kendaraan
+    public bool InstallModule(ModuleTemplate template, Vector2Int position, int angle)
+    {
+        if (template == null) return false;
+
+        // Validasi Tetris placement
+        if (!IsAreaFree(position, template.width, template.height, angle))
+        {
+            Debug.LogWarning($"[VehicleStatsManager] Gagal memasang {template.moduleName} di posisi {position} karena area penuh atau di luar batas.");
+            return false;
+        }
+        
+        PlacedModule newModule = new PlacedModule(template, position, angle);
+
+        // Tentukan prefab yang akan di-spawn
+        GameObject prefabToSpawn = template.modulePrefab;
+        if (template.moduleType == ModuleType.Weapon && template.weaponData != null && template.weaponData.weapon3DPrefab != null)
+        {
+            prefabToSpawn = template.weaponData.weapon3DPrefab;
+        }
 
         // Spawn prefab 3D di posisi grid kendaraan
-        if (template.modulePrefab != null && gridOrigin != null)
+        if (prefabToSpawn != null && gridOrigin != null)
         {
-            // Hitung posisi dunia berdasarkan koordinat grid
-            int sizeX = rotated ? template.height : template.width;
-            int sizeY = rotated ? template.width : template.height;
+            // Hitung posisi dunia berdasarkan koordinat grid (Pusat modul)
+            int effectiveWidth = (angle == 90 || angle == 270) ? template.height : template.width;
+            int effectiveHeight = (angle == 90 || angle == 270) ? template.width : template.height;
             
-            float offsetX = (position.x + sizeX / 2f) * cellSize;
-            float offsetZ = (position.y + sizeY / 2f) * cellSize;
+            float offsetX = (position.x + effectiveWidth / 2f) * cellSize;
+            float offsetZ = (position.y + effectiveHeight / 2f) * cellSize;
             
             Vector3 localPos = new Vector3(offsetX, 0f, offsetZ);
             Vector3 worldPos = gridOrigin.TransformPoint(localPos);
             
-            Quaternion rotation = gridOrigin.rotation;
-            if (rotated)
-            {
-                rotation *= Quaternion.Euler(0f, 90f, 0f);
-            }
+            Quaternion rotation = gridOrigin.rotation * Quaternion.Euler(0f, angle, 0f);
 
-            GameObject spawned = Instantiate(template.modulePrefab, worldPos, rotation, gridOrigin);
+            GameObject spawned = Instantiate(prefabToSpawn, worldPos, rotation, gridOrigin);
             newModule.spawnedPrefab = spawned;
         }
 
@@ -185,5 +243,19 @@ public class VehicleStatsManager : MonoBehaviour
             installedModules.Remove(module);
             CalculateAndApplyStats();
         }
+    }
+
+    // Fungsi untuk menghapus semua modul (digunakan sebelum load data save)
+    public void ClearAllModules()
+    {
+        for (int i = installedModules.Count - 1; i >= 0; i--)
+        {
+            if (installedModules[i].spawnedPrefab != null)
+            {
+                Destroy(installedModules[i].spawnedPrefab);
+            }
+        }
+        installedModules.Clear();
+        CalculateAndApplyStats();
     }
 }
