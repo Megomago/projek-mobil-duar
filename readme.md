@@ -41,6 +41,8 @@ Persenjataan kendaraan didefinisikan sebagai `WeaponData` (*ScriptableObjects*) 
 *   **Distribusi Pellet Gaussian:** Sebaran peluru jenis *shotgun* atau *shrapnel* menggunakan model distribusi Gaussian murni yang diatur oleh parameter *Choke* dinamis.
 *   **Manajemen Termal (Overheat):** Penembakan secara konstan akan meningkatkan akumulasi panas. Mendekati batas termal maksimum akan meningkatkan dispersi dasar senjata secara eksponensial hingga siklus pendinginan selesai.
 
+*   https://github.com/user-attachments/assets/701ab109-da9d-4aab-a8a7-665468cfac92
+
 ### Matematika Penetrasi & Logika Armor
 Prototipe ini meninggalkan sistem pengurangan *health-bar* konvensional dan beralih ke model penetrasi armor deterministik:
 
