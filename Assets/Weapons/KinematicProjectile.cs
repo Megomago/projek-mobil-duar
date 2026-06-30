@@ -27,6 +27,10 @@ namespace Weapons
         private Vector3 _currentPosition;
         private float _aliveTime;
         private TrailRenderer _trailRenderer;
+        // Pembatas spawn impact VFX per frame (ANTI LAG SPIKE)
+        private static float _lastImpactFrameTime;
+        private static int _impactsThisFrame;
+        private const int MAX_IMPACTS_PER_FRAME = 10; // Batasi maks 3 efek ledakan per frame
 
         // Gravitasi bumi (-9.81), bisa diubah jika butuh balistik spesifik
         private readonly Vector3 _gravity = new Vector3(0f, -9.81f, 0f);
@@ -94,15 +98,23 @@ namespace Weapons
 
         private void HandleHit(RaycastHit hit)
         {
-            // DEBUG: Biar ketauan nabrak apa di frame pertama
-#if UNITY_EDITOR
-            Debug.Log($"[DEBUG] Peluru nabrak: {hit.collider.gameObject.name} (Layer: {LayerMask.LayerToName(hit.collider.gameObject.layer)})");
-#endif
 
-            // Spawn efek ledakan/percikan api
+            // Spawn efek ledakan/percikan api dengan pembatas maksimal per frame
             if (hitImpactPrefab != null)
             {
-                ObjectPool.Instance.Spawn(hitImpactPrefab, hit.point, Quaternion.LookRotation(hit.normal));
+                // Jika sudah berganti frame/detik, reset hit counter-nya
+                if (Time.time != _lastImpactFrameTime)
+                {
+                    _lastImpactFrameTime = Time.time;
+                    _impactsThisFrame = 0;
+                }
+
+                // Hanya spawn jika belum melewati batas maksimal per frame (misal max 3)
+                if (_impactsThisFrame < MAX_IMPACTS_PER_FRAME)
+                {
+                    ObjectPool.Instance.Spawn(hitImpactPrefab, hit.point, Quaternion.LookRotation(hit.normal));
+                    _impactsThisFrame++;
+                }
             }
 
             // Tambahkan dorongan fisik (Push) jika target adalah Rigidbody
@@ -114,14 +126,9 @@ namespace Weapons
                 hitRb.AddForceAtPosition(force, hit.point, ForceMode.Impulse);
             }
 
-            // TODO: Integrasi Modular Damage System (Sasis, Engine, Roda) disini nantinya
-            // Contoh: var dmg = hit.collider.GetComponent<DamageablePart>();
-            // if (dmg != null) dmg.TakeDamage(100f, hit.point);
-
             // Hancurkan peluru (Kembalikan ke pool)
             DestroyProjectile();
         }
-
         private void DestroyProjectile()
         {
             if (ObjectPool.Instance != null)
