@@ -14,6 +14,10 @@ namespace Weapons
         [Tooltip("Titik (Transform) di mana mobil 3D akan dimunculkan di Lobby")]
         public Transform vehiclePreviewPivot;
 
+        [Header("=== INTEGRATED CAMERA SYSTEM ===")]
+        [Tooltip("Tarik objek Cinemachine FreeLook yang ada script KlikKananKamera-nya kesini le!")]
+        public KlikKananKamera klikKananKamera; // <--- INI INTEGRASI BARUNYA!
+
         [Header("=== UI SETTINGS ===")]
         [Tooltip("Teks untuk menampilkan nama mobil yang sedang dipilih")]
         public TextMeshProUGUI vehicleNameText;
@@ -152,6 +156,12 @@ namespace Weapons
             if (mainUIPanel != null) mainUIPanel.SetActive(false);
             if (inventoryUIPanel != null) inventoryUIPanel.SetActive(true);
             if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
+            
+            // KAMERA MINGGIR SECARA OTOMATIS
+            if (klikKananKamera != null)
+            {
+                klikKananKamera.ToggleInventoryMode(true);
+            }
         }
 
         public void CloseInventoryMode()
@@ -159,6 +169,12 @@ namespace Weapons
             if (mainUIPanel != null) mainUIPanel.SetActive(true);
             if (inventoryUIPanel != null) inventoryUIPanel.SetActive(false);
             if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
+
+            // KAMERA KEMBALI KE TENGAH
+            if (klikKananKamera != null)
+            {
+                klikKananKamera.ToggleInventoryMode(false);
+            }
         }
 
         // Dipanggil oleh tombol "X" atau "Back" yang ada di dalam panel Grid Senjata
