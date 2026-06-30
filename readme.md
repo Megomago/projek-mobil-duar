@@ -7,7 +7,7 @@
 
 ---
 
-https://github.com/user-attachments/assets/8c2fbfa8-3dbc-48d2-aeb2-35c17223bf1c
+https://github.com/user-attachments/assets/a7c98ed4-9867-477c-919f-eeab241ad898
 
 
 
@@ -63,8 +63,8 @@ Model berkendara menjembatani responsivitas kontrol *arcade* dengan parameter si
 *   **Logika Transmisi:** Transmisi manual dilengkapi dengan simulasi input kopling. Transmisi otomatis dilengkapi dengan fitur *proactive upshifting*, *aggressive downshifting* saat pengereman keras, dan algoritma *kickdown* untuk mencegah mesin mati (*stall*) di tanjakan curam.
 *   **Dinamika Sasis:** Sistem suspensi yang dapat disesuaikan per roda (*spring rates*, *dampening*, *suspension travel*, *anti-roll bars*, dan *downforce* proporsional terhadap kecepatan).
 *   **Transfer Recoil:** Gaya dorong mundur (*recoil*) dari senjata dihitung secara fisik dan diterapkan sebagai vektor impuls negatif langsung ke komponen *Rigidbody* kendaraan.
-
-*   https://github.com/user-attachments/assets/a7c98ed4-9867-477c-919f-eeab241ad898
+  
+https://github.com/user-attachments/assets/8c2fbfa8-3dbc-48d2-aeb2-35c17223bf1c
 
 ### Loadout Grid 3D Diegetik
 Kendaraan dibatasi oleh tata letak grid fisik dan batas berat dasar (*Base Weight*) yang ketat.
