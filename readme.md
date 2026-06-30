@@ -7,6 +7,10 @@
 
 ---
 
+https://github.com/user-attachments/assets/8c2fbfa8-3dbc-48d2-aeb2-35c17223bf1c
+
+
+
 ## 1. Gambaran Umum
 **VDSO (Vehicle, Drive, Shoot, Shoot Outside)** adalah proyek prototipe *vehicle combat* berbasis sistem kompleks (*systems-driven*) yang berfokus pada logistik, manajemen sumber daya, dan pertempuran taktis tingkat tinggi.
 
