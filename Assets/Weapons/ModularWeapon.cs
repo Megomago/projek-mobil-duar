@@ -466,13 +466,16 @@ namespace Weapons
             ObjectPool.Instance.Despawn(casing, 3f);
         }
 
-        private void ApplyVehicleRecoil()
+     private void ApplyVehicleRecoil()
+    {
+        if (_vehicleRb != null && muzzleTransform != null)
         {
-            if (_vehicleRb != null && muzzleTransform != null)
-            {
-                _vehicleRb.AddForceAtPosition(-muzzleTransform.forward * weaponData.recoilForce, muzzleTransform.position, ForceMode.Impulse);
-            }
+            Vector3 recoilDir = -muzzleTransform.forward;
+            float velocityRecoilForce = weaponData.recoilForce / _vehicleRb.mass;
+            _vehicleRb.velocity += recoilDir * (velocityRecoilForce * 0.5f);
+            _vehicleRb.AddForceAtPosition(recoilDir * (velocityRecoilForce * 0.5f), muzzleTransform.position, ForceMode.VelocityChange);
         }
+    }
 
         private void HandleCooling()
         {
