@@ -11,7 +11,7 @@ GameObject:
   - component: {fileID: 4604463642318347071}
   - component: {fileID: 8122219441358204525}
   - component: {fileID: 1205293340608365560}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: ammo
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -98,7 +98,8 @@ GameObject:
   - component: {fileID: 34569229685365377}
   - component: {fileID: 2351697176979766890}
   - component: {fileID: 4790200920671589781}
-  m_Layer: 0
+  - component: {fileID: 989606092473186480}
+  m_Layer: 6
   m_Name: 53mm shotgun
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -211,6 +212,27 @@ MonoBehaviour:
   weaponAnimator: {fileID: 0}
   reloadTriggerName: Reload
   animationDelay: 0
+--- !u!65 &989606092473186480
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1979944428925729620}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.2852337, y: 0.8318272, z: 0.28052965}
+  m_Center: {x: 0.000000014901161, y: -0.011584151, z: 0.14026482}
 --- !u!1 &2386056903906821220
 GameObject:
   m_ObjectHideFlags: 0
@@ -220,7 +242,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 3316068377910787084}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: muz
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -251,7 +273,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 4602003926091051743}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: casout
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -284,7 +306,7 @@ GameObject:
   - component: {fileID: 5800793332422848552}
   - component: {fileID: 2536088811848740524}
   - component: {fileID: 6616661661021709076}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: Big Buster
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -439,7 +461,7 @@ GameObject:
   - component: {fileID: 8854063003533818992}
   - component: {fileID: 1428244592595540363}
   - component: {fileID: 5480822310009150660}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: breach
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -523,7 +545,7 @@ GameObject:
   - component: {fileID: 992915095460371370}
   - component: {fileID: 5501088191689713271}
   - component: {fileID: 3457313571317008192}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: barrel
   m_TagString: Untagged
   m_Icon: {fileID: 0}

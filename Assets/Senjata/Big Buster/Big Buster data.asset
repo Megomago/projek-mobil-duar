@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: fe49559cf43e52a4d8be128c37864496, type: 3}
   m_Name: Big Buster data
   m_EditorClassIdentifier: 
-  weaponName: Mps 53/P50
+  weaponName: Big Buster 50
   weaponIcon: {fileID: 0}
   weapon3DPrefab: {fileID: 7133440297363014158, guid: 9ec46e7abf023e145b05bf5d4f65e6cf,
     type: 3}
