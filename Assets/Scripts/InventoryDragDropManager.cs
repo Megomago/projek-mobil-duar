@@ -21,10 +21,22 @@ public class InventoryDragDropManager : MonoBehaviour
     private Vector2Int _lastValidGridPos = new Vector2Int(-1, -1);
     private bool _canPlace = false;
 
+    // === OPTIMIZATION: Cache Variables ===
+    private Camera _mainCam;
+    private Renderer[] _cachedRenderers;
+    private Collider[] _cachedColliders;
+    private MonoBehaviour[] _cachedScripts;
+    private Material _currentAppliedMat; // Biar gak nge-assign material mulu kalau warnanya sama
+    public bool IsDragging => _isDragging;
+
     private void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+
+        // Cache Camera.main SEKALI di awal. JANGAN dipanggil di Update()!
+        _mainCam = Camera.main;
+        if (_mainCam == null) Debug.LogError("[InventoryDragDropManager] Main Camera tidak ditemukan! Kasih tag 'MainCamera' di Camera lu.");
     }
 
     public void StartDrag(ModuleTemplate template, VehicleStatsManager statsManager)
@@ -39,6 +51,7 @@ public class InventoryDragDropManager : MonoBehaviour
         _targetStatsManager = statsManager;
         _currentAngle = 0;
         _isDragging = true;
+        _currentAppliedMat = null; // Reset tracker material
 
         // Tentukan prefab proxy
         GameObject prefabToSpawn = template.modulePrefab;
@@ -49,7 +62,7 @@ public class InventoryDragDropManager : MonoBehaviour
 
         if (prefabToSpawn == null)
         {
-            Debug.LogError($"[InventoryDragDropManager] Prefab 3D untuk {template.moduleName} kosong! Pastikan prefab terisi di ModuleTemplate atau WeaponData.");
+            Debug.LogError($"[InventoryDragDropManager] Prefab 3D untuk {template.moduleName} kosong!");
             return;
         }
 
@@ -57,14 +70,16 @@ public class InventoryDragDropManager : MonoBehaviour
         _proxyObject = Instantiate(prefabToSpawn);
         _proxyObject.name = "DragProxy_" + template.moduleName;
             
-        // Matikan collider dan script pada proxy agar tidak konflik
-        Collider[] colliders = _proxyObject.GetComponentsInChildren<Collider>();
-        foreach (var col in colliders) col.enabled = false;
-            
-        MonoBehaviour[] scripts = _proxyObject.GetComponentsInChildren<MonoBehaviour>();
-        foreach (var s in scripts) s.enabled = false;
+        // === OPTIMIZATION: Cache semua component SEKALI SAAT INSTANTIATE ===
+        _cachedRenderers = _proxyObject.GetComponentsInChildren<Renderer>();
+        _cachedColliders = _proxyObject.GetComponentsInChildren<Collider>();
+        _cachedScripts = _proxyObject.GetComponentsInChildren<MonoBehaviour>();
 
-        ApplyMaterialToProxy(_proxyObject, validMaterial);
+        // Matikan collider dan script
+        foreach (var col in _cachedColliders) col.enabled = false;
+        foreach (var s in _cachedScripts) s.enabled = false;
+
+        ApplyMaterialToProxy(validMaterial);
     }
 
     private void Update()
@@ -84,33 +99,26 @@ public class InventoryDragDropManager : MonoBehaviour
             _currentAngle = (_currentAngle + 90) % 360;
         }
 
-        // Lakukan Raycast dari Mouse ke Plane gridOrigin
-        Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+        // Gunakan _mainCam yang udah di-cache, BUKAN Camera.main!
+        Ray ray = _mainCam.ScreenPointToRay(Input.mousePosition);
         Plane gridPlane = new Plane(_targetStatsManager.gridOrigin.up, _targetStatsManager.gridOrigin.position);
         
         if (gridPlane.Raycast(ray, out float enter))
         {
             Vector3 hitPoint = ray.GetPoint(enter);
-
-            // Ubah dari World Space ke Local Space relative terhadap gridOrigin
             Vector3 localHit = _targetStatsManager.gridOrigin.InverseTransformPoint(hitPoint);
 
-            // Hitung grid X dan Y (1 unit cellSize = 1 grid)
             float cellSize = _targetStatsManager.cellSize;
             
             int effectiveWidth = (_currentAngle == 90 || _currentAngle == 270) ? _currentTemplate.height : _currentTemplate.width;
             int effectiveHeight = (_currentAngle == 90 || _currentAngle == 270) ? _currentTemplate.width : _currentTemplate.height;
 
-            // Offset koordinat agar mouse berada di tengah modul
             int gridX = Mathf.FloorToInt((localHit.x / cellSize) - (effectiveWidth / 2f) + 0.5f);
             int gridY = Mathf.FloorToInt((localHit.z / cellSize) - (effectiveHeight / 2f) + 0.5f);
 
             _lastValidGridPos = new Vector2Int(gridX, gridY);
-
-            // Cek apakah valid
             _canPlace = _targetStatsManager.IsAreaFree(_lastValidGridPos, _currentTemplate.width, _currentTemplate.height, _currentAngle);
 
-            // Update posisi dan rotasi Proxy
             if (_proxyObject != null)
             {
                 float offsetX = (gridX + effectiveWidth / 2f) * cellSize;
@@ -120,17 +128,16 @@ public class InventoryDragDropManager : MonoBehaviour
                 _proxyObject.transform.position = _targetStatsManager.gridOrigin.TransformPoint(snappedLocalPos);
                 _proxyObject.transform.rotation = _targetStatsManager.gridOrigin.rotation * Quaternion.Euler(0f, _currentAngle, 0f);
 
-                // Update warna material proxy
-                ApplyMaterialToProxy(_proxyObject, _canPlace ? validMaterial : invalidMaterial);
+                // Update warna (sekarang jauh lebih ringan)
+                ApplyMaterialToProxy(_canPlace ? validMaterial : invalidMaterial);
             }
         }
         else
         {
-            // Mouse tidak mengenai area lantai grid
             _canPlace = false;
             if (_proxyObject != null)
             {
-                ApplyMaterialToProxy(_proxyObject, invalidMaterial);
+                ApplyMaterialToProxy(invalidMaterial);
             }
         }
 
@@ -139,17 +146,14 @@ public class InventoryDragDropManager : MonoBehaviour
         {
             if (_canPlace && _lastValidGridPos.x != -1)
             {
-                // Install modul ke grid
                 bool success = _targetStatsManager.InstallModule(_currentTemplate, _lastValidGridPos, _currentAngle);
 
-                // Auto-save setiap kali berhasil memasang modul
                 if (success)
                 {
                     string vehicleName = _targetStatsManager.gameObject.name;
                     GridSaveSystem.SaveGrid(vehicleName, _targetStatsManager);
                 }
             }
-            // Selesai drag (berhasil atau gagal)
             CancelDrag();
         }
     }
@@ -159,17 +163,29 @@ public class InventoryDragDropManager : MonoBehaviour
         _isDragging = false;
         _currentTemplate = null;
         _targetStatsManager = null;
+        
+        // Bersihin cache biar kagak nge-memory leak nge-refer ke object yang udah hancur
+        _cachedRenderers = null;
+        _cachedColliders = null;
+        _cachedScripts = null;
+        _currentAppliedMat = null;
+
         if (_proxyObject != null)
         {
             Destroy(_proxyObject);
+            _proxyObject = null;
         }
     }
 
-    private void ApplyMaterialToProxy(GameObject obj, Material mat)
+    // === OPTIMIZATION: Fungsi ini sekarang cuma make array yang udah di-cache ===
+    private void ApplyMaterialToProxy(Material mat)
     {
-        if (mat == null) return;
-        Renderer[] renderers = obj.GetComponentsInChildren<Renderer>();
-        foreach (var rend in renderers)
+        // Kalau materialnya sama kayak yang lagi dipake, SKIP! Gak perlu di-assign lagi.
+        if (mat == null || _cachedRenderers == null || _currentAppliedMat == mat) return;
+        
+        _currentAppliedMat = mat; // Update tracker
+
+        foreach (var rend in _cachedRenderers)
         {
             Material[] mats = new Material[rend.materials.Length];
             for (int i = 0; i < mats.Length; i++)

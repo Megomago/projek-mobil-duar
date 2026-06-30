@@ -176,7 +176,7 @@ MonoBehaviour:
   m_LookaheadIgnoreY: 0
   m_HorizontalDamping: 0
   m_VerticalDamping: 0
-  m_ScreenX: 0.4999746
+  m_ScreenX: 0.4999899
   m_ScreenY: 0.55
   m_DeadZoneWidth: 0
   m_DeadZoneHeight: 0
@@ -1473,8 +1473,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 557784988}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.045115087, y: 0.95406914, z: -0.18825582, w: -0.22864053}
-  m_LocalPosition: {x: 0.000005722046, y: 0, z: -0.00000333786}
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -1778,7 +1778,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 864789293}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.0516451, y: 0.9482859, z: -0.2155041, w: -0.22725466}
+  m_LocalRotation: {x: -0.05164171, y: 0.9482894, z: -0.21550488, w: -0.22723979}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -1958,7 +1958,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1069876909}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.05817572, y: 0.94167835, z: -0.24275504, w: -0.2256712}
+  m_LocalRotation: {x: -0.058171917, y: 0.9416819, z: -0.24275598, w: -0.2256564}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -2454,6 +2454,7 @@ GameObject:
   - component: {fileID: 1313111397}
   - component: {fileID: 1313111398}
   - component: {fileID: 1313111400}
+  - component: {fileID: 1313111401}
   m_Layer: 0
   m_Name: sceneobj
   m_TagString: Untagged
@@ -2530,6 +2531,23 @@ MonoBehaviour:
     type: 3}
   invalidMaterial: {fileID: 1660569188944424132, guid: f23e3b474fb6ebf4683cdcc955a05817,
     type: 3}
+--- !u!114 &1313111401
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1313111396}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 1c3175ff0ac2e89449b7ca2e326e6487, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  outlineMaterial: {fileID: -8905567777880571083, guid: fbeac71d4c1a6084eaf7d3d31c2d017a,
+    type: 3}
+  moduleLayer:
+    serializedVersion: 2
+    m_Bits: 64
 --- !u!1 &1330862667
 GameObject:
   m_ObjectHideFlags: 3
@@ -2582,7 +2600,7 @@ MonoBehaviour:
   m_LookaheadIgnoreY: 0
   m_HorizontalDamping: 0
   m_VerticalDamping: 0
-  m_ScreenX: 0.4999746
+  m_ScreenX: 0.4999899
   m_ScreenY: 0.6
   m_DeadZoneWidth: 0
   m_DeadZoneHeight: 0
@@ -3090,7 +3108,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1560133212}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.054262802, y: 0.9457372, z: -0.22642724, w: -0.22664386}
+  m_LocalRotation: {x: -0.054256923, y: 0.9457431, z: -0.22642869, w: -0.22661927}
   m_LocalPosition: {x: 2.1487827, y: -1.3040347, z: 4.363303}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -3843,7 +3861,7 @@ MonoBehaviour:
   m_LookaheadIgnoreY: 0
   m_HorizontalDamping: 0
   m_VerticalDamping: 0
-  m_ScreenX: 0.4999746
+  m_ScreenX: 0.4999899
   m_ScreenY: 0.5
   m_DeadZoneWidth: 0
   m_DeadZoneHeight: 0

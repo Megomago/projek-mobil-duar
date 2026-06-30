@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using UnityEngine;
+using Weapons;
 
 [System.Serializable]
 public class PlacedModule
@@ -59,6 +60,10 @@ public class VehicleStatsManager : MonoBehaviour
     public float currentMaxOutput;
     public float currentCapacitorCapacity;
     public float currentCapacitorChargeRate;
+
+    [Header("Mode Settings")]
+    [Tooltip("Centang ini kalau vehicle lagi di mode preview/garage")]
+    public bool isPreviewMode = false;
 
     private Rigidbody rb;
     
@@ -222,8 +227,32 @@ public class VehicleStatsManager : MonoBehaviour
 
             GameObject spawned = Instantiate(prefabToSpawn, worldPos, rotation, gridOrigin);
             newModule.spawnedPrefab = spawned;
-        }
 
+        if (isPreviewMode)
+            {
+            ManualTurretController[] newTurrets = spawned.GetComponentsInChildren<ManualTurretController>(true);
+            foreach (var turret in newTurrets)
+            {
+                turret.enabled = false;
+            }
+            
+            Animator[] newAnimators = spawned.GetComponentsInChildren<Animator>(true);
+            foreach (var anim in newAnimators)
+            {
+                anim.enabled = false;
+            }
+            
+            Rigidbody[] newRbs = spawned.GetComponentsInChildren<Rigidbody>(true);
+            foreach (var rb in newRbs)
+            {
+                if (rb != spawned.GetComponentInParent<Rigidbody>())
+                {
+                    rb.isKinematic = true;
+                    rb.constraints = RigidbodyConstraints.FreezeAll;
+                }
+            }
+        }
+        }
         installedModules.Add(newModule);
         CalculateAndApplyStats();
         return true;
@@ -242,6 +271,8 @@ public class VehicleStatsManager : MonoBehaviour
 
             installedModules.Remove(module);
             CalculateAndApplyStats();
+
+            GridSaveSystem.SaveGrid(gameObject.name, this);
         }
     }
 

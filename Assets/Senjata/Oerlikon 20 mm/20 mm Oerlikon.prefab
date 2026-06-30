@@ -544,7 +544,8 @@ GameObject:
   - component: {fileID: 8260001167224536972}
   - component: {fileID: 5294549450918527993}
   - component: {fileID: 6861893755555857813}
-  m_Layer: 0
+  - component: {fileID: 4793676997258862053}
+  m_Layer: 6
   m_Name: 20 mm Oerlikon
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -699,6 +700,27 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!65 &4793676997258862053
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4485017365523803928}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0, y: 0.41183472, z: 2.1795442}
+  m_Center: {x: 0, y: 0.21816301, z: 0.5897721}
 --- !u!1 &5575165042677335427
 GameObject:
   m_ObjectHideFlags: 0

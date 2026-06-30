@@ -81,50 +81,79 @@ namespace Weapons
         }
 
         private void UpdateVehicleSelection()
+{
+    VehicleData currentData = vehicleDatabase.allVehicles[_currentVehicleIndex];
+    
+    PlayerPrefs.SetString("SelectedVehicle", currentData.vehicleName);
+    PlayerPrefs.Save();
+
+    if (vehicleNameText != null) vehicleNameText.text = currentData.vehicleName;
+
+    if (_currentPreviewVehicle != null) Destroy(_currentPreviewVehicle);
+
+    if (currentData.vehiclePrefab != null && vehiclePreviewPivot != null)
+    {
+        _currentPreviewVehicle = Instantiate(currentData.vehiclePrefab, vehiclePreviewPivot.position, vehiclePreviewPivot.rotation);
+        _currentPreviewVehicle.name = currentData.vehicleName;
+
+        _currentStatsManager = _currentPreviewVehicle.GetComponent<VehicleStatsManager>();
+        if (_currentStatsManager != null)
         {
-            VehicleData currentData = vehicleDatabase.allVehicles[_currentVehicleIndex];
-            
-            // Simpan pilihan mobil
-            PlayerPrefs.SetString("SelectedVehicle", currentData.vehicleName);
-            PlayerPrefs.Save();
-
-            if (vehicleNameText != null) vehicleNameText.text = currentData.vehicleName;
-
-            // --- 1. SPAWN MOBIL PREVIEW ---
-            if (_currentPreviewVehicle != null) Destroy(_currentPreviewVehicle);
-
-            if (currentData.vehiclePrefab != null && vehiclePreviewPivot != null)
-            {
-                _currentPreviewVehicle = Instantiate(currentData.vehiclePrefab, vehiclePreviewPivot.position, vehiclePreviewPivot.rotation);
-                _currentPreviewVehicle.name = currentData.vehicleName;
-                
-                // Matikan player input agar mobil tidak jalan-jalan, biarkan fisika nyala agar mobil "jatuh" ke lantai
-                if (_currentPreviewVehicle.TryGetComponent<VehicleController>(out var vc)) vc.enabled = false;
-
-                // Matikan semua suara (mesin, dsb) di mobil agar lobby tidak berisik
-                AudioSource[] audioSources = _currentPreviewVehicle.GetComponentsInChildren<AudioSource>();
-                foreach (var audio in audioSources)
-                {
-                    audio.enabled = false;
-                }
-
-                _currentStatsManager = _currentPreviewVehicle.GetComponent<VehicleStatsManager>();
-                _currentGridVisualizer = _currentPreviewVehicle.GetComponent<GridVisualizer>();
-                if (_currentGridVisualizer == null && _currentStatsManager != null)
-                {
-                    _currentGridVisualizer = _currentPreviewVehicle.AddComponent<GridVisualizer>();
-                }
-
-                // Load modul yang sudah pernah dipasang sebelumnya dari save
-                if (_currentStatsManager != null && moduleDatabase != null)
-                {
-                    GridSaveSystem.LoadGrid(currentData.vehicleName, _currentStatsManager, moduleDatabase);
-                }
-            }
-
-            // Pastikan Mode Utama yang aktif saat ganti mobil
-            CloseInventoryMode();
+            _currentStatsManager.isPreviewMode = true; // <--- TAMBAHIN INI
         }
+        
+        if (_currentPreviewVehicle.TryGetComponent<VehicleController>(out var vc)) vc.enabled = false;
+        AudioSource[] audioSources = _currentPreviewVehicle.GetComponentsInChildren<AudioSource>();
+        foreach (var audio in audioSources) audio.enabled = false;
+
+        _currentStatsManager = _currentPreviewVehicle.GetComponent<VehicleStatsManager>();
+        _currentGridVisualizer = _currentPreviewVehicle.GetComponent<GridVisualizer>();
+        if (_currentGridVisualizer == null && _currentStatsManager != null)
+        {
+            _currentGridVisualizer = _currentPreviewVehicle.AddComponent<GridVisualizer>();
+        }
+
+        if (_currentStatsManager != null && moduleDatabase != null)
+        {
+            GridSaveSystem.LoadGrid(currentData.vehicleName, _currentStatsManager, moduleDatabase);
+        }
+
+        // === PAKEN COROUTINE BUAT DELAY 1 FRAME ===
+        StartCoroutine(DisableAfterSpawn());
+    }
+
+    CloseInventoryMode();
+}
+
+// === TAMBAHIN INI ===
+private System.Collections.IEnumerator DisableAfterSpawn()
+{
+    yield return null; // Tunggu 1 frame biar semua object fully spawned
+    
+    if (_currentPreviewVehicle == null) yield break;
+
+    ManualTurretController[] allTurrets = _currentPreviewVehicle.GetComponentsInChildren<ManualTurretController>(true);
+    foreach (var turret in allTurrets)
+    {
+        turret.enabled = false;
+    }
+
+    Animator[] allAnimators = _currentPreviewVehicle.GetComponentsInChildren<Animator>(true);
+    foreach (var anim in allAnimators)
+    {
+        anim.enabled = false;
+    }
+
+    Rigidbody[] allRbs = _currentPreviewVehicle.GetComponentsInChildren<Rigidbody>(true);
+    foreach (var rb in allRbs)
+    {
+        if (rb != _currentPreviewVehicle.GetComponent<Rigidbody>())
+        {
+            rb.isKinematic = true;
+            rb.constraints = RigidbodyConstraints.FreezeAll;
+        }
+    }
+}
 
         // === UI MODE TOGGLE ===
         public void OpenInventoryMode()

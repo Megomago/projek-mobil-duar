@@ -17,7 +17,7 @@ MonoBehaviour:
   moduleIcon: {fileID: 0}
   weaponData: {fileID: 11400000, guid: 79af7aa5d5508e147a10727f379d2fb1, type: 2}
   modulePrefab: {fileID: 0}
-  width: 3
+  width: 1
   height: 3
   weight: 50
   maxHealth: 100
