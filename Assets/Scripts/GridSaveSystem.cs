@@ -13,6 +13,7 @@ public static class GridSaveSystem
     [System.Serializable]
     public class SavedModule
     {
+        public string zoneName; // Zona tempat modul terpasang
         public string moduleName;  // Nama modul di ModuleTemplate (digunakan sebagai key lookup)
         public int gridX;
         public int gridY;
@@ -38,6 +39,7 @@ public static class GridSaveSystem
 
             SavedModule saved = new SavedModule
             {
+                zoneName = placed.zoneName,
                 moduleName = placed.moduleTemplate.moduleName,
                 gridX = placed.gridPosition.x,
                 gridY = placed.gridPosition.y,
@@ -85,7 +87,7 @@ public static class GridSaveSystem
             }
 
             Vector2Int pos = new Vector2Int(saved.gridX, saved.gridY);
-            bool success = statsManager.InstallModule(template, pos, saved.rotationAngle);
+            bool success = statsManager.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
             if (success) loaded++;
         }
 

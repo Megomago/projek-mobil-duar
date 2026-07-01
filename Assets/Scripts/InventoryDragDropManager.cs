@@ -20,6 +20,7 @@ public class InventoryDragDropManager : MonoBehaviour
 
     private Vector2Int _lastValidGridPos = new Vector2Int(-1, -1);
     private bool _canPlace = false;
+    private string _lastValidZoneName;
 
     // === OPTIMIZATION: Cache Variables ===
     private Camera _mainCam;
@@ -45,7 +46,13 @@ public class InventoryDragDropManager : MonoBehaviour
         
         if (template == null) { Debug.LogError("Template null!"); return; }
         if (statsManager == null) { Debug.LogError("StatsManager null!"); return; }
-        if (statsManager.gridOrigin == null) { Debug.LogError("GridOrigin null pada kendaraan!"); return; }
+        // Pastikan ada setidaknya 1 zona grid yang valid
+        bool hasZone = false;
+        if (statsManager.gridZones != null)
+        {
+            foreach (var z in statsManager.gridZones) { if (z != null && z.origin != null) { hasZone = true; break; } }
+        }
+        if (!hasZone) { Debug.LogError("Grid zones tidak dikonfigurasi pada kendaraan! Tambahkan minimal 1 GridZone."); return; }
 
         _currentTemplate = template;
         _targetStatsManager = statsManager;
@@ -101,15 +108,54 @@ public class InventoryDragDropManager : MonoBehaviour
 
         // Gunakan _mainCam yang udah di-cache, BUKAN Camera.main!
         Ray ray = _mainCam.ScreenPointToRay(Input.mousePosition);
-        Plane gridPlane = new Plane(_targetStatsManager.gridOrigin.up, _targetStatsManager.gridOrigin.position);
-        
-        if (gridPlane.Raycast(ray, out float enter))
-        {
-            Vector3 hitPoint = ray.GetPoint(enter);
-            Vector3 localHit = _targetStatsManager.gridOrigin.InverseTransformPoint(hitPoint);
 
-            float cellSize = _targetStatsManager.cellSize;
-            
+        GridZone bestZone = null;
+        Vector3 bestHitPoint = Vector3.zero;
+        float bestMetric = Mathf.Infinity;
+
+        // Prefer actual collider under mouse: use Physics.Raycast to find geometry hit point
+        RaycastHit physicsHit;
+        bool hasPhysicsHit = Physics.Raycast(ray, out physicsHit, Mathf.Infinity);
+        Vector3 physicsPoint = hasPhysicsHit ? physicsHit.point : Vector3.zero;
+
+        // Cari zona yang valid dan prioritaskan yang paling mendekati titik hit fisik (jika ada)
+        if (_targetStatsManager.gridZones != null)
+        {
+            foreach (var zone in _targetStatsManager.gridZones)
+            {
+                if (zone == null || zone.origin == null) continue;
+                Plane gridPlane = new Plane(zone.origin.up, zone.origin.position);
+                if (gridPlane.Raycast(ray, out float enter))
+                {
+                    Vector3 planeHit = ray.GetPoint(enter);
+
+                    // Kalkulasi apakah titik pada plane itu berada di dalam batas zona (quick bounds check)
+                    Vector3 localHitCheck = zone.origin.InverseTransformPoint(planeHit);
+                    float checkCellSize = (zone.cellSize > 0f) ? zone.cellSize : 0.25f;
+                    int effW = (_currentAngle == 90 || _currentAngle == 270) ? _currentTemplate.height : _currentTemplate.width;
+                    int effH = (_currentAngle == 90 || _currentAngle == 270) ? _currentTemplate.width : _currentTemplate.height;
+                    int testX = Mathf.FloorToInt((localHitCheck.x / checkCellSize) - (effW / 2f) + 0.5f);
+                    int testY = Mathf.FloorToInt((localHitCheck.z / checkCellSize) - (effH / 2f) + 0.5f);
+
+                    bool withinBounds = (testX >= 0 && testX < zone.capacity.x && testY >= 0 && testY < zone.capacity.y);
+                    if (!withinBounds) continue;
+
+                    float metric = hasPhysicsHit ? Vector3.Distance(planeHit, physicsPoint) : enter;
+                    if (metric < bestMetric)
+                    {
+                        bestMetric = metric;
+                        bestZone = zone;
+                        bestHitPoint = planeHit;
+                    }
+                }
+            }
+        }
+
+        if (bestZone != null)
+        {
+            Vector3 localHit = bestZone.origin.InverseTransformPoint(bestHitPoint);
+            float cellSize = (bestZone.cellSize > 0f) ? bestZone.cellSize : 0.25f;
+
             int effectiveWidth = (_currentAngle == 90 || _currentAngle == 270) ? _currentTemplate.height : _currentTemplate.width;
             int effectiveHeight = (_currentAngle == 90 || _currentAngle == 270) ? _currentTemplate.width : _currentTemplate.height;
 
@@ -117,7 +163,10 @@ public class InventoryDragDropManager : MonoBehaviour
             int gridY = Mathf.FloorToInt((localHit.z / cellSize) - (effectiveHeight / 2f) + 0.5f);
 
             _lastValidGridPos = new Vector2Int(gridX, gridY);
-            _canPlace = _targetStatsManager.IsAreaFree(_lastValidGridPos, _currentTemplate.width, _currentTemplate.height, _currentAngle);
+            _lastValidZoneName = bestZone.zoneName;
+
+            // Cek valid untuk zona yang di-hover
+            _canPlace = _targetStatsManager.IsAreaFree(bestZone, _lastValidGridPos, _currentTemplate.width, _currentTemplate.height, _currentAngle);
 
             if (_proxyObject != null)
             {
@@ -125,18 +174,22 @@ public class InventoryDragDropManager : MonoBehaviour
                 float offsetZ = (gridY + effectiveHeight / 2f) * cellSize;
                 Vector3 snappedLocalPos = new Vector3(offsetX, 0f, offsetZ);
 
-                _proxyObject.transform.position = _targetStatsManager.gridOrigin.TransformPoint(snappedLocalPos);
-                _proxyObject.transform.rotation = _targetStatsManager.gridOrigin.rotation * Quaternion.Euler(0f, _currentAngle, 0f);
+                // Parent proxy to the zone origin so it inherits zone height and rotation
+                _proxyObject.transform.SetParent(bestZone.origin, false);
+                _proxyObject.transform.localPosition = snappedLocalPos;
+                _proxyObject.transform.localRotation = Quaternion.Euler(0f, _currentAngle, 0f);
 
-                // Update warna (sekarang jauh lebih ringan)
                 ApplyMaterialToProxy(_canPlace ? validMaterial : invalidMaterial);
             }
         }
         else
         {
             _canPlace = false;
+            _lastValidZoneName = null;
             if (_proxyObject != null)
             {
+                // Unparent proxy so it doesn't stick to an old zone
+                _proxyObject.transform.SetParent(null, true);
                 ApplyMaterialToProxy(invalidMaterial);
             }
         }
@@ -144,9 +197,9 @@ public class InventoryDragDropManager : MonoBehaviour
         // Handle Drop (Lepas Klik Kiri)
         if (Input.GetMouseButtonUp(0))
         {
-            if (_canPlace && _lastValidGridPos.x != -1)
+            if (_canPlace && _lastValidGridPos.x != -1 && !string.IsNullOrEmpty(_lastValidZoneName))
             {
-                bool success = _targetStatsManager.InstallModule(_currentTemplate, _lastValidGridPos, _currentAngle);
+                bool success = _targetStatsManager.InstallModule(_currentTemplate, _lastValidZoneName, _lastValidGridPos, _currentAngle);
 
                 if (success)
                 {

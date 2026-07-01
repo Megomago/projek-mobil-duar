@@ -6,13 +6,14 @@ using Weapons;
 public class PlacedModule
 {
     public ModuleTemplate moduleTemplate;
-    
+    public string zoneName; // Nama zona grid tempat modul ini terpasang
+
     [Tooltip("Posisi koordinat X, Y di grid")]
     public Vector2Int gridPosition;
-    
+
     [Tooltip("Rotasi modul dalam derajat (0, 90, 180, 270)")]
     public int rotationAngle;
-    
+
     [HideInInspector]
     public float currentHealth;
 
@@ -20,9 +21,10 @@ public class PlacedModule
     [HideInInspector]
     public GameObject spawnedPrefab;
 
-    public PlacedModule(ModuleTemplate template, Vector2Int position, int angle)
+    public PlacedModule(ModuleTemplate template, string zone, Vector2Int position, int angle)
     {
         moduleTemplate = template;
+        zoneName = zone;
         gridPosition = position;
         rotationAngle = angle;
         if (template != null)
@@ -32,6 +34,22 @@ public class PlacedModule
     }
 }
 
+[System.Serializable]
+public class GridZone
+{
+    [Tooltip("Nama unik zona ini (misal: 'Roof', 'Hood'). JANGAN ADA YANG SAMA!")]
+    public string zoneName = "NewZone";
+
+    [Tooltip("Titik awal grid zona ini")]
+    public Transform origin;
+
+    [Tooltip("Kapasitas grid zona ini (X, Y)")]
+    public Vector2Int capacity = new Vector2Int(4, 4);
+
+    [Tooltip("Ukuran 1 cell di zona ini")]
+    public float cellSize = 0.25f;
+}
+
 [RequireComponent(typeof(Rigidbody))]
 public class VehicleStatsManager : MonoBehaviour
 {
@@ -39,14 +57,8 @@ public class VehicleStatsManager : MonoBehaviour
     public VehicleBaseData baseData;
 
     [Header("Modular Grid Setup")]
-    [Tooltip("Kapasitas grid mobil (contoh: atap 4x8)")]
-    public Vector2Int gridCapacity = new Vector2Int(4, 8);
-    
-    [Tooltip("Titik awal (pojok kiri-bawah) grid di dunia 3D. Taruh empty GameObject di mobil sebagai anchor.")]
-    public Transform gridOrigin;
-    
-    [Tooltip("Ukuran 1 kotak grid dalam meter (default 0.25 = 25cm)")]
-    public float cellSize = 0.25f;
+    [Tooltip("Daftar semua zona grid di kendaraan ini (Atap, Kap, dll)")]
+    public List<GridZone> gridZones = new List<GridZone>();
 
     [Header("Installed Modules")]
     public List<PlacedModule> installedModules = new List<PlacedModule>();
@@ -160,24 +172,27 @@ public class VehicleStatsManager : MonoBehaviour
         return cells;
     }
 
-    // Fungsi untuk memvalidasi apakah area grid kosong dan berada di dalam batas
-    public bool IsAreaFree(Vector2Int position, int width, int height, int angle, PlacedModule ignoreModule = null)
+    // Fungsi untuk memvalidasi apakah area grid kosong dan berada di dalam batas untuk sebuah zona tertentu
+    public bool IsAreaFree(GridZone zone, Vector2Int position, int width, int height, int angle, PlacedModule ignoreModule = null)
     {
+        if (zone == null) return false;
+
         List<Vector2Int> targetCells = GetOccupiedCells(position, width, height, angle);
 
         foreach (var cell in targetCells)
         {
-            // Cek batas grid (Out of bounds)
-            if (cell.x < 0 || cell.x >= gridCapacity.x || cell.y < 0 || cell.y >= gridCapacity.y)
+            // Cek batas grid zona
+            if (cell.x < 0 || cell.x >= zone.capacity.x || cell.y < 0 || cell.y >= zone.capacity.y)
             {
                 return false;
             }
 
-            // Cek tabrakan dengan modul lain yang sudah terpasang
+            // Cek tabrakan dengan modul lain yang sudah terpasang, tetapi hanya di zona yang sama
             foreach (var mod in installedModules)
             {
                 if (mod == ignoreModule) continue;
                 if (mod.moduleTemplate == null) continue;
+                if (mod.zoneName != zone.zoneName) continue; // Abaikan modul di zona lain
 
                 List<Vector2Int> modCells = GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle);
                 if (modCells.Contains(cell))
@@ -190,18 +205,33 @@ public class VehicleStatsManager : MonoBehaviour
     }
 
     // Fungsi untuk menambah modul ke grid dan spawn prefab 3D-nya di kendaraan
-    public bool InstallModule(ModuleTemplate template, Vector2Int position, int angle)
+    // Install module ke zona tertentu berdasarkan nama zona
+    public bool InstallModule(ModuleTemplate template, string targetZoneName, Vector2Int position, int angle)
     {
         if (template == null) return false;
 
-        // Validasi Tetris placement
-        if (!IsAreaFree(position, template.width, template.height, angle))
+        // Cari zona yang dituju
+        GridZone targetZone = null;
+        foreach (var z in gridZones)
         {
-            Debug.LogWarning($"[VehicleStatsManager] Gagal memasang {template.moduleName} di posisi {position} karena area penuh atau di luar batas.");
+            if (z == null) continue;
+            if (z.zoneName == targetZoneName) { targetZone = z; break; }
+        }
+
+        if (targetZone == null || targetZone.origin == null)
+        {
+            Debug.LogError("[VehicleStatsManager] Zona grid tidak ditemukan atau origin-nya null!");
             return false;
         }
-        
-        PlacedModule newModule = new PlacedModule(template, position, angle);
+
+        // Validasi Tetris placement di zona yang dituju
+        if (!IsAreaFree(targetZone, position, template.width, template.height, angle))
+        {
+            Debug.LogWarning($"[VehicleStatsManager] Gagal memasang {template.moduleName} di zona {targetZoneName} posisi {position} karena area penuh atau di luar batas.");
+            return false;
+        }
+
+        PlacedModule newModule = new PlacedModule(template, targetZoneName, position, angle);
 
         // Tentukan prefab yang akan di-spawn
         GameObject prefabToSpawn = template.modulePrefab;
@@ -210,49 +240,50 @@ public class VehicleStatsManager : MonoBehaviour
             prefabToSpawn = template.weaponData.weapon3DPrefab;
         }
 
-        // Spawn prefab 3D di posisi grid kendaraan
-        if (prefabToSpawn != null && gridOrigin != null)
+        // Spawn prefab 3D di posisi grid kendaraan untuk zona yang dipilih
+        if (prefabToSpawn != null && targetZone.origin != null)
         {
-            // Hitung posisi dunia berdasarkan koordinat grid (Pusat modul)
             int effectiveWidth = (angle == 90 || angle == 270) ? template.height : template.width;
             int effectiveHeight = (angle == 90 || angle == 270) ? template.width : template.height;
-            
-            float offsetX = (position.x + effectiveWidth / 2f) * cellSize;
-            float offsetZ = (position.y + effectiveHeight / 2f) * cellSize;
-            
-            Vector3 localPos = new Vector3(offsetX, 0f, offsetZ);
-            Vector3 worldPos = gridOrigin.TransformPoint(localPos);
-            
-            Quaternion rotation = gridOrigin.rotation * Quaternion.Euler(0f, angle, 0f);
 
-            GameObject spawned = Instantiate(prefabToSpawn, worldPos, rotation, gridOrigin);
+            float zoneCellSize = (targetZone.cellSize > 0f) ? targetZone.cellSize : 0.25f;
+            float offsetX = (position.x + effectiveWidth / 2f) * zoneCellSize;
+            float offsetZ = (position.y + effectiveHeight / 2f) * zoneCellSize;
+
+            Vector3 localPos = new Vector3(offsetX, 0f, offsetZ);
+            Vector3 worldPos = targetZone.origin.TransformPoint(localPos);
+
+            Quaternion rotation = targetZone.origin.rotation * Quaternion.Euler(0f, angle, 0f);
+
+            GameObject spawned = Instantiate(prefabToSpawn, worldPos, rotation, targetZone.origin);
             newModule.spawnedPrefab = spawned;
 
-        if (isPreviewMode)
+            if (isPreviewMode)
             {
-            ManualTurretController[] newTurrets = spawned.GetComponentsInChildren<ManualTurretController>(true);
-            foreach (var turret in newTurrets)
-            {
-                turret.enabled = false;
-            }
-            
-            Animator[] newAnimators = spawned.GetComponentsInChildren<Animator>(true);
-            foreach (var anim in newAnimators)
-            {
-                anim.enabled = false;
-            }
-            
-            Rigidbody[] newRbs = spawned.GetComponentsInChildren<Rigidbody>(true);
-            foreach (var rb in newRbs)
-            {
-                if (rb != spawned.GetComponentInParent<Rigidbody>())
+                ManualTurretController[] newTurrets = spawned.GetComponentsInChildren<ManualTurretController>(true);
+                foreach (var turret in newTurrets)
                 {
-                    rb.isKinematic = true;
-                    rb.constraints = RigidbodyConstraints.FreezeAll;
+                    turret.enabled = false;
+                }
+
+                Animator[] newAnimators = spawned.GetComponentsInChildren<Animator>(true);
+                foreach (var anim in newAnimators)
+                {
+                    anim.enabled = false;
+                }
+
+                Rigidbody[] newRbs = spawned.GetComponentsInChildren<Rigidbody>(true);
+                foreach (var rb in newRbs)
+                {
+                    if (rb != spawned.GetComponentInParent<Rigidbody>())
+                    {
+                        rb.isKinematic = true;
+                        rb.constraints = RigidbodyConstraints.FreezeAll;
+                    }
                 }
             }
         }
-        }
+
         installedModules.Add(newModule);
         CalculateAndApplyStats();
         return true;

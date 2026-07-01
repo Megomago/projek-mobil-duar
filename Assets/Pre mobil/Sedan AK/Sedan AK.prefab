@@ -601,6 +601,37 @@ WheelCollider:
   m_LayerOverridePriority: 0
   m_Enabled: 1
   m_ProvidesContacts: 0
+--- !u!1 &4752421555681763396
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 7430528426528173444}
+  m_Layer: 0
+  m_Name: pivotgrid hood
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &7430528426528173444
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4752421555681763396}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.51, y: 0.994, z: 1.159}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7266497692247356272}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4835784496681258882
 GameObject:
   m_ObjectHideFlags: 0
@@ -692,7 +723,7 @@ Transform:
   m_GameObject: {fileID: 6364867299934435857}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.51, y: 1.41, z: -1.382}
+  m_LocalPosition: {x: -0.51, y: 1.488, z: -0.86}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -1044,6 +1075,7 @@ Transform:
   - {fileID: 1481093212916752384}
   - {fileID: 3919853356388755118}
   - {fileID: 1928401121685851406}
+  - {fileID: 7430528426528173444}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &2784621064803543879
@@ -1306,9 +1338,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   baseData: {fileID: 11400000, guid: 3bbb624cd1d4f4f4fae546a5b15ae041, type: 2}
-  gridCapacity: {x: 4, y: 5}
-  gridOrigin: {fileID: 1928401121685851406}
-  cellSize: 0.25
+  gridZones:
+  - zoneName: hood
+    origin: {fileID: 7430528426528173444}
+    capacity: {x: 4, y: 4}
+    cellSize: 0.25
+  - zoneName: atap
+    origin: {fileID: 1928401121685851406}
+    capacity: {x: 4, y: 4}
+    cellSize: 0.25
   installedModules: []
   currentTotalMass: 0
   currentPowerConsumption: 0
@@ -1318,6 +1356,7 @@ MonoBehaviour:
   currentMaxOutput: 0
   currentCapacitorCapacity: 0
   currentCapacitorChargeRate: 0
+  isPreviewMode: 0
   hud: {fileID: 0}
 --- !u!114 &8766319752834695132
 MonoBehaviour:
@@ -1331,7 +1370,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 3955582cb80d7974c8fd5133499dfa04, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  cellSprite: {fileID: 10905, guid: 0000000000000000f000000000000000, type: 0}
+  cellSprite: {fileID: 21300000, guid: 8c3b284771b4b15489687c5524a7fa20, type: 3}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
   sortingLayerName: Default
   sortingOrder: 0

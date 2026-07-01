@@ -31,7 +31,8 @@ public class GridVisualizer : MonoBehaviour
 
     private void GenerateGridVisuals()
     {
-        if (_statsManager == null || _statsManager.gridOrigin == null) return;
+        if (_statsManager == null) return;
+
         if (cellSprite == null)
         {
             Debug.LogWarning("[GridVisualizer] Sprite grid belum di-assign!");
@@ -45,43 +46,47 @@ public class GridVisualizer : MonoBehaviour
         }
         _cellObjects.Clear();
 
-        int width = _statsManager.gridCapacity.x;
-        int height = _statsManager.gridCapacity.y;
-        float cellSize = _statsManager.cellSize;
+        if (_statsManager.gridZones == null) return;
 
-        for (int x = 0; x < width; x++)
+        // Buat grid visual untuk setiap zona
+        for (int z = 0; z < _statsManager.gridZones.Count; z++)
         {
-            for (int y = 0; y < height; y++)
+            var zone = _statsManager.gridZones[z];
+            if (zone == null || zone.origin == null) continue;
+
+            int width = zone.capacity.x;
+            int height = zone.capacity.y;
+            float cellSize = (zone.cellSize > 0f) ? zone.cellSize : 0.25f;
+
+            for (int x = 0; x < width; x++)
             {
-                // Posisi tengah untuk cell ini
-                float offsetX = (x + 0.5f) * cellSize;
-                float offsetZ = (y + 0.5f) * cellSize;
-
-                Vector3 localPos = new Vector3(offsetX, 0f, offsetZ);
-
-                GameObject cellObj = new GameObject($"GridCell_{x}_{y}");
-                cellObj.transform.SetParent(_statsManager.gridOrigin);
-                
-                // Set posisi dan rotasi relatif ke origin
-                cellObj.transform.localPosition = localPos;
-                cellObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f); // Putar sprite agar tidur di lantai (sumbu X)
-
-                SpriteRenderer sr = cellObj.AddComponent<SpriteRenderer>();
-                sr.sprite = cellSprite;
-                sr.color = normalColor;
-                sr.sortingLayerName = sortingLayerName;
-                sr.sortingOrder = sortingOrder;
-
-                // Sesuaikan skala sprite agar pas dengan cellSize (asumsi sprite PPU disesuaikan, atau paksa scale)
-                // Jika sprite ukurannya 1x1 meter pada scale 1, maka:
-                if (cellSprite.bounds.size.x > 0 && cellSprite.bounds.size.y > 0)
+                for (int y = 0; y < height; y++)
                 {
-                    float scaleX = cellSize / cellSprite.bounds.size.x;
-                    float scaleY = cellSize / cellSprite.bounds.size.y;
-                    cellObj.transform.localScale = new Vector3(scaleX, scaleY, 1f);
-                }
+                    float offsetX = (x + 0.5f) * cellSize;
+                    float offsetZ = (y + 0.5f) * cellSize;
 
-                _cellObjects.Add(cellObj);
+                    Vector3 localPos = new Vector3(offsetX, 0f, offsetZ);
+
+                    GameObject cellObj = new GameObject($"GridCell_{zone.zoneName}_{x}_{y}");
+                    cellObj.transform.SetParent(zone.origin);
+                    cellObj.transform.localPosition = localPos;
+                    cellObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+                    SpriteRenderer sr = cellObj.AddComponent<SpriteRenderer>();
+                    sr.sprite = cellSprite;
+                    sr.color = normalColor;
+                    sr.sortingLayerName = sortingLayerName;
+                    sr.sortingOrder = sortingOrder;
+
+                    if (cellSprite.bounds.size.x > 0 && cellSprite.bounds.size.y > 0)
+                    {
+                        float scaleX = cellSize / cellSprite.bounds.size.x;
+                        float scaleY = cellSize / cellSprite.bounds.size.y;
+                        cellObj.transform.localScale = new Vector3(scaleX, scaleY, 1f);
+                    }
+
+                    _cellObjects.Add(cellObj);
+                }
             }
         }
     }
