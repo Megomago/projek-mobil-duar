@@ -15,36 +15,76 @@ namespace Weapons
         public float maxAimDistance = 1000f;
         public LayerMask aimMask = ~0;
 
-        [Header("=== BATASAN PITCH ===")]
-        public float minPitch = -15f;
+        [Header("=== DETEKSI OTOMATIS MOUNTING ===")]
+        [Tooltip("Otomatis deteksi posisi pasang (atap vs samping) biar ga perlu bikin prefab berbeda")]
+        public bool autoDetectSideMount = true;
+
+        [Header("=== BATAS PITCH (ATAP / NATO STYLE) ===")]
+        public float minPitch = -15f; // Depresi tangguh ala tank barat
         public float maxPitch = 45f;
+
+        [Header("=== BATAS PITCH (SAMPING / RUSSIAN STYLE) ===")]
+        [Tooltip("Nilai negatif kecil (misal -3 atau 0) biar laras gak nyodok masuk ke bodi samping mobil")]
+        public float minPitchSide = -3f; 
+        [Tooltip("Nilai positif (misal 45) biar laras bebas membidik ke arah luar")]
+        public float maxPitchSide = 45f;
+
+        [Header("=== FITUR ANTI-GEMETERAN (BLIND SPOT FOLD) ===")]
+        [Tooltip("Jika target masuk ke bodi mobil/blind spot, senjata samping bakal melipat halus ke posisi lurus")]
+        public bool foldInBlindSpot = true;
 
         [Header("=== INPUT SETTINGS ===")]
         public bool usePlayerInput = true;
-        
-        [Tooltip("Tombol untuk Free Look (Kamera muter tapi turret diam)")]
-        public KeyCode freeLookKey = KeyCode.C; // <-- INI HOTKEY-NYA
+        public KeyCode freeLookKey = KeyCode.C;
 
         private Vector3 _currentTargetPoint;
         private bool _isFreeLooking = false;
 
-        public void SetAimTarget(Vector3 targetPoint)
-        {
-            _currentTargetPoint = targetPoint;
-        }
+        private float _activeMinPitch;
+        private float _activeMaxPitch;
+        private bool _isSideMounted = false;
 
         void Start()
         {
             if (playerCamera == null) playerCamera = Camera.main;
             if (aimOrigin == null) Debug.LogError("Tolong assign objek 'muz' ke aimOrigin!");
+
+            // Default pake batas atap/datar
+            _activeMinPitch = minPitch;
+            _activeMaxPitch = maxPitch;
+
+            if (autoDetectSideMount)
+            {
+                // Cari Rigidbody di parent (pasti bodi utama mobil/tank)
+                Rigidbody vehicleRB = GetComponentInParent<Rigidbody>();
+                Transform vehicleTransform = (vehicleRB != null) ? vehicleRB.transform : transform.root;
+                
+                // Konversi arah atas Oerlikon (-transform.forward) ke koordinat lokal bodi mobil
+                Vector3 localTurretUp = vehicleTransform.InverseTransformDirection(-transform.forward);
+
+                // JIKA NILAI Y LOKAL DEKAT 0 = Senjata Samping (arah atasnya madep kiri/kanan mobil)
+                // JIKA NILAI Y LOKAL DEKAT 1 = Senjata Atap (arah atasnya searah atap mobil)
+                if (Mathf.Abs(localTurretUp.y) < 0.5f)
+                {
+                    _isSideMounted = true;
+                    _activeMinPitch = minPitchSide; // Pake -3 derajat untuk samping
+                    _activeMaxPitch = maxPitchSide;
+                    Debug.Log($"{gameObject.name} terdeteksi di SAMPING mobil. Limit samping aktif: {_activeMinPitch} s/d {_activeMaxPitch}");
+                }
+                else
+                {
+                    _isSideMounted = false;
+                    _activeMinPitch = minPitch; // Pake -15 derajat untuk atap (Depresi NATO!)
+                    _activeMaxPitch = maxPitch;
+                    Debug.Log($"{gameObject.name} terdeteksi di ATAP mobil. Limit atap aktif: {_activeMinPitch} s/d {_activeMaxPitch}");
+                }
+            }
         }
 
-        // Gw pindahin cek input ke Update biar lebih responsif dibanding LateUpdate
         void Update() 
         {
             if (usePlayerInput && playerCamera != null)
             {
-                // Ngecek apakah tombol 'C' lagi ditekan
                 _isFreeLooking = Input.GetKey(freeLookKey);
             }
         }
@@ -53,44 +93,64 @@ namespace Weapons
         {
             if (turretBase == null || gunBarrel == null || aimOrigin == null) return;
 
-            if (usePlayerInput && playerCamera != null)
+            if (usePlayerInput && playerCamera != null && !_isFreeLooking)
             {
-                // Kalo LAGI GAK NEKAN 'C', update titik aim ke arah crosshair kamera.
-                // Tapi kalo LAGI NEKAN 'C', biarin aja, jangan di-update!
-                if (!_isFreeLooking) 
-                {
-                    _currentTargetPoint = GetCrosshairTarget();
-                }
+                _currentTargetPoint = GetCrosshairTarget();
             }
 
-            // --- INI PERUBAHAN PENTING ---
-            // Turret cuma boleh muter ngikutin titik aim JIKA GAK LAGI FREE LOOK!
-            // (Jadi pas nekan C, laras meriamnya bener-bener diem membeku di tempat)
             if (!_isFreeLooking)
             {
-                // 1. Arahkan Yaw (Kiri/Kanan)
-                AimTurretYaw(_currentTargetPoint);
+                float desiredPitch = CalculateOriginalDesiredPitch(_currentTargetPoint);
 
-                // 2. Arahkan Pitch (Atas/Bawah)
-                AimBarrelPitch(_currentTargetPoint);
+                // Blind spot melipat hanya berlaku untuk senjata samping yang mencoba menembus bodi mobil (pitch < minPitchSide)
+                bool targetInBlindSpot = _isSideMounted && (desiredPitch < _activeMinPitch);
+
+                if (foldInBlindSpot && targetInBlindSpot)
+                {
+                    turretBase.localRotation = Quaternion.RotateTowards(turretBase.localRotation, Quaternion.identity, aimingSpeed * Time.deltaTime);
+                    gunBarrel.localRotation = Quaternion.RotateTowards(gunBarrel.localRotation, Quaternion.identity, aimingSpeed * Time.deltaTime);
+                }
+                else
+                {
+                    AimTurretYaw(_currentTargetPoint);
+                    AimBarrelPitch(_currentTargetPoint);
+                }
             }
         }
 
-        private RaycastHit[] _raycastHits = new RaycastHit[10];
+        private float CalculateOriginalDesiredPitch(Vector3 targetPoint)
+        {
+            Vector3 upAxis = -transform.forward;
+            Vector3 currentMuzFlat = Vector3.ProjectOnPlane(aimOrigin.forward, upAxis).normalized;
+            if (currentMuzFlat.sqrMagnitude < 0.001f) return 0f;
+
+            Vector3 pitchHingeAxis = Vector3.Cross(upAxis, currentMuzFlat).normalized;
+
+            Vector3 dirToTarget = targetPoint - aimOrigin.position;
+            Vector3 currentAimFlat = Vector3.ProjectOnPlane(aimOrigin.forward, pitchHingeAxis).normalized;
+            Vector3 targetAimFlat = Vector3.ProjectOnPlane(dirToTarget, pitchHingeAxis).normalized;
+
+            if (currentAimFlat.sqrMagnitude > 0.001f && targetAimFlat.sqrMagnitude > 0.001f)
+            {
+                float pitchError = Vector3.SignedAngle(currentAimFlat, targetAimFlat, pitchHingeAxis);
+                float currentPitch = Vector3.SignedAngle(currentMuzFlat, currentAimFlat, pitchHingeAxis);
+                return currentPitch + pitchError;
+            }
+            return 0f;
+        }
 
         private Vector3 GetCrosshairTarget()
         {
-            // (Sama persis kayak script lu sebelumnya)
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            int hitCount = Physics.RaycastNonAlloc(ray, _raycastHits, maxAimDistance, aimMask);
+            RaycastHit[] hits = Physics.RaycastAll(ray, maxAimDistance, aimMask);
             
             float closestDistance = float.MaxValue;
             Vector3 targetPoint = ray.GetPoint(maxAimDistance);
 
-            for (int i = 0; i < hitCount; i++)
+            foreach (var hit in hits)
             {
-                RaycastHit hit = _raycastHits[i];
                 if (hit.transform.root == transform.root) continue;
+                if (hit.collider != null && hit.collider.isTrigger) continue;
 
                 if (hit.distance < closestDistance)
                 {
@@ -103,43 +163,29 @@ namespace Weapons
 
         private void AimTurretYaw(Vector3 targetPoint)
         {
-            // Sumbu atas kita ambil dari ROOT kendaraan (mobil utamanya).
-            // Ini menjamin sumbu atas selalu sejajar atap mobil, TAPI tetap mengabaikan 
-            // sumbu turret/barrel yang mungkin acak-acakan dari Blender.
-            Vector3 upAxis = transform.root.up; 
+            Vector3 upAxis = -transform.forward; 
             
-            // Cari arah horizontal dari laras (muz) saat ini (relatif terhadap atap kendaraan)
             Vector3 currentMuzFlat = Vector3.ProjectOnPlane(aimOrigin.forward, upAxis).normalized;
-            // Cari arah horizontal ke target (relatif terhadap atap kendaraan)
             Vector3 dirToTarget = targetPoint - turretBase.position;
             Vector3 targetFlat = Vector3.ProjectOnPlane(dirToTarget, upAxis).normalized;
 
             if (currentMuzFlat.sqrMagnitude > 0.001f && targetFlat.sqrMagnitude > 0.001f)
             {
-                // Hitung berapa derajat harus muter
                 float yawError = Vector3.SignedAngle(currentMuzFlat, targetFlat, upAxis);
-                
-                // Bikin rotasi baru berdasarkan sumbu UP kendaraan
                 Quaternion targetYawRot = Quaternion.AngleAxis(yawError, upAxis) * turretBase.rotation;
-                
-                // Terapkan rotasi secara halus
                 turretBase.rotation = Quaternion.RotateTowards(turretBase.rotation, targetYawRot, aimingSpeed * Time.deltaTime);
             }
         }
 
         private void AimBarrelPitch(Vector3 targetPoint)
         {
-            // Sama, gunakan UP dari root mobil agar pitch tetap sejajar bodi mobil
-            Vector3 upAxis = transform.root.up;
+            Vector3 upAxis = -transform.forward;
             
-            // Sumbu engsel pitch (kiri-kanan) dibuat murni dari hasil silang (cross product) arah moncong & atas.
-            // Ini membuat script SAMA SEKALI TIDAK PEDULI mau sumbu X, Y, Z larasnya kebalik atau ngacak.
             Vector3 currentMuzFlat = Vector3.ProjectOnPlane(aimOrigin.forward, upAxis).normalized;
             if (currentMuzFlat.sqrMagnitude < 0.001f) return; 
 
             Vector3 pitchHingeAxis = Vector3.Cross(upAxis, currentMuzFlat).normalized;
 
-            // Cari arah pitch saat ini dan target pada bidang engsel
             Vector3 dirToTarget = targetPoint - aimOrigin.position;
             Vector3 currentAimFlat = Vector3.ProjectOnPlane(aimOrigin.forward, pitchHingeAxis).normalized;
             Vector3 targetAimFlat = Vector3.ProjectOnPlane(dirToTarget, pitchHingeAxis).normalized;
@@ -147,20 +193,12 @@ namespace Weapons
             if (currentAimFlat.sqrMagnitude > 0.001f && targetAimFlat.sqrMagnitude > 0.001f)
             {
                 float pitchError = Vector3.SignedAngle(currentAimFlat, targetAimFlat, pitchHingeAxis);
-
-                // Hitung pitch aktual saat ini (0 derajat = sejajar atap kendaraan / horizontal lokal)
                 float currentPitch = Vector3.SignedAngle(currentMuzFlat, currentAimFlat, pitchHingeAxis);
-
-                // Tambahkan error ke pitch saat ini untuk dapat target pitch
                 float desiredPitch = currentPitch + pitchError;
                 
-                // Clamp target pitch biar laras nggak tembus body tank
-                float clampedPitch = Mathf.Clamp(desiredPitch, minPitch, maxPitch);
-                
-                // Hitung sisa rotasi yang diizinkan setelah di-clamp
+                float clampedPitch = Mathf.Clamp(desiredPitch, _activeMinPitch, _activeMaxPitch);
                 float allowedError = clampedPitch - currentPitch;
 
-                // Terapkan rotasi secara halus murni di sumbu engsel dunia
                 Quaternion targetPitchRot = Quaternion.AngleAxis(allowedError, pitchHingeAxis) * gunBarrel.rotation;
                 gunBarrel.rotation = Quaternion.RotateTowards(gunBarrel.rotation, targetPitchRot, aimingSpeed * Time.deltaTime);
             }
@@ -212,7 +250,6 @@ namespace Weapons
 
             Gizmos.color = Color.blue;
             float dist = Vector3.Distance(aimOrigin.position, targetPt);
-            // Garis biru 100% dari arah muz
             Gizmos.DrawLine(aimOrigin.position, aimOrigin.position + (aimOrigin.forward * dist));
         }
     }

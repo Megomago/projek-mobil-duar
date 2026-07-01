@@ -2,6 +2,7 @@ using UnityEngine;
 using System.Collections.Generic;
 
 [RequireComponent(typeof(VehicleStatsManager))]
+[ExecuteAlways]
 public class GridVisualizer : MonoBehaviour
 {
     [Header("Visual Settings")]
@@ -23,6 +24,41 @@ public class GridVisualizer : MonoBehaviour
         _statsManager = GetComponent<VehicleStatsManager>();
     }
 
+    private void OnDrawGizmos()
+    {
+        if (_statsManager == null) _statsManager = GetComponent<VehicleStatsManager>();
+        if (_statsManager == null) return;
+        if (cellSprite == null) return;
+
+        if (_statsManager.gridZones == null) return;
+
+        Color gizColor = normalColor;
+        gizColor.a = Mathf.Clamp01(gizColor.a);
+        Gizmos.color = gizColor;
+
+        foreach (var zone in _statsManager.gridZones)
+        {
+            if (zone == null || zone.origin == null) continue;
+            int width = zone.capacity.x;
+            int height = zone.capacity.y;
+            float cellSize = (zone.cellSize > 0f) ? zone.cellSize : 0.25f;
+
+            for (int x = 0; x < width; x++)
+            {
+                for (int y = 0; y < height; y++)
+                {
+                    float offsetX = (x + 0.5f) * cellSize;
+                    float offsetZ = (y + 0.5f) * cellSize;
+                    Vector3 worldPos = zone.origin.TransformPoint(new Vector3(offsetX, 0f, offsetZ));
+
+                    // Draw a thin wire cube on the plane to represent the cell
+                    Vector3 size = new Vector3(cellSize, 0.01f, cellSize);
+                    Gizmos.DrawWireCube(worldPos, size);
+                }
+            }
+        }
+    }
+
     private void Start()
     {
         GenerateGridVisuals();
@@ -39,53 +75,56 @@ public class GridVisualizer : MonoBehaviour
             return;
         }
 
-        // Hapus jika ada sisa grid lama
-        foreach (var obj in _cellObjects)
+        // Hapus jika ada sisa grid runtime (hanya saat playing)
+        if (Application.isPlaying)
         {
-            if (obj != null) Destroy(obj);
-        }
-        _cellObjects.Clear();
-
-        if (_statsManager.gridZones == null) return;
-
-        // Buat grid visual untuk setiap zona
-        for (int z = 0; z < _statsManager.gridZones.Count; z++)
-        {
-            var zone = _statsManager.gridZones[z];
-            if (zone == null || zone.origin == null) continue;
-
-            int width = zone.capacity.x;
-            int height = zone.capacity.y;
-            float cellSize = (zone.cellSize > 0f) ? zone.cellSize : 0.25f;
-
-            for (int x = 0; x < width; x++)
+            foreach (var obj in _cellObjects)
             {
-                for (int y = 0; y < height; y++)
+                if (obj != null) Destroy(obj);
+            }
+            _cellObjects.Clear();
+
+            if (_statsManager.gridZones == null) return;
+
+            // Buat grid visual runtime untuk setiap zona (hologram sprites)
+            for (int z = 0; z < _statsManager.gridZones.Count; z++)
+            {
+                var zone = _statsManager.gridZones[z];
+                if (zone == null || zone.origin == null) continue;
+
+                int width = zone.capacity.x;
+                int height = zone.capacity.y;
+                float cellSize = (zone.cellSize > 0f) ? zone.cellSize : 0.25f;
+
+                for (int x = 0; x < width; x++)
                 {
-                    float offsetX = (x + 0.5f) * cellSize;
-                    float offsetZ = (y + 0.5f) * cellSize;
-
-                    Vector3 localPos = new Vector3(offsetX, 0f, offsetZ);
-
-                    GameObject cellObj = new GameObject($"GridCell_{zone.zoneName}_{x}_{y}");
-                    cellObj.transform.SetParent(zone.origin);
-                    cellObj.transform.localPosition = localPos;
-                    cellObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
-
-                    SpriteRenderer sr = cellObj.AddComponent<SpriteRenderer>();
-                    sr.sprite = cellSprite;
-                    sr.color = normalColor;
-                    sr.sortingLayerName = sortingLayerName;
-                    sr.sortingOrder = sortingOrder;
-
-                    if (cellSprite.bounds.size.x > 0 && cellSprite.bounds.size.y > 0)
+                    for (int y = 0; y < height; y++)
                     {
-                        float scaleX = cellSize / cellSprite.bounds.size.x;
-                        float scaleY = cellSize / cellSprite.bounds.size.y;
-                        cellObj.transform.localScale = new Vector3(scaleX, scaleY, 1f);
-                    }
+                        float offsetX = (x + 0.5f) * cellSize;
+                        float offsetZ = (y + 0.5f) * cellSize;
 
-                    _cellObjects.Add(cellObj);
+                        Vector3 localPos = new Vector3(offsetX, 0f, offsetZ);
+
+                        GameObject cellObj = new GameObject($"GridCell_{zone.zoneName}_{x}_{y}");
+                        cellObj.transform.SetParent(zone.origin);
+                        cellObj.transform.localPosition = localPos;
+                        cellObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
+
+                        SpriteRenderer sr = cellObj.AddComponent<SpriteRenderer>();
+                        sr.sprite = cellSprite;
+                        sr.color = normalColor;
+                        sr.sortingLayerName = sortingLayerName;
+                        sr.sortingOrder = sortingOrder;
+
+                        if (cellSprite.bounds.size.x > 0 && cellSprite.bounds.size.y > 0)
+                        {
+                            float scaleX = cellSize / cellSprite.bounds.size.x;
+                            float scaleY = cellSize / cellSprite.bounds.size.y;
+                            cellObj.transform.localScale = new Vector3(scaleX, scaleY, 1f);
+                        }
+
+                        _cellObjects.Add(cellObj);
+                    }
                 }
             }
         }

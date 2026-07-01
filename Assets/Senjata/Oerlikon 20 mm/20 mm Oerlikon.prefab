@@ -232,6 +232,9 @@ MonoBehaviour:
     m_Bits: 4294967295
   minPitch: -45
   maxPitch: 15
+  autoDetectSideMount: 1
+  minPitchSide: -3
+  maxPitchSide: 45
   usePlayerInput: 1
   freeLookKey: 99
 --- !u!1 &1563691308494740359
