@@ -156,7 +156,7 @@ namespace Weapons
         {
             if (reloadText == null) return;
             float remainingTime = targetWeapon.GetRemainingReloadTime();
-            reloadText.text = $"Reloading... {remainingTime:F1}s";
+            reloadText.text = $"{remainingTime:F1}s";
         }
 
         private void UpdateOverheatUI()

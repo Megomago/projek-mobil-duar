@@ -190,6 +190,7 @@ namespace Weapons
 
             // Inisialisasi ammo awal setelah WeaponData pasti di-assign oleh script manager
             currentAmmo = weaponData.maxAmmo;
+            OnAmmoChanged?.Invoke(currentAmmo, weaponData.maxAmmo);
         }
 
         private void OnDisable()
