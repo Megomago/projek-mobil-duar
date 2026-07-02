@@ -73,18 +73,36 @@ public class VehicleStatsManager : MonoBehaviour
     public float currentCapacitorCapacity;
     public float currentCapacitorChargeRate;
 
+    [Header("Armor Stats (Read Only)")]
+    [Tooltip("Total DEF bodi (Base + ArmorPlate terpasang)")]
+    public float currentBodyArmor;
+    [Tooltip("Total DEF roda (Base + ArmorPlate terpasang)")]
+    public float currentWheelArmor;
+    [Tooltip("Total DEF mesin (Base + ArmorPlate terpasang)")]
+    public float currentEngineArmor;
+    [Tooltip("Total DEF baterai (Base + ArmorPlate terpasang)")]
+    public float currentBatteryArmor;
+
     [Header("Runtime Health")]
-    public float currentBodyHealth;
-    public float currentEngineHealth;
     public float currentWheelHealth;
-    public float currentBatteryHealth;
+    public float currentFuelAmount;
 
     [Header("Mode Settings")]
     [Tooltip("Centang ini kalau vehicle lagi di mode preview/garage")]
     public bool isPreviewMode = false;
 
     private Rigidbody rb;
-    
+    public Rigidbody VehicleRigidbody => rb;
+
+    // Cache collider → PlacedModule biar O(1) lookup di projectile
+    [HideInInspector] public Dictionary<Collider, PlacedModule> moduleColliderMap = new Dictionary<Collider, PlacedModule>();
+
+    // Batch lock buat suppress CalculateAndApplyStats pas loading
+    private int _batchLock = 0;
+    public bool IsBatchLocked => _batchLock > 0;
+    public void BeginBatch() { _batchLock++; }
+    public void EndBatch() { _batchLock--; if (_batchLock <= 0) CalculateAndApplyStats(); }
+
     [Header("UI Reference")]
     public VehicleHUD hud;
 
@@ -96,16 +114,40 @@ public class VehicleStatsManager : MonoBehaviour
     void Start()
     {
         InitializeRuntimeHealth();
+
+        // ISI BENSIN DULU sebelum CalculateAndApplyStats
+        // agar hasFuel check tidak langsung false saat pertama kali
+        if (!isPreviewMode) currentFuelAmount = baseData != null ? baseData.fuelCapacity : 0f;
+
         CalculateAndApplyStats();
+
+        // Setelah stats dihitung, update fuel ke kapasitas aktual (sudah termasuk modul ekstra)
+        if (!isPreviewMode) currentFuelAmount = currentFuelCapacity;
+    }
+
+    void Update()
+    {
+        if (isPreviewMode) return;
+
+        VehicleController vc = GetComponent<VehicleController>();
+        if (vc != null && vc.engineRunning)
+        {
+            // Drain fuel sesuai konsumsi (Liter/sec)
+            currentFuelAmount -= vc.currentFuelConsumptionRate * Time.deltaTime;
+            currentFuelAmount = Mathf.Max(0f, currentFuelAmount);
+
+            // Matikan mesin kalau bensin habis
+            if (currentFuelAmount <= 0f)
+            {
+                vc.engineRunning = false;
+            }
+        }
     }
 
     public void InitializeRuntimeHealth()
     {
         if (baseData == null) return;
-        currentBodyHealth = baseData.bodyHealth;
-        currentEngineHealth = baseData.engineHealth;
         currentWheelHealth = baseData.wheelHealth;
-        currentBatteryHealth = baseData.batteryHealth;
     }
 
     [ContextMenu("Calculate Stats")]
@@ -127,6 +169,56 @@ public class VehicleStatsManager : MonoBehaviour
         currentCapacitorCapacity = 0f;
         currentCapacitorChargeRate = 0f;
 
+        // Reset armor ke basis kendaraan
+        currentBodyArmor    = baseData.bodyArmor;
+        currentWheelArmor   = baseData.wheelArmor;
+        currentEngineArmor  = baseData.engineArmor;
+        currentBatteryArmor = baseData.batteryArmor;
+
+        // Deteksi kehadiran critical part bawaan kendaraan
+        // Scan semua VehicleCriticalPart yang aktif di dalam kendaraan ini
+        bool hasEngineModule     = false;
+        bool hasFuelModule       = false;
+        bool hasBatteryModule    = false;
+        bool hasAlternatorModule = false;
+        bool hasCapacitorModule  = false;
+
+        VehicleCriticalPart[] criticalParts = GetComponentsInChildren<VehicleCriticalPart>();
+        foreach (var part in criticalParts)
+        {
+            if (!part.gameObject.activeInHierarchy) continue; // skip yang sudah hancur
+
+            switch (part.partType)
+            {
+                case VehicleCriticalPart.CriticalPartType.Engine:
+                    hasEngineModule = true;
+                    // DEF mesin dari armor part itu sendiri
+                    currentEngineArmor += part.armor;
+                    break;
+
+                case VehicleCriticalPart.CriticalPartType.FuelTank:
+                    hasFuelModule = true;
+                    // Tangki bensin berkontribusi ke armor bodi (melindungi sasis)
+                    currentBodyArmor += part.armor * 0.3f;
+                    break;
+
+                case VehicleCriticalPart.CriticalPartType.Battery:
+                    hasBatteryModule = true;
+                    currentBatteryArmor += part.armor;
+                    break;
+
+                case VehicleCriticalPart.CriticalPartType.Alternator:
+                    hasAlternatorModule = true;
+                    currentEngineArmor += part.armor * 0.5f;
+                    break;
+
+                case VehicleCriticalPart.CriticalPartType.Capacitor:
+                    hasCapacitorModule = true;
+                    currentBatteryArmor += part.armor * 0.5f;
+                    break;
+            }
+        }
+
         // Hitung stats tambahan dari setiap modul di grid
         foreach (var module in installedModules)
         {
@@ -146,13 +238,50 @@ public class VehicleStatsManager : MonoBehaviour
                 // Tambah kapasitas batrai / aki cadangan
                 currentBatteryCapacity += template.extraBatteryCapacity;
                 
-                // Tambah bensin cadangan
-                currentFuelCapacity += template.extraFuelCapacity;
+                // Tambah bensin cadangan dari modul FuelBarrel ekstra (jeriken, drum luar)
+                if (template.moduleType == ModuleType.FuelBarrel)
+                    currentFuelCapacity += template.extraFuelCapacity;
 
-                // Tambah kapasitor (max output + kapasitas + charge rate)
-                currentMaxOutput += template.extraMaxOutput;
-                currentCapacitorCapacity += template.capacitorCapacity;
+                // Tambah kapasitor dari modul ekstra
+                currentMaxOutput           += template.extraMaxOutput;
+                currentCapacitorCapacity   += template.capacitorCapacity;
                 currentCapacitorChargeRate += template.chargeRate;
+
+                // Tambah armor dari ArmorPlate
+                if (template.moduleType == ModuleType.ArmorPlate)
+                {
+                    currentBodyArmor   += template.armor;
+                    currentWheelArmor  += template.armor * 0.5f;
+                    currentEngineArmor += template.armor * 0.3f;
+                }
+            }
+        }
+
+        // Tangki BAWAAN hanya aktif kalau ada CriticalPart FuelTank
+        if (hasFuelModule)
+            currentFuelCapacity += baseData.fuelCapacity;
+
+        // Baterai BAWAAN hanya aktif kalau ada CriticalPart Battery
+        if (hasBatteryModule)
+        {
+            currentBatteryCapacity += baseData.batteryCapacity;
+        }
+
+        // Alternator BAWAAN hanya aktif kalau ada CriticalPart Alternator
+        if (hasAlternatorModule)
+            currentPowerGeneration += baseData.powerGeneration;
+
+        // Terapkan ke VehicleController berdasarkan kehadiran CriticalPart Engine
+        VehicleController vc = GetComponent<VehicleController>();
+        if (vc != null)
+        {
+            bool hasFuel = isPreviewMode || currentFuelAmount > 0f;
+            vc.engineRunning = hasEngineModule && hasFuel;
+
+            if (!hasEngineModule)
+            {
+                vc.engine.maxTorqueNm = 0f;
+                vc.engine.maxFuelConsumptionRate = 0f;
             }
         }
 
@@ -274,6 +403,19 @@ public class VehicleStatsManager : MonoBehaviour
             GameObject spawned = Instantiate(prefabToSpawn, worldPos, rotation, targetZone.origin);
             newModule.spawnedPrefab = spawned;
 
+            // --- SET LAYER AGAR TIDAK TABRAKAN DENGAN SASIS ---
+            int moduleLayer = LayerMask.NameToLayer("placedmodule");
+            if (moduleLayer != -1)
+            {
+                SetLayerRecursively(spawned, moduleLayer);
+            }
+            // ----------------------------------------------------
+
+            // Daftarkan semua collider modul ke dictionary buat O(1) lookup
+            Collider[] modColliders = spawned.GetComponentsInChildren<Collider>(true);
+            foreach (var col in modColliders)
+                moduleColliderMap[col] = newModule;
+
             if (isPreviewMode)
             {
                 ManualTurretController[] newTurrets = spawned.GetComponentsInChildren<ManualTurretController>(true);
@@ -297,11 +439,18 @@ public class VehicleStatsManager : MonoBehaviour
                         rb.constraints = RigidbodyConstraints.FreezeAll;
                     }
                 }
+
+                // Inisialisasi Script Fisik Modul jika ada
+                VehicleModuleComponent moduleComp = spawned.GetComponent<VehicleModuleComponent>();
+                if (moduleComp != null)
+                {
+                    moduleComp.Initialize(newModule, this);
+                }
             }
         }
 
         installedModules.Add(newModule);
-        CalculateAndApplyStats();
+        if (!IsBatchLocked) CalculateAndApplyStats();
         return true;
     }
 
@@ -310,6 +459,14 @@ public class VehicleStatsManager : MonoBehaviour
     {
         if (installedModules.Contains(module))
         {
+            // Hapus collider modul dari cache sebelum prefab di-destroy
+            if (module.spawnedPrefab != null)
+            {
+                Collider[] modColliders = module.spawnedPrefab.GetComponentsInChildren<Collider>(true);
+                foreach (var col in modColliders)
+                    moduleColliderMap.Remove(col);
+            }
+
             // Hapus prefab 3D dari kendaraan
             if (module.spawnedPrefab != null)
             {
@@ -317,7 +474,7 @@ public class VehicleStatsManager : MonoBehaviour
             }
 
             installedModules.Remove(module);
-            CalculateAndApplyStats();
+            if (!IsBatchLocked) CalculateAndApplyStats();
 
             GridSaveSystem.SaveGrid(gameObject.name, this);
         }
@@ -334,6 +491,17 @@ public class VehicleStatsManager : MonoBehaviour
             }
         }
         installedModules.Clear();
-        CalculateAndApplyStats();
+        if (!IsBatchLocked) CalculateAndApplyStats();
+    }
+
+    // Fungsi rekursif untuk mengubah layer objek dan semua anaknya
+    private void SetLayerRecursively(GameObject obj, int newLayer)
+    {
+        if (obj == null) return;
+        obj.layer = newLayer;
+        foreach (Transform child in obj.transform)
+        {
+            SetLayerRecursively(child.gameObject, newLayer);
+        }
     }
 }

@@ -11,6 +11,9 @@ public class GridVisualizer : MonoBehaviour
     [Tooltip("Warna grid saat kosong")]
     public Color normalColor = new Color(1f, 1f, 1f, 0.3f);
     
+    [Tooltip("Material khusus grid. Kosongkan untuk pakai shader GridOverlay otomatis (agar tembus mesh).")]
+    public Material gridMaterial;
+
     [Header("Sorting")]
     public string sortingLayerName = "Default";
     public int sortingOrder = 0;
@@ -115,6 +118,17 @@ public class GridVisualizer : MonoBehaviour
                         sr.color = normalColor;
                         sr.sortingLayerName = sortingLayerName;
                         sr.sortingOrder = sortingOrder;
+
+                        if (gridMaterial != null)
+                        {
+                            sr.material = gridMaterial;
+                        }
+                        else
+                        {
+                            // Gunakan shader Custom/GridOverlay yang bikin 100% nembus semua mesh
+                            Shader overlayShader = Shader.Find("Custom/GridOverlay");
+                            if (overlayShader != null) sr.material = new Material(overlayShader);
+                        }
 
                         if (cellSprite.bounds.size.x > 0 && cellSprite.bounds.size.y > 0)
                         {

@@ -20,9 +20,7 @@ public class VehicleBaseData : ScriptableObject
     public float engineArmor = 100f;
 
     [Header("Performance (Gambar 2)")]
-    public float horsePower = 650f;
     public float fuelCapacity = 80f; // Liter
-    public float fuelConsumptionRate = 0.09f; // L/KM
     
     [Header("Electrical")]
     [Tooltip("Apakah baterai/aki menyatu dengan mesin? (Jika false, aki diletakkan terpisah seperti di truk)")]

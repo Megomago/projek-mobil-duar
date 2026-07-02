@@ -47,6 +47,8 @@ public class VehicleController : MonoBehaviour
         public float flywheelInertia;
         [Tooltip("Kurva torque engine (X=RPM normalized 0-1, Y=multiplier 0-1)")]
         public AnimationCurve torqueCurve;
+        [Tooltip("Konsumsi bahan bakar (Liter/detik) saat RPM maksimum")]
+        public float maxFuelConsumptionRate;
     }
 
     [System.Serializable]
@@ -98,7 +100,8 @@ public class VehicleController : MonoBehaviour
         idleRPM           = 650f,
         maxRPM            = 7000f,
         peakTorqueRPM     = 3800f,
-        flywheelInertia   = 0.35f
+        flywheelInertia   = 0.35f,
+        maxFuelConsumptionRate = 0.05f
     };
 
     [Header("=== DRIVETRAIN ===")]
@@ -196,6 +199,7 @@ public class VehicleController : MonoBehaviour
     [HideInInspector] public float currentTorqueNm;
     [HideInInspector] public float engineLoad;       // 0-1
     [HideInInspector] public bool  engineRunning = true;
+    [HideInInspector] public float currentFuelConsumptionRate; // L/sec
 
     // Transmission state
     [HideInInspector] public int   currentGearIndex = 1; // 1 = Gear 1
@@ -490,6 +494,9 @@ public class VehicleController : MonoBehaviour
         float torqueMultiplier = engine.torqueCurve.Evaluate(rpmNormalized);
         engineLoad   = throttleInput;
         currentTorqueNm = engine.maxTorqueNm * torqueMultiplier * throttleInput;
+        
+        // Konsumsi bensin dinamis (hanya saat mesin nyala)
+        currentFuelConsumptionRate = (currentRPM / engine.maxRPM) * engine.maxFuelConsumptionRate;
     }
 
     #endregion

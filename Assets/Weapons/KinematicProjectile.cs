@@ -131,17 +131,16 @@ namespace Weapons
         {
             OptResult? result = null;
             var statsMgr = hit.collider.GetComponentInParent<VehicleStatsManager>();
+            string dbgType = "unknown";
 
-            // 1. Coba damage ke modul grid (VehicleStatsManager -> PlacedModule)
+            // 1. Coba damage ke modul grid (O(1) lookup pake dictionary)
             if (statsMgr != null)
             {
-                foreach (var mod in statsMgr.installedModules)
+                if (statsMgr.moduleColliderMap.TryGetValue(hit.collider, out var hitModule))
                 {
-                    if (mod.spawnedPrefab != null && IsChildOrSelf(hit.collider.transform, mod.spawnedPrefab.transform))
-                    {
-                        result = ApplyModuleDamage(mod, statsMgr);
-                        goto AFTER_DAMAGE;
-                    }
+                    dbgType = "module";
+                    result = ApplyModuleDamage(hitModule, statsMgr);
+                    goto AFTER_DAMAGE;
                 }
             }
 
@@ -149,45 +148,38 @@ namespace Weapons
             WheelHealth wheelHealth = hit.collider.GetComponentInParent<WheelHealth>();
             if (wheelHealth != null)
             {
+                dbgType = "wheel";
                 result = OptFormula.Calculate(_atk, _pen, wheelHealth.armor, _currentVelocity.magnitude);
                 wheelHealth.TakeDamage(result.Value.damage);
+                #if UNITY_EDITOR
                 Debug.Log($"[WHEEL] {wheelHealth.gameObject.name} ATK:{_atk} PEN:{_pen} DEF:{wheelHealth.armor} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel} | HP:{wheelHealth.currentHealth}/{wheelHealth.maxHealth}");
+                #endif
                 goto AFTER_DAMAGE;
             }
 
-            // 2. Coba damage ke vehicle body parts
-            // Gunakan nama collider: "BodyHitbox", "EngineHitbox", "WheelHitbox", "BatteryHitbox"
-            string cname = hit.collider.name;
+            // 2. Coba damage ke vehicle parts (component-based, gaperlu layer khusus)
             if (statsMgr != null && statsMgr.baseData != null)
             {
-                float def = 0f;
-                string partName = "";
-
-                if (cname.Contains("BodyHitbox")) { def = statsMgr.baseData.bodyArmor; partName = "Body"; }
-                else if (cname.Contains("EngineHitbox")) { def = statsMgr.baseData.engineArmor; partName = "Engine"; }
-                else if (cname.Contains("WheelHitbox")) { def = statsMgr.baseData.wheelArmor; partName = "Wheel"; }
-                else if (cname.Contains("BatteryHitbox"))
+                VehicleCriticalPart critPart = hit.collider.GetComponentInParent<VehicleCriticalPart>();
+                if (critPart != null)
                 {
-                    bool separateBattery = statsMgr.baseData != null && !statsMgr.baseData.isBatteryJoinEngine;
-                    if (separateBattery)
-                    {
-                        def = statsMgr.baseData.batteryArmor;
-                        partName = "Battery";
-                    }
-                }
-
-                if (def > 0f)
-                {
+                    dbgType = "crit";
+                    float def = critPart.armor;
                     result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
-                    Debug.Log($"[BODY] {partName} ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
+                    #if UNITY_EDITOR
+                    Debug.Log($"[CRIT] {critPart.partName} ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
+                    #endif
 
-                    switch (partName)
-                    {
-                        case "Body": statsMgr.currentBodyHealth -= result.Value.damage; break;
-                        case "Engine": statsMgr.currentEngineHealth -= result.Value.damage; break;
-                        case "Wheel": statsMgr.currentWheelHealth -= result.Value.damage; break;
-                        case "Battery": statsMgr.currentBatteryHealth -= result.Value.damage; break;
-                    }
+                    critPart.TakeDamage(result.Value.damage);
+                }
+                else
+                {
+                    dbgType = "body";
+                    float def = statsMgr.currentBodyArmor;
+                    result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
+                    #if UNITY_EDITOR
+                    Debug.Log($"[BODY] Chassis ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
+                    #endif
                 }
             }
             else
@@ -196,11 +188,29 @@ namespace Weapons
                 var simpleTarget = hit.collider.GetComponentInParent<SimpleTarget>();
                 if (simpleTarget != null)
                 {
+                    dbgType = "target";
                     result = simpleTarget.TakeDamage(_atk, _pen, _currentVelocity.magnitude);
                 }
             }
 
         AFTER_DAMAGE:
+            // ——— DEBUG VISUALIZATION: warna beda tiap tipe hit ———
+            #if UNITY_EDITOR
+            Color dbgColor;
+            switch (dbgType)
+            {
+                case "module": dbgColor = Color.green; break;
+                case "wheel":  dbgColor = Color.red; break;
+                case "crit":   dbgColor = Color.yellow; break;
+                case "body":   dbgColor = Color.blue; break;
+                case "target": dbgColor = Color.magenta; break;
+                default:       dbgColor = Color.white; break;
+            }
+            Debug.DrawLine(hit.point + Vector3.left * 0.2f, hit.point + Vector3.right * 0.2f, dbgColor, 3f);
+            Debug.DrawLine(hit.point + Vector3.up * 0.2f, hit.point + Vector3.down * 0.2f, dbgColor, 3f);
+            Debug.DrawLine(hit.point + Vector3.forward * 0.2f, hit.point + Vector3.back * 0.2f, dbgColor, 3f);
+            #endif
+
             // Spawn efek ledakan/percikan api dengan pembatas maksimal per frame
             if (hitImpactPrefab != null)
             {
@@ -217,8 +227,8 @@ namespace Weapons
                 }
             }
 
-            // Tambahkan dorongan fisik (Push) jika target adalah Rigidbody
-            Rigidbody hitRb = hit.collider.GetComponentInParent<Rigidbody>();
+            // Tambahkan dorongan fisik (Push) — pake Rigidbody cached dari statsMgr
+            Rigidbody hitRb = statsMgr != null ? statsMgr.VehicleRigidbody : hit.collider.GetComponentInParent<Rigidbody>();
             if (hitRb != null)
             {
                 Vector3 force = _currentVelocity.normalized * (_currentVelocity.magnitude * mass);
@@ -228,22 +238,16 @@ namespace Weapons
             // Pierce: kalau tembus, lanjut terbang dengan exit velocity
             if (result.HasValue && result.Value.pierce && result.Value.exitVel > 0f)
             {
-                _piercedColliders.Add(hit.collider); // Masukkan ke daftar tembus agar tidak di-hit lagi selamanya oleh peluru ini
-                
-                // Pindahkan posisi peluru sedikit ke depan (searah velocity) untuk keluar dari permukaan collider
+                _piercedColliders.Add(hit.collider);
                 _currentPosition = hit.point + _currentVelocity.normalized * 0.01f;
                 _currentVelocity = _currentVelocity.normalized * result.Value.exitVel;
-                
-                // PENETRATION DROP: Peluru kehilangan daya tembusnya
                 _pen = result.Value.remainingPen;
                 _atk = result.Value.remainingAtk;
-                
                 transform.position = _currentPosition;
                 transform.forward = _currentVelocity.normalized;
                 return;
             }
 
-            // Hancurkan peluru (Kembalikan ke pool)
             DestroyProjectile();
         }
 
@@ -251,15 +255,31 @@ namespace Weapons
         {
             float def = mod.moduleTemplate.armor;
             var r = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
-            mod.currentHealth -= r.damage;
-            Debug.Log($"[MODULE] {mod.moduleTemplate.moduleName} ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{r.damage} PIERCE:{r.pierce} EXIT:{r.exitVel} | HP:{mod.currentHealth}/{mod.moduleTemplate.maxHealth}");
 
-            if (mod.currentHealth <= 0f)
+            VehicleModuleComponent modComp = mod.spawnedPrefab != null
+                ? mod.spawnedPrefab.GetComponent<VehicleModuleComponent>()
+                : null;
+
+            if (modComp != null)
             {
-                bool wasVolatile = mod.moduleTemplate.volatileExplosive;
-                mgr.UninstallModule(mod);
-                if (wasVolatile) TriggerChainExplosion(mod, mgr);
+                modComp.TakeDamage(r.damage);
+                if (modComp.isDestroyed && mod.moduleTemplate.volatileExplosive)
+                    TriggerChainExplosion(mod, mgr);
             }
+            else
+            {
+                mod.currentHealth -= r.damage;
+                if (mod.currentHealth <= 0f)
+                {
+                    bool wasVolatile = mod.moduleTemplate.volatileExplosive;
+                    mgr.UninstallModule(mod);
+                    if (wasVolatile) TriggerChainExplosion(mod, mgr);
+                }
+            }
+
+            #if UNITY_EDITOR
+            Debug.Log($"[MODULE] {mod.moduleTemplate.moduleName} ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{r.damage} PIERCE:{r.pierce} EXIT:{r.exitVel} | HP:{(modComp != null ? modComp.currentHealth : mod.currentHealth)}/{mod.moduleTemplate.maxHealth}");
+            #endif
 
             return r;
         }
@@ -286,15 +306,6 @@ namespace Weapons
             }
         }
 
-        private bool IsChildOrSelf(Transform child, Transform parent)
-        {
-            while (child != null)
-            {
-                if (child == parent) return true;
-                child = child.parent;
-            }
-            return false;
-        }
         private void DestroyProjectile()
         {
             if (ObjectPool.Instance != null)

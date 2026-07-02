@@ -10,6 +10,7 @@ public enum ModuleType
     ArmorPlate,
     Capacitor,
     Cargo,
+    Engine,
     Other
 }
 

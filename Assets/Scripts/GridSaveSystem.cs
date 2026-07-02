@@ -73,7 +73,8 @@ public static class GridSaveSystem
         SavedGridLayout layout = JsonUtility.FromJson<SavedGridLayout>(json);
         if (layout == null || layout.modules.Count == 0) return;
 
-        // Bersihkan modul yang sudah terpasang sebelum me-load
+        // Batch load: suppress CalculateAndApplyStats, baru 1x di akhir
+        statsManager.BeginBatch();
         statsManager.ClearAllModules();
 
         int loaded = 0;
@@ -91,6 +92,7 @@ public static class GridSaveSystem
             if (success) loaded++;
         }
 
+        statsManager.EndBatch();
         Debug.Log($"[GridSaveSystem] Dimuat {loaded}/{layout.modules.Count} modul untuk '{vehicleName}'");
     }
 

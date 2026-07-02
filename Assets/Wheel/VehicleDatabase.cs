@@ -15,10 +15,16 @@ namespace Weapons
 
             foreach (var vehicle in allVehicles)
             {
-                if (vehicle != null && vehicle.vehicleName == vehicleName)
-                {
+                if (vehicle == null || vehicle.vehiclePrefab == null) continue;
+
+                // Baca nama dari VehicleBaseData di dalam prefab
+                VehicleStatsManager sm = vehicle.vehiclePrefab.GetComponent<VehicleStatsManager>();
+                string nameInPrefab = (sm != null && sm.baseData != null)
+                    ? sm.baseData.vehicleName
+                    : vehicle.name; // fallback ke nama file asset
+
+                if (nameInPrefab == vehicleName)
                     return vehicle;
-                }
             }
             return null;
         }

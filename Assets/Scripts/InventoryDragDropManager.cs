@@ -22,6 +22,12 @@ public class InventoryDragDropManager : MonoBehaviour
     private bool _canPlace = false;
     private string _lastValidZoneName;
 
+    // === OPTIMIZATION: Cache IsAreaFree biar gak tiap frame ===
+    private Vector2Int _lastCheckPos = new Vector2Int(-999, -999);
+    private string _lastCheckZone = "";
+    private int _lastCheckAngle = -1;
+    private bool _lastCheckResult = false;
+
     // === OPTIMIZATION: Cache Variables ===
     private Camera _mainCam;
     private Renderer[] _cachedRenderers;
@@ -58,7 +64,12 @@ public class InventoryDragDropManager : MonoBehaviour
         _targetStatsManager = statsManager;
         _currentAngle = 0;
         _isDragging = true;
-        _currentAppliedMat = null; // Reset tracker material
+        _currentAppliedMat = null;
+
+        // Reset cache grid check
+        _lastCheckPos = new Vector2Int(-999, -999);
+        _lastCheckZone = "";
+        _lastCheckAngle = -1;
 
         // Tentukan prefab proxy
         GameObject prefabToSpawn = template.modulePrefab;
@@ -162,11 +173,24 @@ public class InventoryDragDropManager : MonoBehaviour
             int gridX = Mathf.FloorToInt((localHit.x / cellSize) - (effectiveWidth / 2f) + 0.5f);
             int gridY = Mathf.FloorToInt((localHit.z / cellSize) - (effectiveHeight / 2f) + 0.5f);
 
+            // Cache: skip IsAreaFree kalo posisi/angle gak berubah
+            bool posChanged = (gridX != _lastCheckPos.x || gridY != _lastCheckPos.y ||
+                               bestZone.zoneName != _lastCheckZone || _currentAngle != _lastCheckAngle);
+            if (posChanged)
+            {
+                _canPlace = _targetStatsManager.IsAreaFree(bestZone, new Vector2Int(gridX, gridY), _currentTemplate.width, _currentTemplate.height, _currentAngle);
+                _lastCheckPos = new Vector2Int(gridX, gridY);
+                _lastCheckZone = bestZone.zoneName;
+                _lastCheckAngle = _currentAngle;
+                _lastCheckResult = _canPlace;
+            }
+            else
+            {
+                _canPlace = _lastCheckResult;
+            }
+
             _lastValidGridPos = new Vector2Int(gridX, gridY);
             _lastValidZoneName = bestZone.zoneName;
-
-            // Cek valid untuk zona yang di-hover
-            _canPlace = _targetStatsManager.IsAreaFree(bestZone, _lastValidGridPos, _currentTemplate.width, _currentTemplate.height, _currentAngle);
 
             if (_proxyObject != null)
             {

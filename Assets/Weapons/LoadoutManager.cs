@@ -25,6 +25,8 @@ namespace Weapons
         [Header("=== UI SETTINGS ===")]
         [Tooltip("Teks untuk menampilkan nama mobil yang sedang dipilih")]
         public TextMeshProUGUI vehicleNameText;
+        [Tooltip("Referensi ke VehicleHUD untuk update stat saat ganti mobil")]
+        public VehicleHUD vehicleHUD;
 
         [Header("=== MODE PANELS ===")]
         public GameObject mainUIPanel;
@@ -48,13 +50,22 @@ namespace Weapons
                 return;
             }
 
-            // Muat mobil terakhir yang dipilih, atau mulai dari 0
+            // Cari mobil yang cocok dengan save terakhir
             string savedVehicle = PlayerPrefs.GetString("SelectedVehicle", "");
             if (!string.IsNullOrEmpty(savedVehicle))
             {
                 for (int i = 0; i < vehicleDatabase.allVehicles.Count; i++)
                 {
-                    if (vehicleDatabase.allVehicles[i] != null && vehicleDatabase.allVehicles[i].vehicleName == savedVehicle)
+                    VehicleData vd = vehicleDatabase.allVehicles[i];
+                    if (vd == null || vd.vehiclePrefab == null) continue;
+
+                    // Baca nama dari VehicleBaseData di dalam prefab
+                    VehicleStatsManager sm = vd.vehiclePrefab.GetComponent<VehicleStatsManager>();
+                    string nameInPrefab = (sm != null && sm.baseData != null)
+                        ? sm.baseData.vehicleName
+                        : vd.name;
+
+                    if (nameInPrefab == savedVehicle)
                     {
                         _currentVehicleIndex = i;
                         break;
@@ -81,48 +92,55 @@ namespace Weapons
         }
 
         private void UpdateVehicleSelection()
-{
-    VehicleData currentData = vehicleDatabase.allVehicles[_currentVehicleIndex];
-    
-    PlayerPrefs.SetString("SelectedVehicle", currentData.vehicleName);
-    PlayerPrefs.Save();
-
-    if (vehicleNameText != null) vehicleNameText.text = currentData.vehicleName;
-
-    if (_currentPreviewVehicle != null) Destroy(_currentPreviewVehicle);
-
-    if (currentData.vehiclePrefab != null && vehiclePreviewPivot != null)
-    {
-        _currentPreviewVehicle = Instantiate(currentData.vehiclePrefab, vehiclePreviewPivot.position, vehiclePreviewPivot.rotation);
-        _currentPreviewVehicle.name = currentData.vehicleName;
-
-        _currentStatsManager = _currentPreviewVehicle.GetComponent<VehicleStatsManager>();
-        if (_currentStatsManager != null)
         {
-            _currentStatsManager.isPreviewMode = true; // <--- TAMBAHIN INI
+            VehicleData currentData = vehicleDatabase.allVehicles[_currentVehicleIndex];
+
+            if (currentData.vehiclePrefab == null)
+            {
+                Debug.LogWarning("[LoadoutManager] VehicleData tidak punya prefab!");
+                return;
+            }
+
+            if (_currentPreviewVehicle != null) Destroy(_currentPreviewVehicle);
+
+            _currentPreviewVehicle = Instantiate(currentData.vehiclePrefab, vehiclePreviewPivot.position, vehiclePreviewPivot.rotation);
+
+            // ── Baca nama dari VehicleBaseData di dalam Prefab ────────────
+            _currentStatsManager = _currentPreviewVehicle.GetComponent<VehicleStatsManager>();
+            string vehicleName = (_currentStatsManager != null && _currentStatsManager.baseData != null)
+                ? _currentStatsManager.baseData.vehicleName
+                : currentData.name; // fallback ke nama file asset
+
+            _currentPreviewVehicle.name = vehicleName;
+            if (vehicleNameText != null) vehicleNameText.text = vehicleName;
+
+            // Simpan pilihan terakhir pakai nama dari BaseData
+            PlayerPrefs.SetString("SelectedVehicle", vehicleName);
+            PlayerPrefs.Save();
+            // ─────────────────────────────────────────────────────────────
+
+            if (_currentStatsManager != null)
+            {
+                _currentStatsManager.isPreviewMode = true;
+                _currentStatsManager.hud = vehicleHUD;
+                if (vehicleHUD != null) vehicleHUD.SetVehicle(_currentStatsManager);
+            }
+
+            if (_currentPreviewVehicle.TryGetComponent<VehicleController>(out var vc)) vc.enabled = false;
+            AudioSource[] audioSources = _currentPreviewVehicle.GetComponentsInChildren<AudioSource>();
+            foreach (var audio in audioSources) audio.enabled = false;
+
+            _currentGridVisualizer = _currentPreviewVehicle.GetComponent<GridVisualizer>();
+            if (_currentGridVisualizer == null && _currentStatsManager != null)
+                _currentGridVisualizer = _currentPreviewVehicle.AddComponent<GridVisualizer>();
+
+            // Load grid layout pakai nama dari BaseData sebagai key
+            if (_currentStatsManager != null && moduleDatabase != null)
+                GridSaveSystem.LoadGrid(vehicleName, _currentStatsManager, moduleDatabase);
+
+            StartCoroutine(DisableAfterSpawn());
+            CloseInventoryMode();
         }
-        
-        if (_currentPreviewVehicle.TryGetComponent<VehicleController>(out var vc)) vc.enabled = false;
-        AudioSource[] audioSources = _currentPreviewVehicle.GetComponentsInChildren<AudioSource>();
-        foreach (var audio in audioSources) audio.enabled = false;
-
-        _currentStatsManager = _currentPreviewVehicle.GetComponent<VehicleStatsManager>();
-        _currentGridVisualizer = _currentPreviewVehicle.GetComponent<GridVisualizer>();
-        if (_currentGridVisualizer == null && _currentStatsManager != null)
-        {
-            _currentGridVisualizer = _currentPreviewVehicle.AddComponent<GridVisualizer>();
-        }
-
-        if (_currentStatsManager != null && moduleDatabase != null)
-        {
-            GridSaveSystem.LoadGrid(currentData.vehicleName, _currentStatsManager, moduleDatabase);
-        }
-
-        StartCoroutine(DisableAfterSpawn());
-    }
-
-    CloseInventoryMode();
-}
 
 private System.Collections.IEnumerator DisableAfterSpawn()
 {

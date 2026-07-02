@@ -14,7 +14,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   vehicleName: Daihatsu Grandmax
   baseMass: 1900
-  bodyHealth: 1300
+  bodyHealth: 3000
   bodyArmor: 230
   wheelHealth: 50
   wheelArmor: 5

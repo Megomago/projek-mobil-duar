@@ -44,13 +44,18 @@ namespace Weapons
             Quaternion spawnRot = playerSpawnPoint != null ? playerSpawnPoint.rotation : Quaternion.identity;
 
             GameObject spawnedVehicle = Instantiate(selectedData.vehiclePrefab, spawnPos, spawnRot);
-            spawnedVehicle.name = selectedData.vehicleName;
+
+            // --- BACA NAMA DARI BASEDATA DI DALAM PREFAB ---
+            VehicleStatsManager statsManager = spawnedVehicle.GetComponent<VehicleStatsManager>();
+            string vehicleName = (statsManager != null && statsManager.baseData != null)
+                ? statsManager.baseData.vehicleName
+                : selectedData.name;
+            spawnedVehicle.name = vehicleName;
 
             // --- LOAD GRID INVENTARIS DARI SAVE ---
-            VehicleStatsManager statsManager = spawnedVehicle.GetComponent<VehicleStatsManager>();
             if (statsManager != null && moduleDatabase != null)
             {
-                GridSaveSystem.LoadGrid(selectedData.vehicleName, statsManager, moduleDatabase);
+                GridSaveSystem.LoadGrid(vehicleName, statsManager, moduleDatabase);
             }
             
             // --- SETUP WEAPON TRIGGER ---
