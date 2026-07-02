@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b350e8faa2883947ab13b297ff66abb, type: 3}
   m_Name: Sedan AK
   m_EditorClassIdentifier: 
-  vehicleName: Sedan AK
+  vehicleName: Chevy Camaro
   vehiclePrefab: {fileID: 8859394471345475044, guid: e64254e795dfb34409d3051544d3ba6d,
     type: 3}
   weaponSlotCount: 0

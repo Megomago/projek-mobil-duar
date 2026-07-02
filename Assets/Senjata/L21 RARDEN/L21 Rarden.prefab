@@ -9,7 +9,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 5443149810473243381}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: muz f
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -176,9 +176,14 @@ MonoBehaviour:
   aimMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  autoDetectSideMount: 1
   minPitch: -45
   maxPitch: 15
+  minPitchSide: -3
+  maxPitchSide: 45
+  foldInBlindSpot: 1
   usePlayerInput: 1
+  freeLookKey: 99
 --- !u!1 &3368283989897475414
 GameObject:
   m_ObjectHideFlags: 0
@@ -190,7 +195,7 @@ GameObject:
   - component: {fileID: 6026770090257944535}
   - component: {fileID: 2020917477902995392}
   - component: {fileID: 8818082660856647136}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: breach
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -273,7 +278,8 @@ GameObject:
   - component: {fileID: 4664557302821068976}
   - component: {fileID: 8280829605811230828}
   - component: {fileID: 2454894849444907648}
-  m_Layer: 0
+  - component: {fileID: 6479209036184326169}
+  m_Layer: 6
   m_Name: gun body pitch
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -354,6 +360,27 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &6479209036184326169
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3465020314435888203}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.4823085, y: 1.1766278, z: 0.6806806}
+  m_Center: {x: 0, y: -0.13799515, z: -0.19423604}
 --- !u!1 &3755274667107137203
 GameObject:
   m_ObjectHideFlags: 0
@@ -363,7 +390,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8236801177099769812}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: muz
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -379,7 +406,7 @@ Transform:
   m_GameObject: {fileID: 3755274667107137203}
   serializedVersion: 2
   m_LocalRotation: {x: 0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: -0.045, z: 0.025}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
@@ -396,7 +423,7 @@ GameObject:
   - component: {fileID: 2567731504892222440}
   - component: {fileID: 2774677512092569684}
   - component: {fileID: 1498256410995227338}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: mag
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -482,7 +509,7 @@ GameObject:
   - component: {fileID: 4364999257792894545}
   - component: {fileID: 7493576240066498403}
   - component: {fileID: 7137843414849334717}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: barrel
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -565,7 +592,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 519321127664763286}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: casout
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -596,7 +623,7 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 8582019193191789054}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: klip out
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -817,7 +844,7 @@ GameObject:
   - component: {fileID: 9020621486361058970}
   - component: {fileID: 1991351541525743524}
   - component: {fileID: 4409332651951106115}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: klip
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -900,7 +927,7 @@ GameObject:
   - component: {fileID: 5556938146100355937}
   - component: {fileID: 8016835420116483538}
   - component: {fileID: 7194694427153109726}
-  m_Layer: 0
+  m_Layer: 6
   m_Name: choking
   m_TagString: Untagged
   m_Icon: {fileID: 0}

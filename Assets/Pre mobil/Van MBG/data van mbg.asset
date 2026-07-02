@@ -9,9 +9,10 @@ MonoBehaviour:
   m_GameObject: {fileID: 0}
   m_Enabled: 1
   m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 400b66e8d7fe56444b105822dafc6dd4, type: 3}
-  m_Name: modul database
+  m_Script: {fileID: 11500000, guid: 9b350e8faa2883947ab13b297ff66abb, type: 3}
+  m_Name: data van mbg
   m_EditorClassIdentifier: 
-  allModules:
-  - {fileID: 11400000, guid: 749f3eccdd58baf4fa690cf56c132abb, type: 2}
-  - {fileID: 11400000, guid: 20fdc7c8089cded49b1eb249a06aef26, type: 2}
+  vehicleName: Daihatsu Grandmax
+  vehiclePrefab: {fileID: 5801169931204964018, guid: 30de637b82f2d51409fe866c0f404ff2,
+    type: 3}
+  weaponSlotCount: 0

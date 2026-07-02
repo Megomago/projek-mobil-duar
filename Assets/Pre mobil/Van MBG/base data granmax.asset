@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 8f531426f41d6c04ab5f326030d28f78, type: 3}
   m_Name: base data granmax
   m_EditorClassIdentifier: 
-  vehicleName: Grandmax
+  vehicleName: Daihatsu Grandmax
   baseMass: 1900
   bodyHealth: 1300
   bodyArmor: 230

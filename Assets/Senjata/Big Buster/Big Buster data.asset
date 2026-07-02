@@ -20,6 +20,8 @@ MonoBehaviour:
     type: 3}
   muzzleVelocity: 190
   fireRateRPM: 600
+  attackPower: 100
+  penetration: 150
   maxAmmo: 1
   autoReload: 1
   reloadTime: 7
@@ -37,7 +39,7 @@ MonoBehaviour:
   recoilForce: 15000
   cameraShakeMultiplier: 0.0005
   cameraShakeDuration: 0.2
-  shootSound: {fileID: 8300000, guid: 43c70cd559d03234188a0a79839aef85, type: 3}
+  shootSound: {fileID: 8300000, guid: 8093aef2a2a76204981f4bc38cd3a3c1, type: 3}
   reloadSound: {fileID: 0}
   emptyClickSound: {fileID: 0}
   casingPrefab: {fileID: 6428558085314955693, guid: 81ffa24a43ebf9a42896898bba6d7b95,

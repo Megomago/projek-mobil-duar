@@ -20,6 +20,8 @@ MonoBehaviour:
     type: 3}
   muzzleVelocity: 1200
   fireRateRPM: 90
+  attackPower: 100
+  penetration: 150
   maxAmmo: 3
   autoReload: 1
   reloadTime: 2.85
@@ -33,10 +35,11 @@ MonoBehaviour:
   coolingRate: 15
   maxHeat: 100
   heatDispersionMultiplier: 4
+  overheatDispersionThreshold: 0.8
   recoilForce: 2500
   cameraShakeMultiplier: 0.0005
   cameraShakeDuration: 0.2
-  shootSound: {fileID: 8300000, guid: d74d2ed14c3aedc4d8d196c6f4747eed, type: 3}
+  shootSound: {fileID: 8300000, guid: 440ff0a513a6c3a47bd663e828c612e7, type: 3}
   reloadSound: {fileID: 0}
   emptyClickSound: {fileID: 0}
   casingPrefab: {fileID: 8861373467729997680, guid: 07d19cd4efd487741a4e81b47f37da44,
