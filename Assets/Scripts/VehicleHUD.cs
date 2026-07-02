@@ -65,7 +65,8 @@ public class VehicleHUD : MonoBehaviour
         if (powerGenerationText != null) 
             powerGenerationText.text = statsManager.currentPowerGeneration.ToString("0") + " W";
 
-        // Batas output kelistrikan
-        if (maxPowerOutputText != null) maxPowerOutputText.text = data.maxPowerOutput.ToString("0") + " W";
+        // Batas output kelistrikan (Base + Kapasitor Tambahan)
+        if (maxPowerOutputText != null) 
+            maxPowerOutputText.text = statsManager.currentMaxOutput.ToString("0") + " W";
     }
 }

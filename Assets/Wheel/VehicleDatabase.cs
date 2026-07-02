@@ -3,7 +3,7 @@ using System.Collections.Generic;
 
 namespace Weapons
 {
-    [CreateAssetMenu(fileName = "VehicleDatabase", menuName = "Weapons/Vehicle Database")]
+    [CreateAssetMenu(fileName = "VehicleDatabase", menuName = "Vehicle/Vehicle Database")]
     public class VehicleDatabase : ScriptableObject
     {
         [Tooltip("Daftar semua mobil yang ada di game. Tarik semua VehicleData ke sini.")]

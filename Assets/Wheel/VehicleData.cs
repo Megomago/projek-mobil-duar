@@ -2,7 +2,7 @@ using UnityEngine;
 
 namespace Weapons
 {
-    [CreateAssetMenu(fileName = "New VehicleData", menuName = "Weapons/Vehicle Data")]
+    [CreateAssetMenu(fileName = "New VehicleData", menuName = "Vehicle/Vehicle Data")]
     public class VehicleData : ScriptableObject
     {
         [Tooltip("Nama kendaraan yang akan muncul di UI Lobby")]
