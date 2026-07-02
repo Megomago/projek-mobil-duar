@@ -15,11 +15,13 @@ public class ModuleSelectionManager : MonoBehaviour
     private PlacedModule _selectedModule;
     private GameObject _outlineObject;
     private VehicleStatsManager _currentVehicleManager;
+    private Camera _mainCam;
 
     private void Awake()
     {
         if (Instance == null) Instance = this;
         else Destroy(gameObject);
+        _mainCam = Camera.main;
     }
 
     private void Update()
@@ -30,7 +32,7 @@ public class ModuleSelectionManager : MonoBehaviour
         {
             if (EventSystem.current != null && EventSystem.current.IsPointerOverGameObject()) return;
 
-            Ray ray = Camera.main.ScreenPointToRay(Input.mousePosition);
+            Ray ray = _mainCam.ScreenPointToRay(Input.mousePosition);
             if (Physics.Raycast(ray, out RaycastHit hit, 100f, moduleLayer))
             {
                 PlacedModule clickedModule = FindModuleByPrefab(hit.collider.gameObject);
@@ -64,16 +66,15 @@ public class ModuleSelectionManager : MonoBehaviour
 
     private PlacedModule FindModuleByPrefab(GameObject hitObject)
     {
-        VehicleStatsManager[] allManagers = FindObjectsOfType<VehicleStatsManager>();
-        foreach (var manager in allManagers)
+        VehicleStatsManager manager = hitObject.GetComponentInParent<VehicleStatsManager>();
+        if (manager == null) return null;
+
+        _currentVehicleManager = manager;
+        foreach (var mod in manager.installedModules)
         {
-            foreach (var mod in manager.installedModules)
+            if (mod.spawnedPrefab != null && IsChildOrSelf(hitObject.transform, mod.spawnedPrefab.transform))
             {
-                if (mod.spawnedPrefab != null && IsChildOrSelf(hitObject.transform, mod.spawnedPrefab.transform))
-                {
-                    _currentVehicleManager = manager;
-                    return mod;
-                }
+                return mod;
             }
         }
         return null;
@@ -89,14 +90,12 @@ public class ModuleSelectionManager : MonoBehaviour
         return false;
     }
 
-    // === BAGIAN INI YANG GUE PERBAIKI ===
     private void SelectModule(PlacedModule module)
     {
         if (_selectedModule == module) return; 
 
-        // FIX: Jangan panggil DeselectModule() di sini! 
-        // Itu bakal nge-reset _currentVehicleManager jadi null.
-        // Cukup hancurkan outline lama aja secara manual.
+        // Jangan panggil DeselectModule() di sini
+        // Itu bakal nge-reset _currentVehicleManager jadi null
         if (_outlineObject != null)
         {
             Destroy(_outlineObject);
@@ -127,7 +126,6 @@ public class ModuleSelectionManager : MonoBehaviour
             _outlineObject.SetActive(true); 
         }
     }
-    // === SELESAI PERBAIKAN ===
 
     private void DeselectModule()
     {

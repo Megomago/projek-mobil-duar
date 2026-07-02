@@ -18,7 +18,7 @@ MonoBehaviour:
     type: 3}
   hudPrefab: {fileID: 6880005277670001014, guid: 173b46495b470c74f97a41a24a558c6b,
     type: 3}
-  muzzleVelocity: 320
+  muzzleVelocity: 190
   fireRateRPM: 600
   maxAmmo: 1
   autoReload: 1
@@ -34,7 +34,7 @@ MonoBehaviour:
   maxHeat: 100
   heatDispersionMultiplier: 4
   overheatDispersionThreshold: 0.8
-  recoilForce: 7500
+  recoilForce: 15000
   cameraShakeMultiplier: 0.0005
   cameraShakeDuration: 0.2
   shootSound: {fileID: 8300000, guid: 43c70cd559d03234188a0a79839aef85, type: 3}

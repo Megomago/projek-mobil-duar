@@ -118,14 +118,12 @@ namespace Weapons
             GridSaveSystem.LoadGrid(currentData.vehicleName, _currentStatsManager, moduleDatabase);
         }
 
-        // === PAKEN COROUTINE BUAT DELAY 1 FRAME ===
         StartCoroutine(DisableAfterSpawn());
     }
 
     CloseInventoryMode();
 }
 
-// === TAMBAHIN INI ===
 private System.Collections.IEnumerator DisableAfterSpawn()
 {
     yield return null; // Tunggu 1 frame biar semua object fully spawned
@@ -217,8 +215,5 @@ private System.Collections.IEnumerator DisableAfterSpawn()
         {
             if (weaponGridPanel != null) weaponGridPanel.SetActive(false);
         }
-
-        // === GRID SYSTEM LAMA DIHAPUS ===
-        // (Logika Inventory Grid 3D akan menggantikan bagian ini)
     }
 }

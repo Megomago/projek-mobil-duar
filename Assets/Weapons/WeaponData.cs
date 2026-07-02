@@ -27,6 +27,11 @@ namespace Weapons
         public float muzzleVelocity = 800f;
         [Tooltip("Tembakan per menit (RPM)")]
         public float fireRateRPM = 600f;
+
+        [Tooltip("Raw damage value")]
+        public float attackPower = 100f;
+        [Tooltip("Penetration power vs DEF")]
+        public float penetration = 150f;
         
         [Tooltip("Batas amunisi dalam satu magazine (0 = Infinite)")]
         public int maxAmmo = 30;
@@ -63,8 +68,6 @@ namespace Weapons
         public float maxHeat = 100f;
         [Tooltip("Saat overheat 100%, dispersi tembakan dikali berapa? (Bikin akurasi sangat buruk)")]
         public float heatDispersionMultiplier = 4f;
-
-        // --- INI BARANG BARU YANG GUE TAMBAHIN BIAR BISA DI-STEL ---
         [Tooltip("Ambang batas panas (0.0 - 1.0) sebelum akurasi mulai memburuk. Contoh: 0.8 berarti mulai goyang saat panas 80%")]
         [Range(0f, 1f)] public float overheatDispersionThreshold = 0.8f;
         #endregion

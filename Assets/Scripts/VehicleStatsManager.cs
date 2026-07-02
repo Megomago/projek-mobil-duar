@@ -73,6 +73,12 @@ public class VehicleStatsManager : MonoBehaviour
     public float currentCapacitorCapacity;
     public float currentCapacitorChargeRate;
 
+    [Header("Runtime Health")]
+    public float currentBodyHealth;
+    public float currentEngineHealth;
+    public float currentWheelHealth;
+    public float currentBatteryHealth;
+
     [Header("Mode Settings")]
     [Tooltip("Centang ini kalau vehicle lagi di mode preview/garage")]
     public bool isPreviewMode = false;
@@ -89,7 +95,17 @@ public class VehicleStatsManager : MonoBehaviour
 
     void Start()
     {
+        InitializeRuntimeHealth();
         CalculateAndApplyStats();
+    }
+
+    public void InitializeRuntimeHealth()
+    {
+        if (baseData == null) return;
+        currentBodyHealth = baseData.bodyHealth;
+        currentEngineHealth = baseData.engineHealth;
+        currentWheelHealth = baseData.wheelHealth;
+        currentBatteryHealth = baseData.batteryHealth;
     }
 
     [ContextMenu("Calculate Stats")]

@@ -437,7 +437,7 @@ namespace Weapons
                 KinematicProjectile kp = projObj.GetComponent<KinematicProjectile>();
                 if (kp != null)
                 {
-                    kp.Initialize(muzzleTransform.position, finalDirection, weaponData.muzzleVelocity);
+                    kp.Initialize(muzzleTransform.position, finalDirection, weaponData.muzzleVelocity, weaponData.attackPower, weaponData.penetration);
                 }
             }
         }

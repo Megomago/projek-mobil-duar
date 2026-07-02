@@ -15,4 +15,4 @@ MonoBehaviour:
   vehicleName: Sedan AK
   vehiclePrefab: {fileID: 8859394471345475044, guid: e64254e795dfb34409d3051544d3ba6d,
     type: 3}
-  weaponSlotCount: 2
+  weaponSlotCount: 0

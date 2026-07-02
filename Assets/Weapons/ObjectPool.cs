@@ -25,7 +25,6 @@ namespace Weapons
             if (Instance == null)
             {
                 Instance = this;
-                // Optional: DontDestroyOnLoad(gameObject); // Jika butuh lintas scene
             }
             else
             {

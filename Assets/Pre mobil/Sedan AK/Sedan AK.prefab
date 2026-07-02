@@ -611,7 +611,7 @@ GameObject:
   m_Component:
   - component: {fileID: 7430528426528173444}
   m_Layer: 0
-  m_Name: pivotgrid hood
+  m_Name: pivotgrid kiri
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0
@@ -843,6 +843,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7266497692247356272}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &6945443872256167471
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2916181200958217102}
+  m_Layer: 0
+  m_Name: pivotgrid samping kanan
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2916181200958217102
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6945443872256167471}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
+  m_LocalPosition: {x: 0.976, y: 0.919, z: -0.689}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7266497692247356272}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -90}
 --- !u!1 &7303715227000854764
 GameObject:
   m_ObjectHideFlags: 0
@@ -1076,6 +1107,7 @@ Transform:
   - {fileID: 3919853356388755118}
   - {fileID: 1928401121685851406}
   - {fileID: 7430528426528173444}
+  - {fileID: 2916181200958217102}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &2784621064803543879
@@ -1339,13 +1371,17 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   baseData: {fileID: 11400000, guid: 3bbb624cd1d4f4f4fae546a5b15ae041, type: 2}
   gridZones:
-  - zoneName: hood
+  - zoneName: kiri
     origin: {fileID: 7430528426528173444}
     capacity: {x: 2, y: 4}
     cellSize: 0.25
   - zoneName: atap
     origin: {fileID: 1928401121685851406}
     capacity: {x: 4, y: 4}
+    cellSize: 0.25
+  - zoneName: kanan
+    origin: {fileID: 2916181200958217102}
+    capacity: {x: 2, y: 4}
     cellSize: 0.25
   installedModules: []
   currentTotalMass: 0
