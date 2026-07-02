@@ -145,6 +145,16 @@ namespace Weapons
                 }
             }
 
+            // 1.5 Coba damage ke individual wheel (sistem baru)
+            WheelHealth wheelHealth = hit.collider.GetComponentInParent<WheelHealth>();
+            if (wheelHealth != null)
+            {
+                result = OptFormula.Calculate(_atk, _pen, wheelHealth.armor, _currentVelocity.magnitude);
+                wheelHealth.TakeDamage(result.Value.damage);
+                Debug.Log($"[WHEEL] {wheelHealth.gameObject.name} ATK:{_atk} PEN:{_pen} DEF:{wheelHealth.armor} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel} | HP:{wheelHealth.currentHealth}/{wheelHealth.maxHealth}");
+                goto AFTER_DAMAGE;
+            }
+
             // 2. Coba damage ke vehicle body parts
             // Gunakan nama collider: "BodyHitbox", "EngineHitbox", "WheelHitbox", "BatteryHitbox"
             string cname = hit.collider.name;
@@ -226,6 +236,7 @@ namespace Weapons
                 
                 // PENETRATION DROP: Peluru kehilangan daya tembusnya
                 _pen = result.Value.remainingPen;
+                _atk = result.Value.remainingAtk;
                 
                 transform.position = _currentPosition;
                 transform.forward = _currentVelocity.normalized;
