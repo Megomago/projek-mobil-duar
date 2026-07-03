@@ -124,6 +124,9 @@ namespace Weapons
                 _currentStatsManager.isPreviewMode = true;
                 _currentStatsManager.hud = vehicleHUD;
                 if (vehicleHUD != null) vehicleHUD.SetVehicle(_currentStatsManager);
+
+                VehicleModuleListUI moduleList = FindObjectOfType<VehicleModuleListUI>();
+                if (moduleList != null) moduleList.Initialize(_currentStatsManager);
             }
 
             if (_currentPreviewVehicle.TryGetComponent<VehicleController>(out var vc)) vc.enabled = false;

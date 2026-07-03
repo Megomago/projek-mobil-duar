@@ -3229,11 +3229,13 @@ GameObject:
   - component: {fileID: 2656132369603131874}
   - component: {fileID: 7019062386691496236}
   - component: {fileID: 1208283488320129021}
-  - component: {fileID: 7622050489055512228}
   - component: {fileID: 7004624173932309030}
   - component: {fileID: 2771324667218329942}
   - component: {fileID: 4668030914644899591}
   - component: {fileID: 8666523320399317605}
+  - component: {fileID: 5602281208122304107}
+  - component: {fileID: -78592057881969603}
+  - component: {fileID: 7622050489055512228}
   m_Layer: 0
   m_Name: Grandmax
   m_TagString: Untagged
@@ -3492,6 +3494,255 @@ MonoBehaviour:
   speedKmh: 0.0014675315
   speedMs: 0.00040764766
   wheelSlipRatio: 0
+--- !u!114 &7004624173932309030
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5801169931204964018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82edc5cc0d2357744a9daa8d2e89c4ed, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  engineAudioSource: {fileID: 7622050489055512228}
+  starterAudioSource: {fileID: -78592057881969603}
+  minPitch: 0.6
+  maxPitch: 2.8
+  idleVolume: 0.3
+  maxVolume: 1
+--- !u!114 &2771324667218329942
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5801169931204964018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca88c73e77ffc20479fec5317af66eba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  baseData: {fileID: 11400000, guid: 9def05a98a4a9b940afbb8feb597f1c8, type: 2}
+  gridZones:
+  - zoneName: atas
+    origin: {fileID: 5959161589016137262}
+    capacity: {x: 4, y: 6}
+    cellSize: 0.25
+  installedModules: []
+  currentTotalMass: 1900
+  currentPowerConsumption: 0
+  currentPowerGeneration: 95
+  currentBatteryCapacity: 720
+  currentFuelCapacity: 80
+  currentMaxOutput: 1000
+  currentCapacitorCapacity: 0
+  currentCapacitorChargeRate: 0
+  currentBodyArmor: 0
+  currentWheelArmor: 0
+  currentEngineArmor: 0
+  currentBatteryArmor: 0
+  currentWheelHealth: 50
+  currentFuelAmount: 0
+  currentBatteryAmount: 0
+  isPreviewMode: 0
+  hud: {fileID: 0}
+--- !u!114 &4668030914644899591
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5801169931204964018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3955582cb80d7974c8fd5133499dfa04, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cellSprite: {fileID: 21300000, guid: 862c0374ba66af449a06a6dc899503b4, type: 3}
+  normalColor: {r: 1, g: 1, b: 1, a: 1}
+  gridMaterial: {fileID: 0}
+  sortingLayerName: Default
+  sortingOrder: 0
+--- !u!114 &8666523320399317605
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5801169931204964018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 351b3800a2ad11b4790a13cce1b80f76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hudContainer: {fileID: 0}
+  usePlayerInput: 1
+--- !u!114 &5602281208122304107
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5801169931204964018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82865527bc2b1134e91b4882cf3c653c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  vehicle: {fileID: 0}
+  statsManager: {fileID: 0}
+  vehicleNameText: {fileID: 0}
+  speedText: {fileID: 0}
+  gearText: {fileID: 0}
+  torqueText: {fileID: 0}
+  rpmBarFill: {fileID: 0}
+  rpmBarColor:
+    serializedVersion: 2
+    key0: {r: 1, g: 1, b: 1, a: 1}
+    key1: {r: 1, g: 1, b: 1, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  fuelAmountText: {fileID: 0}
+  fuelCapacityText: {fileID: 0}
+  fuelConsumptionText: {fileID: 0}
+  fuelBarFill: {fileID: 0}
+  batteryAmountText: {fileID: 0}
+  batteryCapacityText: {fileID: 0}
+  powerGenerationText: {fileID: 0}
+  powerConsumptionText: {fileID: 0}
+  maxPowerOutputText: {fileID: 0}
+  capacitorCapacityText: {fileID: 0}
+  capacitorChargeRateText: {fileID: 0}
+  bodyArmorText: {fileID: 0}
+  wheelHPText: {fileID: 0}
+  wheelArmorText: {fileID: 0}
+  engineArmorText: {fileID: 0}
+  batteryArmorText: {fileID: 0}
+  totalWeightText: {fileID: 0}
+  showDebugOverlay: 1
+  updateRate: 15
+--- !u!82 &-78592057881969603
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5801169931204964018}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 8300000, guid: 19595c164c7b8c64295bd1c5db99db4a, type: 3}
+  m_PlayOnAwake: 1
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
 --- !u!82 &7622050489055512228
 AudioSource:
   m_ObjectHideFlags: 0
@@ -3588,91 +3839,6 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
---- !u!114 &7004624173932309030
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5801169931204964018}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 82edc5cc0d2357744a9daa8d2e89c4ed, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  engineAudioSource: {fileID: 7622050489055512228}
-  minPitch: 0.6
-  maxPitch: 2.8
-  idleVolume: 0.3
-  maxVolume: 1
---- !u!114 &2771324667218329942
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5801169931204964018}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: ca88c73e77ffc20479fec5317af66eba, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  baseData: {fileID: 11400000, guid: 9def05a98a4a9b940afbb8feb597f1c8, type: 2}
-  gridZones:
-  - zoneName: atas
-    origin: {fileID: 5959161589016137262}
-    capacity: {x: 4, y: 6}
-    cellSize: 0.25
-  installedModules: []
-  currentTotalMass: 1900
-  currentPowerConsumption: 0
-  currentPowerGeneration: 95
-  currentBatteryCapacity: 720
-  currentFuelCapacity: 80
-  currentMaxOutput: 1000
-  currentCapacitorCapacity: 0
-  currentCapacitorChargeRate: 0
-  currentBodyArmor: 0
-  currentWheelArmor: 0
-  currentEngineArmor: 0
-  currentBatteryArmor: 0
-  currentEngineHealth: 200
-  currentWheelHealth: 50
-  currentBatteryHealth: 50
-  currentFuelAmount: 0
-  isPreviewMode: 0
-  hud: {fileID: 0}
---- !u!114 &4668030914644899591
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5801169931204964018}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 3955582cb80d7974c8fd5133499dfa04, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  cellSprite: {fileID: 21300000, guid: 862c0374ba66af449a06a6dc899503b4, type: 3}
-  normalColor: {r: 1, g: 1, b: 1, a: 1}
-  gridMaterial: {fileID: 0}
-  sortingLayerName: Default
-  sortingOrder: 0
---- !u!114 &8666523320399317605
-MonoBehaviour:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 5801169931204964018}
-  m_Enabled: 1
-  m_EditorHideFlags: 0
-  m_Script: {fileID: 11500000, guid: 351b3800a2ad11b4790a13cce1b80f76, type: 3}
-  m_Name: 
-  m_EditorClassIdentifier: 
-  hudContainer: {fileID: 0}
-  usePlayerInput: 1
 --- !u!1 &5840160850931072303
 GameObject:
   m_ObjectHideFlags: 0
@@ -5265,6 +5431,7 @@ GameObject:
   - component: {fileID: 5177127607435049852}
   - component: {fileID: 6103302654865355803}
   - component: {fileID: 755055071623051262}
+  - component: {fileID: 8778314359102111715}
   m_Layer: 0
   m_Name: body
   m_TagString: Untagged
@@ -5358,10 +5525,32 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
-  m_Size: {x: 1.05, y: 1.6575031, z: 4.0380845}
-  m_Center: {x: 0, y: 1.0374306, z: -0.04557705}
+  m_Size: {x: 1.12, y: 0.6643429, z: 3.5925884}
+  m_Center: {x: 0, y: 0.7060423, z: -0.26832485}
+--- !u!64 &8778314359102111715
+MeshCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8045902814289580102}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 5
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -7196802604745430461, guid: cb175a7cad832fc42a55f09e987fddfa, type: 3}
 --- !u!1 &8122709177161004887
 GameObject:
   m_ObjectHideFlags: 0

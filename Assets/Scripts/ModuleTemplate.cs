@@ -64,6 +64,10 @@ public class ModuleTemplate : ScriptableObject
     [Tooltip("Kecepatan kapasitor mengisi daya dari surplus listrik (W)")]
     public float chargeRate = 0f;
 
+    [Header("UI Settings")]
+    [Tooltip("Sembunyikan modul ini dari daftar modul UI (misal lampu, dekorasi)")]
+    public bool hideFromModuleList = false;
+
     [Header("Explosion Risk")]
     [Tooltip("Apakah modul ini mudah meledak jika hancur? (Misal aki, generator, fuel barrel)")]
     public bool volatileExplosive = false;

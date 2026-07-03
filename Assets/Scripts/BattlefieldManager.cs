@@ -75,6 +75,10 @@ namespace Weapons
                 weaponTrigger.InitializeWeapons();
             }
 
+            // --- INIT MODULE LIST UI ---
+            VehicleModuleListUI moduleList = FindObjectOfType<VehicleModuleListUI>();
+            if (moduleList != null) moduleList.Initialize(statsManager);
+
             // --- HUBUNGKAN KE KAMERA ---
             if (VehicleCamera.Instance != null)
             {

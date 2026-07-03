@@ -15,7 +15,7 @@ public class GridVisualizer : MonoBehaviour
     public Material gridMaterial;
 
     [Header("Sorting")]
-    public string sortingLayerName = "Default";
+    public string sortingLayerName = "Default"; 
     public int sortingOrder = 0;
 
     private VehicleStatsManager _statsManager;

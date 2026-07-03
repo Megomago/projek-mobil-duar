@@ -10,6 +10,10 @@ public class EngineAudio : MonoBehaviour
     [Header("=== ENGINE SOUND ===")]
     public AudioSource engineAudioSource;
 
+    [Header("=== STARTER SOUND ===")]
+    [Tooltip("Suara dinamo starter (non-looping clip)")]
+    public AudioSource starterAudioSource;
+
     [Tooltip("Pitch terendah (idle RPM)")]
     public float minPitch = 0.6f;
     [Tooltip("Pitch tertinggi (max RPM)")]
@@ -21,6 +25,8 @@ public class EngineAudio : MonoBehaviour
     [Range(0f, 1f)] public float maxVolume = 1.0f;
 
     private VehicleController _vc;
+    private float _fadeSpeed = 2.5f;
+    private bool _prevEngineRunning;
 
     private void Awake()
     {
@@ -34,17 +40,39 @@ public class EngineAudio : MonoBehaviour
 
     private void Update()
     {
-        if (engineAudioSource == null || !_vc.engineRunning) return;
+        if (engineAudioSource == null) return;
+
+        // ── TRACK ENGINE START TRANSITION ──
+        if (_vc.engineRunning && !_prevEngineRunning && starterAudioSource != null)
+        {
+            starterAudioSource.Stop();
+            starterAudioSource.Play();
+        }
+        _prevEngineRunning = _vc.engineRunning;
+
+        if (!_vc.engineRunning)
+        {
+            // Stall: fade volume & pitch lerp ke minimal
+            engineAudioSource.volume = Mathf.Lerp(engineAudioSource.volume, 0f, Time.deltaTime * _fadeSpeed);
+            engineAudioSource.pitch  = Mathf.Lerp(engineAudioSource.pitch, minPitch * 0.3f, Time.deltaTime * _fadeSpeed);
+
+            if (engineAudioSource.volume < 0.005f && engineAudioSource.isPlaying)
+                engineAudioSource.Stop();
+            return;
+        }
+
+        if (!engineAudioSource.isPlaying)
+        {
+            engineAudioSource.volume = 0f;
+            engineAudioSource.Play();
+        }
 
         float rpmNorm = Mathf.Clamp01(_vc.currentRPM / _vc.engine.maxRPM);
         engineAudioSource.pitch  = Mathf.Lerp(minPitch, maxPitch, rpmNorm);
         
-        // FIX: Volume harusnya naik seiring tingginya RPM mesin (misal lagi engine braking di gigi rendah),
-        // bukan murni berdasarkan injekan gas aja.
-        // Kita bikin perpaduan: base volume dari RPM, dan dikasih sedikit boost kalau digas keras.
         float baseVolume = Mathf.Lerp(idleVolume, maxVolume, rpmNorm);
         float throttleBoost = _vc.throttleInput * 0.15f; 
         
-        engineAudioSource.volume = Mathf.Clamp(baseVolume + throttleBoost, idleVolume, maxVolume);
+        engineAudioSource.volume = Mathf.Lerp(engineAudioSource.volume, Mathf.Clamp(baseVolume + throttleBoost, idleVolume, maxVolume), Time.deltaTime * _fadeSpeed * 2f);
     }
 }

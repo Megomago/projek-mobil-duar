@@ -398,6 +398,22 @@ public class VehicleController : MonoBehaviour
         }
         // =========================================================================
 
+        // I = Ignition (On/Off mesin seperti mobil asli)
+        if (Input.GetKeyDown(KeyCode.I))
+        {
+            if (engineRunning)
+            {
+                engineRunning = false;
+            }
+            else
+            {
+                VehicleStatsManager vsm = GetComponent<VehicleStatsManager>();
+                bool hasFuel = vsm == null || vsm.currentFuelAmount > 0f || vsm.isPreviewMode;
+                if (hasFuel)
+                    engineRunning = true;
+            }
+        }
+
         // Transmisi manual (tetap lu pertahankan jika ingin opsional)
         if (transmissionType == TransmissionType.Manual)
         {
@@ -413,7 +429,12 @@ public class VehicleController : MonoBehaviour
 
     private void UpdateEngineRPM()
     {
-        if (!engineRunning) { currentRPM = 0f; return; }
+        if (!engineRunning)
+        {
+            currentRPM = Mathf.Lerp(currentRPM, 0f, Time.fixedDeltaTime * 3f);
+            if (currentRPM < 1f) currentRPM = 0f;
+            return;
+        }
 
         // Hitung wheel RPM dari drive wheels
         float totalWheelRPM = 0f;

@@ -86,6 +86,7 @@ public class VehicleStatsManager : MonoBehaviour
     [Header("Runtime Health")]
     public float currentWheelHealth;
     public float currentFuelAmount;
+    public float currentBatteryAmount;
 
     [Header("Mode Settings")]
     [Tooltip("Centang ini kalau vehicle lagi di mode preview/garage")]
@@ -121,8 +122,12 @@ public class VehicleStatsManager : MonoBehaviour
 
         CalculateAndApplyStats();
 
-        // Setelah stats dihitung, update fuel ke kapasitas aktual (sudah termasuk modul ekstra)
-        if (!isPreviewMode) currentFuelAmount = currentFuelCapacity;
+        // Setelah stats dihitung, update fuel & battery ke kapasitas aktual
+        if (!isPreviewMode)
+        {
+            currentFuelAmount = currentFuelCapacity;
+            currentBatteryAmount = currentBatteryCapacity;
+        }
     }
 
     void Update()
@@ -142,6 +147,14 @@ public class VehicleStatsManager : MonoBehaviour
                 vc.engineRunning = false;
             }
         }
+
+        // ── BATERAI DINAMIS ──
+        // Hitung selisih daya (generation - consumption)
+        // Saat mesin nyala → alternator hidup → powerGeneration aktif
+        // Saat mesin mati → hanya solar panel dll yg berkontribusi
+        float netPower = currentPowerGeneration - currentPowerConsumption;
+        currentBatteryAmount += netPower * Time.deltaTime / 3600f; // Watt → Watt-hour
+        currentBatteryAmount = Mathf.Clamp(currentBatteryAmount, 0f, currentBatteryCapacity);
     }
 
     public void InitializeRuntimeHealth()
@@ -169,14 +182,7 @@ public class VehicleStatsManager : MonoBehaviour
         currentCapacitorCapacity = 0f;
         currentCapacitorChargeRate = 0f;
 
-        // Reset armor ke basis kendaraan
-        currentBodyArmor    = baseData.bodyArmor;
-        currentWheelArmor   = baseData.wheelArmor;
-        currentEngineArmor  = baseData.engineArmor;
-        currentBatteryArmor = baseData.batteryArmor;
-
         // Deteksi kehadiran critical part bawaan kendaraan
-        // Scan semua VehicleCriticalPart yang aktif di dalam kendaraan ini
         bool hasEngineModule     = false;
         bool hasFuelModule       = false;
         bool hasBatteryModule    = false;
@@ -186,35 +192,28 @@ public class VehicleStatsManager : MonoBehaviour
         VehicleCriticalPart[] criticalParts = GetComponentsInChildren<VehicleCriticalPart>();
         foreach (var part in criticalParts)
         {
-            if (!part.gameObject.activeInHierarchy) continue; // skip yang sudah hancur
+            if (!part.gameObject.activeInHierarchy) continue;
 
             switch (part.partType)
             {
                 case VehicleCriticalPart.CriticalPartType.Engine:
                     hasEngineModule = true;
-                    // DEF mesin dari armor part itu sendiri
-                    currentEngineArmor += part.armor;
                     break;
 
                 case VehicleCriticalPart.CriticalPartType.FuelTank:
                     hasFuelModule = true;
-                    // Tangki bensin berkontribusi ke armor bodi (melindungi sasis)
-                    currentBodyArmor += part.armor * 0.3f;
                     break;
 
                 case VehicleCriticalPart.CriticalPartType.Battery:
                     hasBatteryModule = true;
-                    currentBatteryArmor += part.armor;
                     break;
 
                 case VehicleCriticalPart.CriticalPartType.Alternator:
                     hasAlternatorModule = true;
-                    currentEngineArmor += part.armor * 0.5f;
                     break;
 
                 case VehicleCriticalPart.CriticalPartType.Capacitor:
                     hasCapacitorModule = true;
-                    currentBatteryArmor += part.armor * 0.5f;
                     break;
             }
         }
@@ -225,20 +224,20 @@ public class VehicleStatsManager : MonoBehaviour
             if (module != null && module.moduleTemplate != null)
             {
                 ModuleTemplate template = module.moduleTemplate;
-                
+
                 // Tambah berat
                 currentTotalMass += template.weight;
-                
+
                 // Tambah konsumsi daya
                 currentPowerConsumption += template.powerConsumption;
-                
+
                 // Tambah produksi daya (generator / panel surya)
                 currentPowerGeneration += template.powerGeneration;
-                
+
                 // Tambah kapasitas batrai / aki cadangan
                 currentBatteryCapacity += template.extraBatteryCapacity;
-                
-                // Tambah bensin cadangan dari modul FuelBarrel ekstra (jeriken, drum luar)
+
+                // Tambah bensin cadangan dari modul FuelBarrel ekstra
                 if (template.moduleType == ModuleType.FuelBarrel)
                     currentFuelCapacity += template.extraFuelCapacity;
 
@@ -246,14 +245,6 @@ public class VehicleStatsManager : MonoBehaviour
                 currentMaxOutput           += template.extraMaxOutput;
                 currentCapacitorCapacity   += template.capacitorCapacity;
                 currentCapacitorChargeRate += template.chargeRate;
-
-                // Tambah armor dari ArmorPlate
-                if (template.moduleType == ModuleType.ArmorPlate)
-                {
-                    currentBodyArmor   += template.armor;
-                    currentWheelArmor  += template.armor * 0.5f;
-                    currentEngineArmor += template.armor * 0.3f;
-                }
             }
         }
 
@@ -296,6 +287,11 @@ public class VehicleStatsManager : MonoBehaviour
         {
             hud.UpdateHUD(this);
         }
+
+        // Refresh module list UI
+        VehicleModuleListUI moduleList = GetComponentInChildren<VehicleModuleListUI>();
+        if (moduleList != null)
+            moduleList.Refresh();
     }
 
     // Fungsi untuk mendapatkan semua cell yang ditempati sebuah modul

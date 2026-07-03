@@ -41,12 +41,20 @@ public class VehicleHUDSpawner : MonoBehaviour
         // 3. Sambungkan (Initialize) script UIManager dengan mobil ini
         VehicleUIManager uiManager = _spawnedHUD.GetComponent<VehicleUIManager>();
         VehicleController controller = GetComponent<VehicleController>();
+        VehicleStatsManager stats = GetComponent<VehicleStatsManager>();
         
         if (uiManager != null && controller != null)
         {
-            // Ambil nama mobil dari GameObject (buang tulisan Clone)
             string carName = gameObject.name.Replace("(Clone)", "").Trim();
-            uiManager.Initialize(controller, carName);
+            uiManager.Initialize(controller, stats, carName);
+        }
+
+        // 4. Initialize Module List UI (panel terpisah di Canvas) dengan StatsManager kendaraan ini
+        if (stats != null)
+        {
+            VehicleModuleListUI moduleList = FindObjectOfType<VehicleModuleListUI>();
+            if (moduleList != null)
+                moduleList.Initialize(stats);
         }
     }
 
