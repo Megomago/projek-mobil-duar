@@ -84,25 +84,24 @@ public class VehicleHUD : MonoBehaviour
 
         // ── Health & Armor ────────────────────────────────────────────
         // Bodi — Chassis cuma armor (DEF), gada HP
-        if (bodyHPText    != null) bodyHPText.text    = statsManager.currentBodyArmor.ToString("0") + " DEF";
-        if (bodyArmorText != null) bodyArmorText.text  = statsManager.currentBodyArmor.ToString("0");
+        if (bodyHPText    != null) bodyHPText.text    = statsManager.currentChassisArmor.ToString("0") + " DEF";
+        if (bodyArmorText != null) bodyArmorText.text  = statsManager.currentChassisArmor.ToString("0");
 
-        // Roda
-        if (wheelHPText    != null) wheelHPText.text    = statsManager.currentWheelHealth.ToString("0");
-        if (wheelArmorText != null) wheelArmorText.text  = statsManager.currentWheelArmor.ToString("0");
-
-        // Mesin & Baterai — baca langsung dari VehicleCriticalPart
+        // Roda, Mesin & Baterai — baca langsung dari VehicleCriticalPart
         var critParts = statsManager.GetComponentsInChildren<VehicleCriticalPart>(false);
-        float engineHP = 0, batteryHP = 0;
+        float engineHP = 0, engineArmor = 0, batteryHP = 0, batteryArmor = 0, wheelHP = 0, wheelArmor = 0;
         foreach (var cp in critParts)
         {
-            if (cp.partType == VehicleCriticalPart.CriticalPartType.Engine) engineHP = cp.currentHealth;
-            else if (cp.partType == VehicleCriticalPart.CriticalPartType.Battery) batteryHP = cp.currentHealth;
+                     if (cp.partType == VehicleCriticalPart.CriticalPartType.Engine)  { engineHP = cp.currentHealth; engineArmor = cp.armor; }
+                else if (cp.partType == VehicleCriticalPart.CriticalPartType.Battery) { batteryHP = cp.currentHealth; batteryArmor = cp.armor; }
+                else if (cp.partType == VehicleCriticalPart.CriticalPartType.Other)   { wheelHP = cp.currentHealth; wheelArmor = cp.armor; }
         }
-        if (engineHPText    != null) engineHPText.text    = engineHP.ToString("0");
-        if (engineArmorText != null) engineArmorText.text  = statsManager.currentEngineArmor.ToString("0");
-        if (batteryHPText    != null) batteryHPText.text    = batteryHP.ToString("0");
-        if (batteryArmorText != null) batteryArmorText.text  = statsManager.currentBatteryArmor.ToString("0");
+        if (wheelHPText     != null) wheelHPText.text     = wheelHP.ToString("0");
+        if (wheelArmorText  != null) wheelArmorText.text   = wheelArmor.ToString("0");
+        if (engineHPText    != null) engineHPText.text     = engineHP.ToString("0");
+        if (engineArmorText != null) engineArmorText.text   = engineArmor.ToString("0");
+        if (batteryHPText   != null) batteryHPText.text    = batteryHP.ToString("0");
+        if (batteryArmorText!= null) batteryArmorText.text  = batteryArmor.ToString("0");
 
         // ── Performa – Bensin ─────────────────────────────────────────
         VehicleController vc = statsManager.GetComponent<VehicleController>();
@@ -121,7 +120,13 @@ public class VehicleHUD : MonoBehaviour
 
         // ── Performa – Kelistrikan ────────────────────────────────────
         if (batteryCapacityText    != null) batteryCapacityText.text    = statsManager.currentBatteryCapacity.ToString("0") + " Wh";
-        if (powerGenerationText    != null) powerGenerationText.text    = statsManager.currentPowerGeneration.ToString("0") + " W";
+        if (powerGenerationText    != null)
+        {
+            float totalGen = statsManager.currentPowerGeneration;
+            if (vc != null && vc.engineRunning)
+                totalGen += statsManager.enginePowerGeneration;
+            powerGenerationText.text = totalGen.ToString("0") + " W";
+        }
         if (powerConsumptionText   != null) powerConsumptionText.text   = statsManager.currentPowerConsumption.ToString("0") + " W";
         if (maxPowerOutputText     != null) maxPowerOutputText.text     = statsManager.currentMaxOutput.ToString("0") + " W";
         if (capacitorCapacityText  != null) capacitorCapacityText.text  = statsManager.currentCapacitorCapacity.ToString("0") + " Wh";

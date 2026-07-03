@@ -56,6 +56,10 @@ public class VehicleCriticalPart : MonoBehaviour
     [Tooltip("Sembunyikan dari daftar modul UI")]
     public bool hideFromModuleList = false;
 
+    [Header("Lamp Settings")]
+    [Tooltip("Centang jika part ini adalah lampu. Lampu akan mati otomatis saat baterai habis.")]
+    public bool isLamp = false;
+
     [Header("Ledakan")]
     public bool volatileExplosive = false;
     public float explosionDamage = 200f;
@@ -66,6 +70,32 @@ public class VehicleCriticalPart : MonoBehaviour
     {
         currentHealth = maxHealth;
         _statsManager = GetComponentInParent<VehicleStatsManager>();
+    }
+
+    public void UpdateLampState(float currentBattery, bool lightsOn)
+    {
+        if (!isLamp) return;
+
+        // Cek toggle lampu (L) dulu
+        if (!lightsOn)
+        {
+            SetLightsEnabled(false);
+            return;
+        }
+
+        // Matikan lampu kalau sisa baterai (Wh) ga cukup buat nyalain lampu ini.
+        // Konversi: powerConsumption (W) * waktu (jam) = energi (Wh).
+        // Threshold: sisa baterai < daya lampu selama 1 menit (60/3600 jam).
+        float minThresholdWh = powerConsumption * 60f / 3600f;
+        bool enoughBattery = currentBattery > minThresholdWh;
+        SetLightsEnabled(enoughBattery);
+    }
+
+    private void SetLightsEnabled(bool enabled)
+    {
+        Light[] lights = GetComponentsInChildren<Light>(true);
+        foreach (var light in lights)
+            light.enabled = enabled;
     }
 
     public void TakeDamage(float damage)

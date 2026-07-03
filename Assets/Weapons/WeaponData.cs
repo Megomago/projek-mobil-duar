@@ -88,6 +88,14 @@ namespace Weapons
         public AudioClip shootSound;
         public AudioClip reloadSound;
         public AudioClip emptyClickSound;
+
+        [Header("=== AUDIO VARIATION ===")]
+        [Tooltip("Pitch random range (1.0 = original). Senjata berat → pitch rendah, ringan → tinggi")]
+        public float minPitch = 0.85f;
+        public float maxPitch = 1.0f;
+        [Tooltip("Volume random range (1.0 = original)")]
+        public float minVolume = 0.9f;
+        public float maxVolume = 1.0f;
         #endregion
 
         #region --- 7. CASING EJECTION ---

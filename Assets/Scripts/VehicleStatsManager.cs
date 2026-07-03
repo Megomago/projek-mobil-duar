@@ -67,6 +67,11 @@ public class VehicleStatsManager : MonoBehaviour
     public float currentTotalMass;
     public float currentPowerConsumption;
     public float currentPowerGeneration;
+
+    // Produksi daya dari Engine & Alternator (baru ditambahkan kalau engine hidup)
+    private float _enginePowerGeneration;
+    public float enginePowerGeneration => _enginePowerGeneration;
+
     public float currentBatteryCapacity;
     public float currentFuelCapacity;
     public float currentMaxOutput;
@@ -74,17 +79,10 @@ public class VehicleStatsManager : MonoBehaviour
     public float currentCapacitorChargeRate;
 
     [Header("Armor Stats (Read Only)")]
-    [Tooltip("Total DEF bodi (Base + ArmorPlate terpasang)")]
-    public float currentBodyArmor;
-    [Tooltip("Total DEF roda (Base + ArmorPlate terpasang)")]
-    public float currentWheelArmor;
-    [Tooltip("Total DEF mesin (Base + ArmorPlate terpasang)")]
-    public float currentEngineArmor;
-    [Tooltip("Total DEF baterai (Base + ArmorPlate terpasang)")]
-    public float currentBatteryArmor;
+    [Tooltip("Total DEF sasis (Base + ArmorPlate terpasang) - melindungi critical parts")]
+    public float currentChassisArmor;
 
     [Header("Runtime Health")]
-    public float currentWheelHealth;
     public float currentFuelAmount;
     public float currentBatteryAmount;
 
@@ -125,11 +123,7 @@ public class VehicleStatsManager : MonoBehaviour
 
     void Start()
     {
-        InitializeRuntimeHealth();
-
-        // ISI BENSIN DULU sebelum CalculateAndApplyStats
-        // agar hasFuel check tidak langsung false saat pertama kali
-        if (!isPreviewMode) currentFuelAmount = baseData != null ? baseData.fuelCapacity : 0f;
+        currentFuelAmount = 0f;
 
         CalculateAndApplyStats();
 
@@ -138,6 +132,14 @@ public class VehicleStatsManager : MonoBehaviour
         {
             currentFuelAmount = currentFuelCapacity;
             currentBatteryAmount = currentBatteryCapacity;
+        }
+
+        // Pastikan engine mati di awal battlefield — pemain harus starter manual via I
+        if (!isPreviewMode)
+        {
+            VehicleController vc = GetComponent<VehicleController>();
+            if (vc != null)
+                vc.engineRunning = false;
         }
     }
 
@@ -161,17 +163,22 @@ public class VehicleStatsManager : MonoBehaviour
 
         // ── BATERAI DINAMIS ──
         // Hitung selisih daya (generation - consumption)
-        // Saat mesin nyala → alternator hidup → powerGeneration aktif
-        // Saat mesin mati → hanya solar panel dll yg berkontribusi
-        float netPower = currentPowerGeneration - currentPowerConsumption;
+        // Saat mesin nyala → enginePowerGeneration ditambahkan ke total
+        // Saat mesin mati → hanya solar panel / generator mandiri yg berkontribusi
+        float totalPowerGen = currentPowerGeneration;
+        if (vc != null && vc.engineRunning)
+            totalPowerGen += _enginePowerGeneration;
+        float netPower = totalPowerGen - currentPowerConsumption;
         currentBatteryAmount += netPower * Time.deltaTime / 3600f; // Watt → Watt-hour
         currentBatteryAmount = Mathf.Clamp(currentBatteryAmount, 0f, currentBatteryCapacity);
-    }
 
-    public void InitializeRuntimeHealth()
-    {
-        if (baseData == null) return;
-        currentWheelHealth = baseData.wheelHealth;
+        // Update lamp state untuk semua critical part bertipe lampu
+        bool lightsOn = vc != null && vc.lightsOn;
+        VehicleCriticalPart[] criticalParts = GetComponentsInChildren<VehicleCriticalPart>();
+        foreach (var part in criticalParts)
+        {
+            part.UpdateLampState(currentBatteryAmount, lightsOn);
+        }
     }
 
     [ContextMenu("Calculate Stats")]
@@ -185,11 +192,12 @@ public class VehicleStatsManager : MonoBehaviour
 
         // Reset nilai ke basis kendaraan
         currentTotalMass = baseData.baseMass;
+        currentChassisArmor = baseData.chassisArmor;
         currentPowerConsumption = 0f;
         currentPowerGeneration = 0f;
+        _enginePowerGeneration = 0f;
         currentBatteryCapacity = 0f;
         currentFuelCapacity = 0f;
-        currentMaxOutput = baseData.maxPowerOutput;
         currentCapacitorCapacity = 0f;
         currentCapacitorChargeRate = 0f;
 
@@ -202,7 +210,6 @@ public class VehicleStatsManager : MonoBehaviour
             if (!part.gameObject.activeInHierarchy) continue;
 
             currentPowerConsumption   += part.powerConsumption;
-            currentPowerGeneration    += part.powerGeneration;
             currentBatteryCapacity    += part.extraBatteryCapacity;
             currentFuelCapacity       += part.extraFuelCapacity;
             currentMaxOutput          += part.extraMaxOutput;
@@ -211,6 +218,12 @@ public class VehicleStatsManager : MonoBehaviour
 
             if (part.partType == VehicleCriticalPart.CriticalPartType.Engine)
                 hasEngineModule = true;
+
+            if (part.partType == VehicleCriticalPart.CriticalPartType.Engine ||
+                part.partType == VehicleCriticalPart.CriticalPartType.Alternator)
+                _enginePowerGeneration += part.powerGeneration;
+            else
+                currentPowerGeneration += part.powerGeneration;
         }
 
         // Hitung stats tambahan dari setiap modul di grid
@@ -243,19 +256,14 @@ public class VehicleStatsManager : MonoBehaviour
             }
         }
 
-        // Base power generator dari kendaraan (alternator built-in engine)
-        if (hasEngineModule)
-            currentPowerGeneration += baseData.powerGeneration;
-
-        // Terapkan ke VehicleController berdasarkan kehadiran CriticalPart Engine
+        // Terapkan ke VehicleController — jangan auto-start engine!
+        // Hanya matikan mesin kalau part Engine hancur/tidak ada.
         VehicleController vc = GetComponent<VehicleController>();
         if (vc != null)
         {
-            bool hasFuel = isPreviewMode || currentFuelAmount > 0f;
-            vc.engineRunning = hasEngineModule && hasFuel;
-
             if (!hasEngineModule)
             {
+                vc.engineRunning = false;
                 vc.engine.maxTorqueNm = 0f;
                 vc.engine.maxFuelConsumptionRate = 0f;
             }

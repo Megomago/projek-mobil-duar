@@ -157,9 +157,12 @@ public class VehicleUIManager : MonoBehaviour
         Row($"<b>── ELECTRICAL (VSM) ──</b>");
         float battPct = statsManager.currentBatteryCapacity > 0f ? statsManager.currentBatteryAmount / statsManager.currentBatteryCapacity * 100f : 0f;
         Row($"Battery   : {statsManager.currentBatteryAmount:F1} / {statsManager.currentBatteryCapacity:F0} Wh ({battPct:F1}%)");
-        Row($"Power Gen : {statsManager.currentPowerGeneration:F0} W");
+        float totalGen = statsManager.currentPowerGeneration;
+        if (vehicle != null && vehicle.engineRunning)
+            totalGen += statsManager.enginePowerGeneration;
+        Row($"Power Gen : {totalGen:F0} W");
         Row($"Power Cons: {statsManager.currentPowerConsumption:F0} W");
-        float netPower = statsManager.currentPowerGeneration - statsManager.currentPowerConsumption;
+        float netPower = totalGen - statsManager.currentPowerConsumption;
         Row($"Net Power : {netPower:F0} W {(netPower >= 0 ? "(charging)" : "(draining)")}");
         Row($"Max Out   : {statsManager.currentMaxOutput:F0} W");
         Row($"Capacitor : {statsManager.currentCapacitorCapacity:F0} Wh");
@@ -167,12 +170,15 @@ public class VehicleUIManager : MonoBehaviour
         Row($"");
 
         Row($"<b>── ARMOR & HEALTH (VSM) ──</b>");
-        Row($"Body DEF  : {statsManager.currentBodyArmor:F0}");
-        Row($"Wheel HP  : {statsManager.currentWheelHealth:F0}");
-        Row($"Wheel DEF : {statsManager.currentWheelArmor:F0}");
-        Row($"Engine DEF: {statsManager.currentEngineArmor:F0}");
-        Row($"Batt  DEF : {statsManager.currentBatteryArmor:F0}");
+        Row($"Chassis DEF: {statsManager.currentChassisArmor:F0}");
+        Row($"Mass (kg)  : {statsManager.currentTotalMass:F0}");
         Row($"");
+        Row($"<b>── CRITICAL PARTS ──</b>");
+        foreach (var cp in statsManager.GetComponentsInChildren<VehicleCriticalPart>(false))
+        {
+            if (cp.hideFromModuleList) continue;
+            Row($"{cp.partName}  HP:{cp.currentHealth}/{cp.maxHealth}  DEF:{cp.armor}");
+        }
 
         // Battery bar visual
         if (statsManager.currentBatteryCapacity > 0f)
@@ -243,7 +249,12 @@ public class VehicleUIManager : MonoBehaviour
             batteryCapacityText.text = statsManager.currentBatteryCapacity.ToString("0") + " Wh";
 
         if (powerGenerationText != null)
-            powerGenerationText.text = statsManager.currentPowerGeneration.ToString("0") + " W";
+        {
+            float totalGen = statsManager.currentPowerGeneration;
+            if (vehicle != null && vehicle.engineRunning)
+                totalGen += statsManager.enginePowerGeneration;
+            powerGenerationText.text = totalGen.ToString("0") + " W";
+        }
 
         if (powerConsumptionText != null)
             powerConsumptionText.text = statsManager.currentPowerConsumption.ToString("0") + " W";
@@ -259,19 +270,28 @@ public class VehicleUIManager : MonoBehaviour
 
         // Armor & Health
         if (bodyArmorText != null)
-            bodyArmorText.text = statsManager.currentBodyArmor.ToString("0") + " DEF";
+            bodyArmorText.text = statsManager.currentChassisArmor.ToString("0") + " DEF";
 
-        if (wheelHPText != null)
-            wheelHPText.text = statsManager.currentWheelHealth.ToString("0");
-
-        if (wheelArmorText != null)
-            wheelArmorText.text = statsManager.currentWheelArmor.ToString("0");
-
-        if (engineArmorText != null)
-            engineArmorText.text = statsManager.currentEngineArmor.ToString("0");
-
-        if (batteryArmorText != null)
-            batteryArmorText.text = statsManager.currentBatteryArmor.ToString("0");
+        if (wheelHPText != null || wheelArmorText != null || engineArmorText != null || batteryArmorText != null)
+        {
+            foreach (var cp in statsManager.GetComponentsInChildren<VehicleCriticalPart>(false))
+            {
+                if (cp.hideFromModuleList) continue;
+                switch (cp.partType)
+                {
+                    case VehicleCriticalPart.CriticalPartType.Engine:
+                        if (engineArmorText != null) engineArmorText.text = cp.armor.ToString("0");
+                        break;
+                    case VehicleCriticalPart.CriticalPartType.Battery:
+                        if (batteryArmorText != null) batteryArmorText.text = cp.armor.ToString("0");
+                        break;
+                    default:
+                        if (wheelHPText != null) wheelHPText.text = cp.currentHealth.ToString("0");
+                        if (wheelArmorText != null) wheelArmorText.text = cp.armor.ToString("0");
+                        break;
+                }
+            }
+        }
 
         // Weight
         if (totalWeightText != null)

@@ -138,6 +138,7 @@ namespace Weapons
 
         #region --- PRIVATE REFERENCES ---
         private Rigidbody _vehicleRb;
+        private VehicleStatsManager _ownerStatsManager;
 
         // Event untuk memicu animasi dan UI
         public event Action OnReloadStart;
@@ -177,6 +178,7 @@ namespace Weapons
 
             // Mencari Rigidbody kendaraan induk secara otomatis
             _vehicleRb = GetComponentInParent<Rigidbody>();
+            _ownerStatsManager = GetComponentInParent<VehicleStatsManager>();
         }
 
         private void Start()
@@ -437,7 +439,7 @@ namespace Weapons
                 KinematicProjectile kp = projObj.GetComponent<KinematicProjectile>();
                 if (kp != null)
                 {
-                    kp.Initialize(muzzleTransform.position, finalDirection, weaponData.muzzleVelocity, weaponData.attackPower, weaponData.penetration);
+                    kp.Initialize(muzzleTransform.position, finalDirection, weaponData.muzzleVelocity, weaponData.attackPower, weaponData.penetration, _ownerStatsManager);
                 }
             }
         }
@@ -678,13 +680,11 @@ namespace Weapons
             {
                 if (randomize)
                 {
-                    // Acak dikit pitch & volume biar gak mendem pas ditiup/dispam
-                    weaponAudioSource.pitch = Random.Range(0.85f, 0.98f); // Suara bakal lebih berat & ngebass
-                    weaponAudioSource.volume = Random.Range(0.9f, 1.0f);
+                    weaponAudioSource.pitch = Random.Range(weaponData.minPitch, weaponData.maxPitch);
+                    weaponAudioSource.volume = Random.Range(weaponData.minVolume, weaponData.maxVolume);
                 }
                 else
                 {
-                    // Kembalikan ke normal untuk suara lain (reload, dll)
                     weaponAudioSource.pitch = 1f;
                     weaponAudioSource.volume = 1f;
                 }

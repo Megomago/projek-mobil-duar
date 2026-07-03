@@ -260,6 +260,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   defense: 100
   maxHealth: 500
+  isOneHitPart: 0
+  isDisappearAfterDie: 1
   destroyedPrefab: {fileID: 1897922076}
   currentHealth: 0
 --- !u!65 &139805459
@@ -468,6 +470,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   defense: 100
   maxHealth: 500
+  isOneHitPart: 0
+  isDisappearAfterDie: 1
   destroyedPrefab: {fileID: 1897922076}
   currentHealth: 0
 --- !u!1 &218709788
@@ -898,13 +902,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 410087039}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.7035643, y: -0.5454423, z: 0.031625584, w: -0.45441157}
+  m_LocalRotation: {x: -0.4179561, y: -0.5038009, z: -0.6159059, w: -0.43835753}
   m_LocalPosition: {x: 0, y: 3, z: 0}
   m_LocalScale: {x: 0, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: -222.37, y: -37.642, z: -90.619995}
+  m_LocalEulerAnglesHint: {x: -165.276, y: -98.502014, z: -83.58499}
 --- !u!114 &410087042
 MonoBehaviour:
   m_ObjectHideFlags: 0

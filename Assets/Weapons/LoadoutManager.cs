@@ -125,6 +125,10 @@ namespace Weapons
                 _currentStatsManager.hud = vehicleHUD;
                 if (vehicleHUD != null) vehicleHUD.SetVehicle(_currentStatsManager);
 
+                // Load grid DULU sebelum refresh module list
+                if (moduleDatabase != null)
+                    GridSaveSystem.LoadGrid(vehicleName, _currentStatsManager, moduleDatabase);
+
                 VehicleModuleListUI moduleList = FindObjectOfType<VehicleModuleListUI>();
                 if (moduleList != null) moduleList.Initialize(_currentStatsManager);
             }
@@ -133,13 +137,12 @@ namespace Weapons
             AudioSource[] audioSources = _currentPreviewVehicle.GetComponentsInChildren<AudioSource>();
             foreach (var audio in audioSources) audio.enabled = false;
 
+            Light[] lights = _currentPreviewVehicle.GetComponentsInChildren<Light>();
+            foreach (var light in lights) light.enabled = false;
+
             _currentGridVisualizer = _currentPreviewVehicle.GetComponent<GridVisualizer>();
             if (_currentGridVisualizer == null && _currentStatsManager != null)
                 _currentGridVisualizer = _currentPreviewVehicle.AddComponent<GridVisualizer>();
-
-            // Load grid layout pakai nama dari BaseData sebagai key
-            if (_currentStatsManager != null && moduleDatabase != null)
-                GridSaveSystem.LoadGrid(vehicleName, _currentStatsManager, moduleDatabase);
 
             StartCoroutine(DisableAfterSpawn());
             CloseInventoryMode();

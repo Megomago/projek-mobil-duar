@@ -30,6 +30,7 @@ namespace Weapons
         private TrailRenderer _trailRenderer;
         private float _atk;
         private float _pen;
+        private VehicleStatsManager _ownerStatsManager;
         // Pembatas spawn impact VFX per frame (ANTI LAG SPIKE)
         private static float _lastImpactFrameTime;
         private static int _impactsThisFrame;
@@ -51,7 +52,7 @@ namespace Weapons
         /// <param name="muzzleVelocity">Kecepatan awal (m/s)</param>
         /// <param name="atk">Attack power</param>
         /// <param name="pen">Penetration power</param>
-        public void Initialize(Vector3 startPos, Vector3 startDir, float muzzleVelocity, float atk, float pen)
+        public void Initialize(Vector3 startPos, Vector3 startDir, float muzzleVelocity, float atk, float pen, VehicleStatsManager owner = null)
         {
             _currentPosition = startPos;
             transform.position = startPos;
@@ -61,6 +62,7 @@ namespace Weapons
             _aliveTime = 0f;
             _atk = atk;
             _pen = pen;
+            _ownerStatsManager = owner;
 
             // FIX: Bersihkan jejak TrailRenderer kalau peluru ini hasil daur ulang dari Object Pool
             // Biar gak ngebentuk "laser" dari posisi matinya peluru balik ke ujung laras
@@ -129,8 +131,12 @@ namespace Weapons
 
         private void HandleHit(RaycastHit hit)
         {
-            OptResult? result = null;
+            // Skip hits on the shooter's own vehicle — prevent self-damage
             var statsMgr = hit.collider.GetComponentInParent<VehicleStatsManager>();
+            if (statsMgr != null && _ownerStatsManager != null && statsMgr == _ownerStatsManager)
+                return;
+
+            OptResult? result = null;
             string dbgType = "unknown";
 
             // 1. Coba damage ke modul grid (O(1) lookup pake dictionary)
@@ -175,7 +181,7 @@ namespace Weapons
                 else
                 {
                     dbgType = "body";
-                    float def = statsMgr.currentBodyArmor;
+                    float def = statsMgr.currentChassisArmor;
                     result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
                     #if UNITY_EDITOR
                     Debug.Log($"[BODY] Chassis ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");

@@ -39,9 +39,13 @@ MonoBehaviour:
   recoilForce: 400
   cameraShakeMultiplier: 0.0001
   cameraShakeDuration: 0.2
-  shootSound: {fileID: 8300000, guid: 0f0bb47dbfb21864c9c97f5b8ecb5018, type: 3}
+  shootSound: {fileID: 8300000, guid: a0a86146ab31a5c4f98897d54dbd3f2c, type: 3}
   reloadSound: {fileID: 0}
   emptyClickSound: {fileID: 0}
+  minPitch: 0.98
+  maxPitch: 1
+  minVolume: 0.9
+  maxVolume: 1
   casingPrefab: {fileID: 78784092414082019, guid: 99c5ff25f20b6144f9297993931ad0ba,
     type: 3}
   casingEjectDelay: 0.05
