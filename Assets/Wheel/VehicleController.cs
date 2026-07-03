@@ -104,6 +104,18 @@ public class VehicleController : MonoBehaviour
         maxFuelConsumptionRate = 0.05f
     };
 
+    [Header("=== STARTER ===")]
+    [Tooltip("Daya listrik yg dibutuhkan starter utk menyalakan mesin (Watt). Mobil kecil ~1kW, diesel/V8 ~2-3kW")]
+    public float starterPowerRequired = 1500f;
+    [Tooltip("Minimal energi baterai (Wh) agar starter bisa memutar mesin. ~5-10% dari kapasitas baterai")]
+    public float starterMinBatteryWh = 50f;
+
+    [Header("=== ENGINE BRAKE ===")]
+    [Tooltip("Kekuatan engine brake saat throttle lepas (semakin besar, semakin terasa hambatan mesin)")]
+    public float engineBrakingTorque = 200f;
+    [Tooltip("Kekuatan compression brake saat mesin mati (menahan laju kendaraan)")]
+    public float compressionBrakeTorque = 80f;
+
     [Header("=== DRIVETRAIN ===")]
     public DrivetrainType drivetrainType = DrivetrainType.RWD;
     public TransmissionType transmissionType = TransmissionType.Automatic;
@@ -196,7 +208,8 @@ public class VehicleController : MonoBehaviour
     [HideInInspector] public float currentRPM;
     [HideInInspector] public float currentTorqueNm;
     [HideInInspector] public float engineLoad;       // 0-1
-    [HideInInspector] public bool  engineRunning = true;
+    [HideInInspector] public bool  engineRunning = false;
+    [HideInInspector] public bool  lightsOn = false;
     [HideInInspector] public float currentFuelConsumptionRate; // L/sec
 
     // Transmission state
@@ -232,6 +245,9 @@ public class VehicleController : MonoBehaviour
 
     private void Awake()
     {
+        engineRunning = false;
+        currentRPM = 0f;
+
         _rb = GetComponent<Rigidbody>();
         InitRigidbody();
         InitWheels();
@@ -407,10 +423,22 @@ public class VehicleController : MonoBehaviour
             {
                 VehicleStatsManager vsm = GetComponent<VehicleStatsManager>();
                 bool hasFuel = vsm == null || vsm.currentFuelAmount > 0f || vsm.isPreviewMode;
-                if (hasFuel)
-                    engineRunning = true;
+                if (!hasFuel) return;
+
+                // Cek apakah baterai cukup kuat utk starter
+                // Starter mobil butuh daya besar (~1500W) dalam waktu singkat.
+                // Minimal baterai harus > starterMinBatteryWh agar voltase tidak drop.
+                bool hasStarterPower = vsm == null || vsm.currentBatteryAmount > starterMinBatteryWh || vsm.isPreviewMode;
+
+                if (!hasStarterPower) return;
+
+                engineRunning = true;
             }
         }
+
+        // L = Lampu On/Off
+        if (Input.GetKeyDown(KeyCode.L))
+            lightsOn = !lightsOn;
 
         // Transmisi manual (tetap lu pertahankan jika ingin opsional)
         if (transmissionType == TransmissionType.Manual)
@@ -427,14 +455,7 @@ public class VehicleController : MonoBehaviour
 
     private void UpdateEngineRPM()
     {
-        if (!engineRunning)
-        {
-            currentRPM = Mathf.Lerp(currentRPM, 0f, Time.fixedDeltaTime * 3f);
-            if (currentRPM < 1f) currentRPM = 0f;
-            return;
-        }
-
-        // Hitung wheel RPM dari drive wheels
+        // Hitung wheel RPM dari drive wheels — selalu update walau mesin mati
         float totalWheelRPM = 0f;
         int   driveCount    = 0;
         foreach (var w in wheels)
@@ -443,20 +464,36 @@ public class VehicleController : MonoBehaviour
             
             if (preventWheelSlipRPM)
             {
-                // Rumus RPM roda anti-slip: (Kecepatan m/s * 60) / (Keliling Roda)
-                // Di mana keliling roda = 2 * PI * radius
                 float sign = Vector3.Dot(_rb.velocity, transform.forward) >= 0 ? 1f : -1f;
                 float theoreticalWheelRPM = (speedMs * 60f) / (2f * Mathf.PI * w.collider.radius) * sign;
                 totalWheelRPM += theoreticalWheelRPM;
             }
             else
             {
-                // RPM bawaan fisika Unity (bisa liar kalau roda ngepot/burnout)
                 totalWheelRPM += w.collider.rpm;
             }
             driveCount++;
         }
         _wheelRPM = driveCount > 0 ? totalWheelRPM / driveCount : 0f;
+
+        if (!engineRunning)
+        {
+            // Saat mesin baru dinyalakan, sync RPM ke putaran roda
+            if (currentRPM > 1f)
+            {
+                currentRPM = Mathf.Lerp(currentRPM, 0f, Time.fixedDeltaTime * 3f);
+                if (currentRPM < 1f) currentRPM = 0f;
+            }
+            return;
+        }
+
+        // Saat engine baru nyala & RPM masih 0, sync ke putaran roda biar gak loncat
+        if (currentRPM < 1f)
+        {
+            float startGearR = Mathf.Abs(GetCurrentGearRatio());
+            currentRPM = Mathf.Abs(_wheelRPM) * startGearR * finalDriveRatio;
+            // Dihapus Mathf.Max ke idleRPM agar RPM bisa naik perlahan dari 0 saat distarter
+        }
 
         // Konversi wheel RPM ke engine RPM via gear ratio
         // engineRPM = |wheelRPM| * gearRatio * finalDriveRatio
@@ -515,7 +552,13 @@ public class VehicleController : MonoBehaviour
         currentTorqueNm = engine.maxTorqueNm * torqueMultiplier * throttleInput;
         
         // Konsumsi bensin dinamis (hanya saat mesin nyala)
-        currentFuelConsumptionRate = (currentRPM / engine.maxRPM) * engine.maxFuelConsumptionRate;
+        // - Bergantung pada RPM
+        // - Bergantung pada beban mesin (throttle)
+        // - Bergantung pada rasio berat mobil (semakin berat modul/armor, makin boros)
+        float loadFactor = Mathf.Lerp(0.1f, 1.0f, throttleInput); // 10% konsumsi saat idle/coasting, 100% saat gas penuh
+        float massFactor = _rb.mass / vehicleMass; // vehicleMass = berat standar tanpa modul
+        
+        currentFuelConsumptionRate = (currentRPM / engine.maxRPM) * loadFactor * massFactor * engine.maxFuelConsumptionRate;
     }
 
     #endregion
@@ -524,59 +567,59 @@ public class VehicleController : MonoBehaviour
 
     private void ApplyDriveTorque()
     {
-        if (!engineRunning) return;
+        float gearRatio = GetCurrentGearRatio();
+        float totalDriveTorque = 0f;
 
-        float gearRatio      = GetCurrentGearRatio();
-        float totalDriveTorque = currentTorqueNm * gearRatio * finalDriveRatio * transmissionEfficiency;
-
-        // =========================================================================
-        // JURUS ANTI BOCOR / SOFT REV-LIMITER (BIAR MOBIL GAK BISA MELEBIHI TOP SPEED GIGI)
-        // =========================================================================
-        // Hitung berapa RPM mesin yang "seharusnya" jika mengikuti putaran roda saat ini
-        float gearR = Mathf.Abs(gearRatio);
-        float realEngineRPM = Mathf.Abs(_wheelRPM) * gearR * finalDriveRatio;
-
-        float revLimiterFactor = 1f;
-        if (realEngineRPM >= engine.maxRPM)
+        // ── DRIVE TORQUE (hanya saat engine nyala) ──
+        if (engineRunning)
         {
-            // Jika putaran roda sudah melewati batas RPM maksimal mesin, potong torsi jadi NOL
-            revLimiterFactor = 0f; 
+            totalDriveTorque = currentTorqueNm * gearRatio * finalDriveRatio * transmissionEfficiency;
+
+            // ── REV LIMITER ──
+            float gearR = Mathf.Abs(gearRatio);
+            float realEngineRPM = Mathf.Abs(_wheelRPM) * gearR * finalDriveRatio;
+
+            float revLimiterFactor = 1f;
+            if (realEngineRPM >= engine.maxRPM)
+                revLimiterFactor = 0f;
+            else if (realEngineRPM > engine.maxRPM * 0.98f)
+                revLimiterFactor = Mathf.InverseLerp(engine.maxRPM, engine.maxRPM * 0.98f, realEngineRPM);
+
+            totalDriveTorque *= revLimiterFactor;
+
+            // Clutch slip
+            if (transmissionType == TransmissionType.Manual && clutchInput)
+                totalDriveTorque *= 0.05f;
         }
-        else if (realEngineRPM > engine.maxRPM * 0.98f)
+
+        // ── ENGINE BRAKE / COMPRESSION BRAKE (jalan terus walau mesin mati) ──
+        if (speedMs > 1f && (!engineRunning || throttleInput < 0.1f))
         {
-            // Sunat torsi secara mulus dari 98% menuju 100% RPM maksimal
-            revLimiterFactor = Mathf.InverseLerp(engine.maxRPM, engine.maxRPM * 0.98f, realEngineRPM);
-        }
+            float brakeTorque;
+            if (engineRunning)
+            {
+                // Engine brake: hambat kompresi mesin saat throttle lepas
+                float fade = 1f - Mathf.Clamp01(throttleInput / 0.1f);
+                brakeTorque = (currentRPM / engine.maxRPM) * engineBrakingTorque * fade;
+            }
+            else
+            {
+                // Compression brake ringan saat mesin mati (menahan laju kendaraan)
+                brakeTorque = compressionBrakeTorque;
+            }
 
-        // Kalikan torsi total dengan faktor pembatas
-        totalDriveTorque *= revLimiterFactor;
-        // =========================================================================
-
-        // Bagi torque ke drive wheels
-        float torquePerWheel = _driveWheelCount > 0 ? totalDriveTorque / _driveWheelCount : 0f;
-
-        // Clutch slip - manual mode
-        if (transmissionType == TransmissionType.Manual && clutchInput)
-            torquePerWheel *= 0.05f;
-
-        // Engine braking saat throttle lepas
-        if (throttleInput < 0.1f && speedMs > 1f)
-        {
-            float engineBrakeFactor = (1f - throttleInput / 0.1f); // smooth fade 0→1 saat throttle 0.1→0
-            float engineBrakingTorque = (currentRPM / engine.maxRPM) * 200f * engineBrakeFactor;
-
-            // Tentukan arah engine braking: lawan arah gerak roda
             float sign = (_wheelRPM >= 0f) ? -1f : 1f;
-            torquePerWheel = sign * engineBrakingTorque;
+            totalDriveTorque = sign * brakeTorque;
         }
+
+        // Terapkan ke roda
+        float torquePerWheel = _driveWheelCount > 0 ? totalDriveTorque / _driveWheelCount : 0f;
 
         foreach (var w in wheels)
         {
             if (w.collider == null) continue;
 
-            bool drivesThisWheel = IsWheelDriven(w);
-
-            if (drivesThisWheel)
+            if (IsWheelDriven(w))
                 w.collider.motorTorque = torquePerWheel;
             else
                 w.collider.motorTorque = 0f;

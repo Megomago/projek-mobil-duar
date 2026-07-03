@@ -34,7 +34,17 @@ public class EngineAudio : MonoBehaviour
         if (engineAudioSource != null)
         {
             engineAudioSource.loop = true;
-            engineAudioSource.Play();
+            engineAudioSource.playOnAwake = false;
+            
+            if (_vc.engineRunning)
+            {
+                engineAudioSource.Play();
+            }
+            else
+            {
+                engineAudioSource.volume = 0f;
+                engineAudioSource.Stop();
+            }
         }
     }
 
