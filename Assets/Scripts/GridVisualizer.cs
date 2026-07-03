@@ -10,6 +10,12 @@ public class GridVisualizer : MonoBehaviour
     public Sprite cellSprite;
     [Tooltip("Warna grid saat kosong")]
     public Color normalColor = new Color(1f, 1f, 1f, 0.3f);
+    [Tooltip("Warna grid saat terisi modul")]
+    public Color occupiedColor = new Color(1f, 0f, 0f, 0.4f);
+    [Tooltip("Warna grid saat disorot/preview pas di-drag")]
+    public Color previewColor = new Color(1f, 1f, 0f, 0.4f);
+    [Tooltip("Warna grid untuk area clearance (zona tembak/laras)")]
+    public Color clearanceColor = new Color(1f, 0.5f, 0f, 0.4f);
     
     [Tooltip("Material khusus grid. Kosongkan untuk pakai shader GridOverlay otomatis (agar tembus mesh).")]
     public Material gridMaterial;
@@ -20,6 +26,7 @@ public class GridVisualizer : MonoBehaviour
 
     private VehicleStatsManager _statsManager;
     private List<GameObject> _cellObjects = new List<GameObject>();
+    private Dictionary<string, SpriteRenderer> _cellRenderers = new Dictionary<string, SpriteRenderer>();
     private bool _isGridVisible = false;
 
     private void Awake()
@@ -67,6 +74,14 @@ public class GridVisualizer : MonoBehaviour
         GenerateGridVisuals();
         ToggleGrid(false); // Default sembunyi sampai masuk mode inventaris
     }
+    
+    private void Update()
+    {
+        if (Application.isPlaying && _isGridVisible)
+        {
+            UpdateGridColors();
+        }
+    }
 
     private void GenerateGridVisuals()
     {
@@ -86,6 +101,7 @@ public class GridVisualizer : MonoBehaviour
                 if (obj != null) Destroy(obj);
             }
             _cellObjects.Clear();
+            _cellRenderers.Clear();
 
             if (_statsManager.gridZones == null) return;
 
@@ -138,6 +154,90 @@ public class GridVisualizer : MonoBehaviour
                         }
 
                         _cellObjects.Add(cellObj);
+                        _cellRenderers[$"{zone.zoneName}_{x}_{y}"] = sr;
+                    }
+                }
+            }
+        }
+    }
+
+    public void UpdateGridColors()
+    {
+        if (_statsManager == null || _statsManager.installedModules == null) return;
+
+        // 1. Reset semua cell ke normalColor
+        foreach (var kvp in _cellRenderers)
+        {
+            if (kvp.Value != null) kvp.Value.color = normalColor;
+        }
+
+        // 1.5. Warnai cell Clearance (supaya kalau ketimpa occupiedColor, occupiedColor yang menang)
+        foreach (var mod in _statsManager.installedModules)
+        {
+            if (mod.moduleTemplate == null || !mod.moduleTemplate.enableClearance) continue;
+            
+            List<Vector2Int> clearance = _statsManager.GetClearanceCells(mod.gridPosition, mod.moduleTemplate, mod.rotationAngle);
+            foreach (var pos in clearance)
+            {
+                string key = $"{mod.zoneName}_{pos.x}_{pos.y}";
+                if (_cellRenderers.TryGetValue(key, out SpriteRenderer sr) && sr != null)
+                {
+                    // Hanya timpa jika warnanya masih normal (biar nggak nimpa kotak merah base)
+                    if (sr.color == normalColor)
+                    {
+                        sr.color = clearanceColor;
+                    }
+                }
+            }
+        }
+
+        // 2. Warnai cell yang terisi modul fisik (Base) dengan occupiedColor
+        foreach (var mod in _statsManager.installedModules)
+        {
+            if (mod.moduleTemplate == null) continue;
+
+            List<Vector2Int> occupied = _statsManager.GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle);
+            
+            foreach (var pos in occupied)
+            {
+                string key = $"{mod.zoneName}_{pos.x}_{pos.y}";
+                if (_cellRenderers.TryGetValue(key, out SpriteRenderer sr) && sr != null)
+                {
+                    sr.color = occupiedColor;
+                }
+            }
+        }
+
+        // 3. Warnai kotak yang sedang disorot/di-drag saat ini
+        if (InventoryDragDropManager.Instance != null && InventoryDragDropManager.Instance.IsDragging)
+        {
+            var mgr = InventoryDragDropManager.Instance;
+            if (mgr.CurrentTemplate != null && !string.IsNullOrEmpty(mgr.CurrentZoneName) && mgr.CurrentGridPos.x != -1)
+            {
+                List<Vector2Int> previewBase = _statsManager.GetOccupiedCells(mgr.CurrentGridPos, mgr.CurrentTemplate.width, mgr.CurrentTemplate.height, mgr.CurrentAngle);
+                List<Vector2Int> previewClearance = _statsManager.GetClearanceCells(mgr.CurrentGridPos, mgr.CurrentTemplate, mgr.CurrentAngle);
+                
+                // Kuning kalau areanya kosong/bisa dipasang, Merah kalau nabrak/keluar batas
+                Color highlightBaseColor = mgr.CanPlace ? previewColor : occupiedColor; 
+                Color highlightClearanceColor = mgr.CanPlace ? clearanceColor : occupiedColor;
+                
+                // Gambar clearance preview dulu
+                foreach (var pos in previewClearance)
+                {
+                    string key = $"{mgr.CurrentZoneName}_{pos.x}_{pos.y}";
+                    if (_cellRenderers.TryGetValue(key, out SpriteRenderer sr) && sr != null)
+                    {
+                        sr.color = highlightClearanceColor;
+                    }
+                }
+
+                // Gambar base preview (menimpa clearance preview kalau berpotongan, walau secara logika tak mungkin)
+                foreach (var pos in previewBase)
+                {
+                    string key = $"{mgr.CurrentZoneName}_{pos.x}_{pos.y}";
+                    if (_cellRenderers.TryGetValue(key, out SpriteRenderer sr) && sr != null)
+                    {
+                        sr.color = highlightBaseColor;
                     }
                 }
             }

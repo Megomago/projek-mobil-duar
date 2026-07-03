@@ -306,34 +306,91 @@ public class VehicleStatsManager : MonoBehaviour
         return cells;
     }
 
-    // Fungsi untuk memvalidasi apakah area grid kosong dan berada di dalam batas untuk sebuah zona tertentu
-    public bool IsAreaFree(GridZone zone, Vector2Int position, int width, int height, int angle, PlacedModule ignoreModule = null)
+    public List<Vector2Int> GetClearanceCells(Vector2Int position, ModuleTemplate template, int angle)
     {
-        if (zone == null) return false;
+        List<Vector2Int> cells = new List<Vector2Int>();
+        if (template == null || !template.enableClearance) return cells;
 
-        List<Vector2Int> targetCells = GetOccupiedCells(position, width, height, angle);
+        int effectiveWidth = (angle == 90 || angle == 270) ? template.height : template.width;
+        int effectiveHeight = (angle == 90 || angle == 270) ? template.width : template.height;
 
-        foreach (var cell in targetCells)
+        int up = 0, down = 0, left = 0, right = 0;
+        if (angle == 0) { up = template.clearanceFront; down = template.clearanceBack; right = template.clearanceRight; left = template.clearanceLeft; }
+        else if (angle == 90) { right = template.clearanceFront; left = template.clearanceBack; down = template.clearanceRight; up = template.clearanceLeft; }
+        else if (angle == 180) { down = template.clearanceFront; up = template.clearanceBack; left = template.clearanceRight; right = template.clearanceLeft; }
+        else if (angle == 270) { left = template.clearanceFront; right = template.clearanceBack; up = template.clearanceRight; down = template.clearanceLeft; }
+
+        int minX = position.x - left;
+        int maxX = position.x + effectiveWidth - 1 + right;
+        int minY = position.y - down;
+        int maxY = position.y + effectiveHeight - 1 + up;
+
+        for (int x = minX; x <= maxX; x++)
         {
-            // Cek batas grid zona
+            for (int y = minY; y <= maxY; y++)
+            {
+                bool isBase = (x >= position.x && x < position.x + effectiveWidth) && (y >= position.y && y < position.y + effectiveHeight);
+                if (!isBase)
+                {
+                    cells.Add(new Vector2Int(x, y));
+                }
+            }
+        }
+        return cells;
+    }
+
+    private bool HasIntersection(List<Vector2Int> list1, List<Vector2Int> list2)
+    {
+        foreach (var a in list1)
+        {
+            if (list2.Contains(a)) return true;
+        }
+        return false;
+    }
+
+    // Fungsi untuk memvalidasi apakah area grid kosong dan berada di dalam batas untuk sebuah zona tertentu
+    public bool IsAreaFree(GridZone zone, Vector2Int position, ModuleTemplate templateToPlace, int angle, PlacedModule ignoreModule = null)
+    {
+        if (zone == null || templateToPlace == null) return false;
+
+        List<Vector2Int> baseCellsA = GetOccupiedCells(position, templateToPlace.width, templateToPlace.height, angle);
+        List<Vector2Int> clearanceCellsA = GetClearanceCells(position, templateToPlace, angle);
+
+        // Cek batas grid zona HANYA untuk Base fisik
+        foreach (var cell in baseCellsA)
+        {
             if (cell.x < 0 || cell.x >= zone.capacity.x || cell.y < 0 || cell.y >= zone.capacity.y)
             {
                 return false;
             }
+        }
 
-            // Cek tabrakan dengan modul lain yang sudah terpasang, tetapi hanya di zona yang sama
-            foreach (var mod in installedModules)
+        // Cek tabrakan dengan modul lain yang sudah terpasang
+        foreach (var mod in installedModules)
+        {
+            if (mod == ignoreModule) continue;
+            if (mod.moduleTemplate == null) continue;
+            if (mod.zoneName != zone.zoneName) continue; // Abaikan modul di zona lain (sistem koordinat berbeda)
+
+            List<Vector2Int> baseCellsB = GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle);
+            List<Vector2Int> clearanceCellsB = GetClearanceCells(mod.gridPosition, mod.moduleTemplate, mod.rotationAngle);
+
+            // Cek Base A vs Base B (selalu terlarang)
+            if (HasIntersection(baseCellsA, baseCellsB)) return false;
+
+            // Cek Base A vs Clearance B (Boleh jika A kecil)
+            if (HasIntersection(baseCellsA, clearanceCellsB))
             {
-                if (mod == ignoreModule) continue;
-                if (mod.moduleTemplate == null) continue;
-                if (mod.zoneName != zone.zoneName) continue; // Abaikan modul di zona lain
-
-                List<Vector2Int> modCells = GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle);
-                if (modCells.Contains(cell))
-                {
-                    return false; // Tabrakan!
-                }
+                if (!templateToPlace.isSmall) return false;
             }
+
+            // Cek Clearance A vs Base B (Boleh jika B kecil)
+            if (HasIntersection(clearanceCellsA, baseCellsB))
+            {
+                if (!mod.moduleTemplate.isSmall) return false;
+            }
+
+            // Clearance A vs Clearance B selalu boleh
         }
         return true;
     }
@@ -359,7 +416,7 @@ public class VehicleStatsManager : MonoBehaviour
         }
 
         // Validasi Tetris placement di zona yang dituju
-        if (!IsAreaFree(targetZone, position, template.width, template.height, angle))
+        if (!IsAreaFree(targetZone, position, template, angle))
         {
             Debug.LogWarning($"[VehicleStatsManager] Gagal memasang {template.moduleName} di zona {targetZoneName} posisi {position} karena area penuh atau di luar batas.");
             return false;

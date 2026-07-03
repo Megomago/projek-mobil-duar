@@ -13,19 +13,5 @@ MonoBehaviour:
   m_Name: base data granmax
   m_EditorClassIdentifier: 
   vehicleName: Daihatsu Grandmax
-  baseMass: 1900
-  bodyHealth: 3000
-  bodyArmor: 230
-  wheelHealth: 50
-  wheelArmor: 5
-  engineHealth: 200
-  engineArmor: 100
-  horsePower: 650
-  fuelCapacity: 80
-  fuelConsumptionRate: 0.09
-  isBatteryJoinEngine: 1
-  batteryHealth: 50
-  batteryArmor: 10
-  batteryCapacity: 720
-  powerGeneration: 95
-  maxPowerOutput: 1000
+  baseMass: 1100
+  chassisArmor: 230

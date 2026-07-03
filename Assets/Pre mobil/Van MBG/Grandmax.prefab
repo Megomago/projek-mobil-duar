@@ -10144,6 +10144,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cellSprite: {fileID: 21300000, guid: 862c0374ba66af449a06a6dc899503b4, type: 3}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
+  occupiedColor: {r: 1, g: 0, b: 0, a: 1}
+  previewColor: {r: 1, g: 1, b: 0, a: 1}
   gridMaterial: {fileID: 0}
   sortingLayerName: Default
   sortingOrder: 0

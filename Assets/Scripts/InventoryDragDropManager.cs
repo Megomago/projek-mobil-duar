@@ -34,7 +34,13 @@ public class InventoryDragDropManager : MonoBehaviour
     private Collider[] _cachedColliders;
     private MonoBehaviour[] _cachedScripts;
     private Material _currentAppliedMat; // Biar gak nge-assign material mulu kalau warnanya sama
+    
     public bool IsDragging => _isDragging;
+    public ModuleTemplate CurrentTemplate => _currentTemplate;
+    public Vector2Int CurrentGridPos => _lastValidGridPos;
+    public string CurrentZoneName => _lastValidZoneName;
+    public int CurrentAngle => _currentAngle;
+    public bool CanPlace => _canPlace;
 
     private void Awake()
     {
@@ -178,7 +184,7 @@ public class InventoryDragDropManager : MonoBehaviour
                                bestZone.zoneName != _lastCheckZone || _currentAngle != _lastCheckAngle);
             if (posChanged)
             {
-                _canPlace = _targetStatsManager.IsAreaFree(bestZone, new Vector2Int(gridX, gridY), _currentTemplate.width, _currentTemplate.height, _currentAngle);
+                _canPlace = _targetStatsManager.IsAreaFree(bestZone, new Vector2Int(gridX, gridY), _currentTemplate, _currentAngle);
                 _lastCheckPos = new Vector2Int(gridX, gridY);
                 _lastCheckZone = bestZone.zoneName;
                 _lastCheckAngle = _currentAngle;

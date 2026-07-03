@@ -18,7 +18,13 @@ MonoBehaviour:
   weaponData: {fileID: 11400000, guid: 54ce7e9a5153ac740993e740be96da94, type: 2}
   modulePrefab: {fileID: 0}
   width: 3
-  height: 4
+  height: 5
+  isSmall: 0
+  enableClearance: 1
+  clearanceRight: 0
+  clearanceLeft: 0
+  clearanceFront: 6
+  clearanceBack: 0
   weight: 1500
   maxHealth: 100
   armor: 10
@@ -29,6 +35,7 @@ MonoBehaviour:
   extraMaxOutput: 0
   capacitorCapacity: 0
   chargeRate: 0
+  hideFromModuleList: 0
   volatileExplosive: 0
   explosionRadius: 1
   explosionDamage: 100
