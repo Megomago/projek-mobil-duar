@@ -98,11 +98,8 @@ public class VehicleStatsManager : MonoBehaviour
     // Cache collider → PlacedModule biar O(1) lookup di projectile
     [HideInInspector] public Dictionary<Collider, PlacedModule> moduleColliderMap = new Dictionary<Collider, PlacedModule>();
 
-    // Batch lock buat suppress CalculateAndApplyStats pas loading
-    private int _batchLock = 0;
-    public bool IsBatchLocked => _batchLock > 0;
-    public void BeginBatch() { _batchLock++; }
-    public void EndBatch() { _batchLock--; if (_batchLock <= 0) CalculateAndApplyStats(); }
+    // Dirty flag: CalculateAndApplyStats cuma jalan sekali per frame via LateUpdate
+    private bool _statsDirty = false;
 
     [Header("UI Reference")]
     public VehicleHUD hud;
@@ -110,6 +107,20 @@ public class VehicleStatsManager : MonoBehaviour
     void Awake()
     {
         rb = GetComponent<Rigidbody>();
+    }
+
+    void LateUpdate()
+    {
+        if (_statsDirty)
+        {
+            _statsDirty = false;
+            CalculateAndApplyStats();
+        }
+    }
+
+    public void MarkStatsDirty()
+    {
+        _statsDirty = true;
     }
 
     void Start()
@@ -175,47 +186,31 @@ public class VehicleStatsManager : MonoBehaviour
         // Reset nilai ke basis kendaraan
         currentTotalMass = baseData.baseMass;
         currentPowerConsumption = 0f;
-        currentPowerGeneration = baseData.powerGeneration;
-        currentBatteryCapacity = baseData.batteryCapacity;
-        currentFuelCapacity = baseData.fuelCapacity;
+        currentPowerGeneration = 0f;
+        currentBatteryCapacity = 0f;
+        currentFuelCapacity = 0f;
         currentMaxOutput = baseData.maxPowerOutput;
         currentCapacitorCapacity = 0f;
         currentCapacitorChargeRate = 0f;
 
-        // Deteksi kehadiran critical part bawaan kendaraan
-        bool hasEngineModule     = false;
-        bool hasFuelModule       = false;
-        bool hasBatteryModule    = false;
-        bool hasAlternatorModule = false;
-        bool hasCapacitorModule  = false;
+        // Deteksi kehadiran Engine + accumulasi stats dari semua critical part
+        bool hasEngineModule = false;
 
         VehicleCriticalPart[] criticalParts = GetComponentsInChildren<VehicleCriticalPart>();
         foreach (var part in criticalParts)
         {
             if (!part.gameObject.activeInHierarchy) continue;
 
-            switch (part.partType)
-            {
-                case VehicleCriticalPart.CriticalPartType.Engine:
-                    hasEngineModule = true;
-                    break;
+            currentPowerConsumption   += part.powerConsumption;
+            currentPowerGeneration    += part.powerGeneration;
+            currentBatteryCapacity    += part.extraBatteryCapacity;
+            currentFuelCapacity       += part.extraFuelCapacity;
+            currentMaxOutput          += part.extraMaxOutput;
+            currentCapacitorCapacity  += part.capacitorCapacity;
+            currentCapacitorChargeRate+= part.chargeRate;
 
-                case VehicleCriticalPart.CriticalPartType.FuelTank:
-                    hasFuelModule = true;
-                    break;
-
-                case VehicleCriticalPart.CriticalPartType.Battery:
-                    hasBatteryModule = true;
-                    break;
-
-                case VehicleCriticalPart.CriticalPartType.Alternator:
-                    hasAlternatorModule = true;
-                    break;
-
-                case VehicleCriticalPart.CriticalPartType.Capacitor:
-                    hasCapacitorModule = true;
-                    break;
-            }
+            if (part.partType == VehicleCriticalPart.CriticalPartType.Engine)
+                hasEngineModule = true;
         }
 
         // Hitung stats tambahan dari setiap modul di grid
@@ -248,18 +243,8 @@ public class VehicleStatsManager : MonoBehaviour
             }
         }
 
-        // Tangki BAWAAN hanya aktif kalau ada CriticalPart FuelTank
-        if (hasFuelModule)
-            currentFuelCapacity += baseData.fuelCapacity;
-
-        // Baterai BAWAAN hanya aktif kalau ada CriticalPart Battery
-        if (hasBatteryModule)
-        {
-            currentBatteryCapacity += baseData.batteryCapacity;
-        }
-
-        // Alternator BAWAAN hanya aktif kalau ada CriticalPart Alternator
-        if (hasAlternatorModule)
+        // Base power generator dari kendaraan (alternator built-in engine)
+        if (hasEngineModule)
             currentPowerGeneration += baseData.powerGeneration;
 
         // Terapkan ke VehicleController berdasarkan kehadiran CriticalPart Engine
@@ -412,6 +397,13 @@ public class VehicleStatsManager : MonoBehaviour
             foreach (var col in modColliders)
                 moduleColliderMap[col] = newModule;
 
+            // Init script module SELALU jalan (biar damage/explosion konsisten di semua mode)
+            VehicleModuleComponent moduleComp = spawned.GetComponent<VehicleModuleComponent>();
+            if (moduleComp != null)
+            {
+                moduleComp.Initialize(newModule, this);
+            }
+
             if (isPreviewMode)
             {
                 ManualTurretController[] newTurrets = spawned.GetComponentsInChildren<ManualTurretController>(true);
@@ -435,18 +427,11 @@ public class VehicleStatsManager : MonoBehaviour
                         rb.constraints = RigidbodyConstraints.FreezeAll;
                     }
                 }
-
-                // Inisialisasi Script Fisik Modul jika ada
-                VehicleModuleComponent moduleComp = spawned.GetComponent<VehicleModuleComponent>();
-                if (moduleComp != null)
-                {
-                    moduleComp.Initialize(newModule, this);
-                }
             }
         }
 
         installedModules.Add(newModule);
-        if (!IsBatchLocked) CalculateAndApplyStats();
+        MarkStatsDirty();
         return true;
     }
 
@@ -470,7 +455,7 @@ public class VehicleStatsManager : MonoBehaviour
             }
 
             installedModules.Remove(module);
-            if (!IsBatchLocked) CalculateAndApplyStats();
+            MarkStatsDirty();
 
             GridSaveSystem.SaveGrid(gameObject.name, this);
         }
@@ -487,7 +472,7 @@ public class VehicleStatsManager : MonoBehaviour
             }
         }
         installedModules.Clear();
-        if (!IsBatchLocked) CalculateAndApplyStats();
+        MarkStatsDirty();
     }
 
     // Fungsi rekursif untuk mengubah layer objek dan semua anaknya

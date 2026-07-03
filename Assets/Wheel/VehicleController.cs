@@ -185,8 +185,6 @@ public class VehicleController : MonoBehaviour
     [Tooltip("Downforce multiplier berdasarkan kecepatan")]
     public float downforceMultiplier = 0.02f;
 
-    [Header("=== DEBUG & HUD ===")]
-    public bool showDebugGUI = false;
     [Tooltip("Gunakan RPM berdasarkan kecepatan nyata mobil (mencegah RPM fluktuatif karena roda slip / ngepot)")]
     public bool preventWheelSlipRPM = true;
 
@@ -830,47 +828,6 @@ public class VehicleController : MonoBehaviour
     {
         speedMs  = _rb.velocity.magnitude;
         speedKmh = speedMs * 3.6f;
-    }
-
-    #endregion
-
-    #region --- DEBUG GUI ---
-
-    private void OnGUI()
-    {
-        if (!showDebugGUI) return;
-
-        int x = 10, y = 10, w = 280, h = 22, pad = 2;
-        GUIStyle box = GUI.skin.box;
-        GUIStyle lbl = new GUIStyle(GUI.skin.label) { fontSize = 13, normal = { textColor = Color.white } };
-
-        GUI.Box(new Rect(x - 4, y - 4, w + 8, 300), "");
-
-        void Row(string label)
-        {
-            GUI.Label(new Rect(x, y, w, h), label, lbl);
-            y += h + pad;
-        }
-
-        Row($"Speed     : {speedKmh:F1} km/h");
-        Row($"Gear      : {GetGearName()}");
-        Row($"Engine RPM: {currentRPM:F0} / {engine.maxRPM}");
-        Row($"Torque    : {currentTorqueNm:F1} Nm");
-        Row($"Gear Ratio: {GetCurrentGearRatio():F3}x  FDR: {finalDriveRatio:F2}x");
-        Row($"Throttle  : {throttleInput * 100f:F0}%   Brake: {brakeInput * 100f:F0}%");
-        Row($"Steer     : {steerInput:F2}");
-        Row($"Mass      : {vehicleMass} kg");
-        Row($"Drivetrain: {drivetrainType}  {transmissionType}");
-        Row($"Handbrake : {(handbrakeInput > 0.5f ? "ON" : "off")}");
-
-        // RPM bar
-        Rect barBG  = new Rect(x, y, w, 14);
-        Rect barFG  = new Rect(x, y, w * Mathf.Clamp01(currentRPM / engine.maxRPM), 14);
-        GUI.DrawTexture(barBG, Texture2D.whiteTexture, ScaleMode.StretchToFill, false, 0, new Color(0.2f, 0.2f, 0.2f), 0, 0);
-        Color rpmColor = currentRPM > engine.maxRPM * 0.85f ? Color.red : (currentRPM > engine.maxRPM * 0.6f ? Color.yellow : Color.green);
-        GUI.DrawTexture(barFG, Texture2D.whiteTexture, ScaleMode.StretchToFill, false, 0, rpmColor, 0, 0);
-        y += 18;
-        Row($"RPM bar (red = near redline)");
     }
 
     #endregion

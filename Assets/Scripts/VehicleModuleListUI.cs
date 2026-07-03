@@ -45,6 +45,7 @@ public class VehicleModuleListUI : MonoBehaviour
         foreach (var part in criticalParts)
         {
             if (!part.gameObject.activeInHierarchy) continue;
+            if (part.hideFromModuleList) continue;
             AddItem(string.IsNullOrEmpty(part.partName) ? part.partType.ToString() : part.partName, baseModuleColor);
         }
 

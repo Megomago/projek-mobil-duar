@@ -9,11 +9,11 @@ public class VehicleCriticalPart : MonoBehaviour
 {
     public enum CriticalPartType
     {
-        Engine,       // Mengaktifkan torsi dari VehicleController
-        FuelTank,     // Mengaktifkan fuelCapacity dari VehicleBaseData
-        Battery,      // Mengaktifkan batteryCapacity & batteryHealth dari VehicleBaseData
-        Alternator,   // Mengaktifkan powerGeneration dari VehicleBaseData
-        Capacitor,    // Mengaktifkan capacitor stats dari VehicleBaseData (jika ada)
+        Engine,
+        FuelTank,
+        Battery,
+        Alternator,
+        Capacitor,
         Other
     }
 
@@ -25,10 +25,36 @@ public class VehicleCriticalPart : MonoBehaviour
     [Header("Durability")]
     public float maxHealth = 300f;
     [HideInInspector] public float currentHealth;
+    [Tooltip("ONESHOT: part ini langsung hancur kena peluru apapun")]
+    public bool isOneHitPart = false;
 
     [Header("Armor / DEF")]
-    [Tooltip("Armor part ini. Berkontribusi ke DEF kendaraan sesuai tipenya.")]
+    [Tooltip("Armor part ini")]
     public float armor = 30f;
+
+    [Header("Power Settings")]
+    [Tooltip("Konsumsi daya part ini (Watt)")]
+    public float powerConsumption = 0f;
+    [Tooltip("Produksi daya part ini (Watt)")]
+    public float powerGeneration = 0f;
+    [Tooltip("Kapasitas penyimpanan listrik tambahan (Wh)")]
+    public float extraBatteryCapacity = 0f;
+
+    [Header("Fuel Settings")]
+    [Tooltip("Kapasitas penyimpanan bensin tambahan (L)")]
+    public float extraFuelCapacity = 0f;
+
+    [Header("Capacitor Settings")]
+    [Tooltip("Tambahan max output (W)")]
+    public float extraMaxOutput = 0f;
+    [Tooltip("Kapasitas energi kapasitor (Wh)")]
+    public float capacitorCapacity = 0f;
+    [Tooltip("Kecepatan isi daya kapasitor (W)")]
+    public float chargeRate = 0f;
+
+    [Header("UI Settings")]
+    [Tooltip("Sembunyikan dari daftar modul UI")]
+    public bool hideFromModuleList = false;
 
     [Header("Ledakan")]
     public bool volatileExplosive = false;
@@ -44,6 +70,15 @@ public class VehicleCriticalPart : MonoBehaviour
 
     public void TakeDamage(float damage)
     {
+        if (currentHealth <= 0f) return;
+
+        if (isOneHitPart)
+        {
+            currentHealth = 0f;
+            OnDestroyed();
+            return;
+        }
+
         currentHealth -= damage;
         currentHealth = Mathf.Max(0f, currentHealth);
 
