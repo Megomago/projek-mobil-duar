@@ -176,7 +176,7 @@ MonoBehaviour:
   m_LookaheadIgnoreY: 0
   m_HorizontalDamping: 0
   m_VerticalDamping: 0
-  m_ScreenX: 0.5
+  m_ScreenX: 0.4000002
   m_ScreenY: 0.55
   m_DeadZoneWidth: 0
   m_DeadZoneHeight: 0
@@ -817,7 +817,7 @@ Transform:
   m_GameObject: {fileID: 243781647}
   serializedVersion: 2
   m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 2.1487672, y: -1.3040347, z: 4.3633103}
+  m_LocalPosition: {x: 2.148767, y: -1.3040347, z: 4.3633103}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -2481,8 +2481,8 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 557784988}
   serializedVersion: 2
-  m_LocalRotation: {x: 0.045110203, y: -0.9540751, z: 0.18825702, w: 0.22861576}
-  m_LocalPosition: {x: -0.00000023841858, y: 0, z: 0}
+  m_LocalRotation: {x: -0.063904606, y: 0.9260864, z: -0.18273434, w: -0.32386464}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -3174,7 +3174,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 864789293}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.05163948, y: 0.9482918, z: -0.21550547, w: -0.22722994}
+  m_LocalRotation: {x: -0.073154226, y: 0.9204728, z: -0.20918341, w: -0.3219016}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -3563,7 +3563,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1069876909}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.058169402, y: 0.94168425, z: -0.24275659, w: -0.22564663}
+  m_LocalRotation: {x: -0.08240471, y: 0.9140591, z: -0.23563509, w: -0.31965864}
   m_LocalPosition: {x: 0, y: 0, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -4445,7 +4445,7 @@ MonoBehaviour:
   engineArmorText: {fileID: 0}
   batteryHPText: {fileID: 0}
   batteryArmorText: {fileID: 0}
-  motorTorqueText: {fileID: 0}
+  motorTorqueText: {fileID: 839552123}
   fuelCapacityText: {fileID: 920084851}
   fuelConsumptionText: {fileID: 130402997}
   batteryCapacityText: {fileID: 1130481829}
@@ -4507,7 +4507,7 @@ MonoBehaviour:
   m_LookaheadIgnoreY: 0
   m_HorizontalDamping: 0
   m_VerticalDamping: 0
-  m_ScreenX: 0.5
+  m_ScreenX: 0.4000002
   m_ScreenY: 0.6
   m_DeadZoneWidth: 0
   m_DeadZoneHeight: 0
@@ -5090,7 +5090,7 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1560133212}
   serializedVersion: 2
-  m_LocalRotation: {x: -0.05425693, y: 0.9457431, z: -0.22642864, w: -0.22661933}
+  m_LocalRotation: {x: -0.07686219, y: 0.91799885, z: -0.21978621, w: -0.32103652}
   m_LocalPosition: {x: 2.1487827, y: -1.3040347, z: 4.363303}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
@@ -5934,7 +5934,7 @@ MonoBehaviour:
   m_LookaheadIgnoreY: 0
   m_HorizontalDamping: 0
   m_VerticalDamping: 0
-  m_ScreenX: 0.5
+  m_ScreenX: 0.4000002
   m_ScreenY: 0.5
   m_DeadZoneWidth: 0
   m_DeadZoneHeight: 0

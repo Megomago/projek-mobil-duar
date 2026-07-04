@@ -82,6 +82,10 @@ public class ModuleTemplate : ScriptableObject
     [Tooltip("Sembunyikan modul ini dari daftar modul UI (misal lampu, dekorasi)")]
     public bool hideFromModuleList = false;
 
+    [Header("Aerodynamics")]
+    [Tooltip("Tambahan luas frontal (m²) dari modul ini. Modul kotak besar ~0.1-0.3, modul pipih kecil ~0.02")]
+    public float dragModifier = 0f;
+
     [Header("Explosion Risk")]
     [Tooltip("Apakah modul ini mudah meledak jika hancur? (Misal aki, generator, fuel barrel)")]
     public bool volatileExplosive = false;

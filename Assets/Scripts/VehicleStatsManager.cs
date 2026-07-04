@@ -48,6 +48,9 @@ public class GridZone
 
     [Tooltip("Ukuran 1 cell di zona ini")]
     public float cellSize = 0.25f;
+
+    [Tooltip("Centang jika zona ini terkena angin (luar sasis). Contoh: Roof, Hood, Trunk. Uncentang jika di dalam sasis (Engine Bay, Interior)")]
+    public bool affectDrag = true;
 }
 
 [RequireComponent(typeof(Rigidbody))]
@@ -226,6 +229,9 @@ public class VehicleStatsManager : MonoBehaviour
                 currentPowerGeneration += part.powerGeneration;
         }
 
+        // Akumulasi drag dari modul
+        float totalDragArea = baseData.baseFrontalArea;
+
         // Hitung stats tambahan dari setiap modul di grid
         foreach (var module in installedModules)
         {
@@ -253,6 +259,11 @@ public class VehicleStatsManager : MonoBehaviour
                 currentMaxOutput           += template.extraMaxOutput;
                 currentCapacitorCapacity   += template.capacitorCapacity;
                 currentCapacitorChargeRate += template.chargeRate;
+
+                // Tambah drag area hanya jika modul di zona yang terkena angin
+                GridZone moduleZone = gridZones.Find(z => z.zoneName == module.zoneName);
+                if (moduleZone != null && moduleZone.affectDrag)
+                    totalDragArea += template.dragModifier;
             }
         }
 
@@ -273,6 +284,13 @@ public class VehicleStatsManager : MonoBehaviour
         if (rb != null)
         {
             rb.mass = currentTotalMass;
+        }
+
+        // Terapkan aerodynamics ke VehicleController
+        if (vc != null)
+        {
+            vc.airDragCd = baseData.baseDragCd;
+            vc.frontalArea = totalDragArea;
         }
 
         // Update HUD

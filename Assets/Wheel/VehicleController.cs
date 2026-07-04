@@ -197,6 +197,12 @@ public class VehicleController : MonoBehaviour
     [Tooltip("Downforce multiplier berdasarkan kecepatan")]
     public float downforceMultiplier = 0.02f;
 
+    [Header("=== AIR DRAG ===")]
+    [Tooltip("Koefisien drag (Cd) — diisi otomatis oleh VehicleStatsManager. Default 0.4")]
+    public float airDragCd = 0.40f;
+    [Tooltip("Luas frontal (m²) — diisi otomatis oleh VehicleStatsManager. Default 2.2")]
+    public float frontalArea = 2.2f;
+
     [Tooltip("Gunakan RPM berdasarkan kecepatan nyata mobil (mencegah RPM fluktuatif karena roda slip / ngepot)")]
     public bool preventWheelSlipRPM = true;
 
@@ -275,6 +281,7 @@ public class VehicleController : MonoBehaviour
         ApplySteering();
         ApplyAntiRollBar();
         ApplyDownforce();
+        ApplyAirDrag();
     }
 
     #endregion
@@ -819,6 +826,20 @@ public class VehicleController : MonoBehaviour
         if (downforceMultiplier <= 0f) return;
         float force = speedMs * speedMs * downforceMultiplier;
         _rb.AddForce(-transform.up * force);
+    }
+
+    #endregion
+
+    #region --- AIR DRAG ---
+
+    private void ApplyAirDrag()
+    {
+        if (airDragCd <= 0f || frontalArea <= 0f || speedMs < 0.1f) return;
+
+        float airDensity = 1.225f;
+        float dragForceMagnitude = 0.5f * airDensity * speedMs * speedMs * airDragCd * frontalArea;
+        Vector3 dragForce = -_rb.velocity.normalized * dragForceMagnitude;
+        _rb.AddForce(dragForce, ForceMode.Force);
     }
 
     #endregion
