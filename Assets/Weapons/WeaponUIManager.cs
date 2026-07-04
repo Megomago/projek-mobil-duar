@@ -111,7 +111,8 @@ namespace Weapons
             }
             else
             {
-                ammoText.text = $"Ammo: {currentAmmo} / {maxAmmo}";
+                int poolRounds = targetWeapon != null ? targetWeapon.GetRemainingPoolRounds() : 0;
+                ammoText.text = $"{currentAmmo}/{maxAmmo} ({poolRounds})";
                 ammoText.color = currentAmmo <= 0 ? Color.red : Color.white;
             }
 
@@ -128,6 +129,9 @@ namespace Weapons
         {
             _isReloadingActive = false;
             UpdateReloadUIVisibility();
+            // Refresh ammo display agar pool rounds ikut terupdate
+            if (targetWeapon != null)
+                HandleAmmoChanged(targetWeapon.currentAmmo, targetWeapon.weaponData.maxAmmo);
         }
 
         private void UpdateReloadUIVisibility()

@@ -190,7 +190,7 @@ namespace Weapons
                 return;
             }
 
-            // Inisialisasi ammo awal setelah WeaponData pasti di-assign oleh script manager
+            // Inisialisasi ammo awal — senjata selalu punya magazine penuh sendiri
             currentAmmo = weaponData.maxAmmo;
             OnAmmoChanged?.Invoke(currentAmmo, weaponData.maxAmmo);
         }
@@ -259,7 +259,7 @@ namespace Weapons
             _isHoldingTrigger = true;
 
             if (_isReloading) return;
-            
+
             if (weaponData.maxAmmo > 0 && currentAmmo <= 0)
             {
                 if (weaponData.autoReload)
@@ -280,6 +280,11 @@ namespace Weapons
             {
                 Fire();
             }
+        }
+
+        private bool HasPoolAmmo()
+        {
+            return _ownerStatsManager != null && _ownerStatsManager.totalAmmoPoints >= weaponData.ammoCostPerShot;
         }
 
         private void Fire()
@@ -600,7 +605,14 @@ namespace Weapons
         public void StartReload()
         {
             if (_isReloading || weaponData.maxAmmo <= 0 || currentAmmo == weaponData.maxAmmo) return;
-            
+
+            // Cek apakah pool masih cukup buat 1 peluru
+            if (weaponData.ammoCostPerShot > 0 && !HasPoolAmmo())
+            {
+                if (Input.GetMouseButtonDown(0)) PlaySound(weaponData.emptyClickSound);
+                return;
+            }
+
             _isReloading = true;
             _reloadTimer = weaponData.reloadTime;
             PlaySound(weaponData.reloadSound);
@@ -628,7 +640,20 @@ namespace Weapons
                 _reloadTimer -= Time.deltaTime;
                 if (_reloadTimer <= 0f)
                 {
-                    currentAmmo = weaponData.maxAmmo;
+                    // Isi magazine langsung dari pool ammo
+                    if (weaponData.ammoCostPerShot > 0 && _ownerStatsManager != null)
+                    {
+                        int shortage = weaponData.maxAmmo - currentAmmo;
+                        int canAfford = Mathf.FloorToInt(_ownerStatsManager.totalAmmoPoints / weaponData.ammoCostPerShot);
+                        int fillRounds = Mathf.Min(shortage, canAfford);
+                        _ownerStatsManager.TryConsumeAmmo(fillRounds * weaponData.ammoCostPerShot);
+                        currentAmmo += fillRounds;
+                    }
+                    else
+                    {
+                        currentAmmo = weaponData.maxAmmo;
+                    }
+
                     _isReloading = false;
                     OnAmmoChanged?.Invoke(currentAmmo, weaponData.maxAmmo);
                     OnReloadFinished?.Invoke();
@@ -704,5 +729,11 @@ namespace Weapons
         public bool IsOverheatEnabled() => weaponData != null && weaponData.enableOverheat;
         public float GetCurrentHeat() => _currentHeat;
         public float GetMaxHeat() => weaponData != null ? weaponData.maxHeat : 1f;
+
+        public int GetRemainingPoolRounds()
+        {
+            if (_ownerStatsManager == null || weaponData == null || weaponData.ammoCostPerShot <= 0) return 0;
+            return Mathf.FloorToInt(_ownerStatsManager.totalAmmoPoints / weaponData.ammoCostPerShot);
+        }
     }
 }

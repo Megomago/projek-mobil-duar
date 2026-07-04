@@ -21,6 +21,9 @@ public class PlacedModule
     [HideInInspector]
     public GameObject spawnedPrefab;
 
+    [HideInInspector]
+    public float currentAmmoPoint;
+
     public PlacedModule(ModuleTemplate template, string zone, Vector2Int position, int angle)
     {
         moduleTemplate = template;
@@ -30,6 +33,7 @@ public class PlacedModule
         if (template != null)
         {
             currentHealth = template.maxHealth;
+            currentAmmoPoint = template.ammoPoint;
         }
     }
 }
@@ -81,6 +85,10 @@ public class VehicleStatsManager : MonoBehaviour
     public float currentCapacitorCapacity;
     public float currentCapacitorChargeRate;
 
+    [Header("Ammo Pool (Read Only)")]
+    [Tooltip("Total poin amunisi yang tersisa (diakumulasi dari semua modul ammo)")]
+    public float totalAmmoPoints;
+
     [Header("Armor Stats (Read Only)")]
     [Tooltip("Total DEF sasis (Base + ArmorPlate terpasang) - melindungi critical parts")]
     public float currentChassisArmor;
@@ -129,6 +137,19 @@ public class VehicleStatsManager : MonoBehaviour
         currentFuelAmount = 0f;
 
         CalculateAndApplyStats();
+
+        // Inisialisasi ammo points dari semua modul & critical parts
+        foreach (var mod in installedModules)
+        {
+            if (mod.moduleTemplate != null && mod.moduleTemplate.ammoPoint > 0 && mod.currentAmmoPoint <= 0f)
+                mod.currentAmmoPoint = mod.moduleTemplate.ammoPoint;
+        }
+        VehicleCriticalPart[] allCrit = GetComponentsInChildren<VehicleCriticalPart>(true);
+        foreach (var cp in allCrit)
+        {
+            if (cp.ammoPoint > 0 && cp.currentAmmoPoint <= 0f)
+                cp.currentAmmoPoint = cp.ammoPoint;
+        }
 
         // Setelah stats dihitung, update fuel & battery ke kapasitas aktual
         if (!isPreviewMode)
@@ -181,6 +202,95 @@ public class VehicleStatsManager : MonoBehaviour
         foreach (var part in criticalParts)
         {
             part.UpdateLampState(currentBatteryAmount, lightsOn);
+        }
+    }
+
+    /// <summary>
+    /// Konsumsi ammo point secara sequential dari modul yang dipasang paling awal.
+    /// Returns false jika point tidak mencukupi.
+    /// </summary>
+    // Cache sumber ammo biar gak iterate semua object tiap tembakan
+    private List<PlacedModule> _ammoModuleCache;
+    private List<VehicleCriticalPart> _ammoCriticalCache;
+    private int _ammoCacheIndex;
+
+    public bool TryConsumeAmmo(float points)
+    {
+        if (points <= 0f) return true;
+        if (totalAmmoPoints < points) return false;
+
+        float remaining = points;
+
+        // Konsumsi dari modul grid dulu (sequential)
+        int modCount = _ammoModuleCache.Count;
+        for (int i = 0; i < modCount; i++)
+        {
+            var mod = _ammoModuleCache[i];
+            if (mod.currentAmmoPoint <= 0f) continue;
+
+            if (mod.currentAmmoPoint >= remaining)
+            {
+                mod.currentAmmoPoint -= remaining;
+                remaining = 0f;
+                break;
+            }
+            else
+            {
+                remaining -= mod.currentAmmoPoint;
+                mod.currentAmmoPoint = 0f;
+            }
+        }
+
+        // Kalau masih kurang, ambil dari critical parts
+        if (remaining > 0f)
+        {
+            int critCount = _ammoCriticalCache.Count;
+            for (int i = 0; i < critCount; i++)
+            {
+                var crit = _ammoCriticalCache[i];
+                if (crit.currentAmmoPoint <= 0f) continue;
+
+                if (crit.currentAmmoPoint >= remaining)
+                {
+                    crit.currentAmmoPoint -= remaining;
+                    remaining = 0f;
+                    break;
+                }
+                else
+                {
+                    remaining -= crit.currentAmmoPoint;
+                    crit.currentAmmoPoint = 0f;
+                }
+            }
+        }
+
+        totalAmmoPoints -= points;
+        return true;
+    }
+
+    private void RebuildAmmoCache()
+    {
+        if (_ammoModuleCache == null)
+            _ammoModuleCache = new List<PlacedModule>();
+        _ammoModuleCache.Clear();
+
+        if (_ammoCriticalCache == null)
+            _ammoCriticalCache = new List<VehicleCriticalPart>();
+        _ammoCriticalCache.Clear();
+
+        _ammoCacheIndex = 0;
+
+        foreach (var mod in installedModules)
+        {
+            if (mod.moduleTemplate != null && mod.moduleTemplate.ammoPoint > 0f && mod.currentAmmoPoint > 0f)
+                _ammoModuleCache.Add(mod);
+        }
+
+        VehicleCriticalPart[] critParts = GetComponentsInChildren<VehicleCriticalPart>(true);
+        foreach (var cp in critParts)
+        {
+            if (cp.ammoPoint > 0f && cp.currentAmmoPoint > 0f)
+                _ammoCriticalCache.Add(cp);
         }
     }
 
@@ -266,6 +376,20 @@ public class VehicleStatsManager : MonoBehaviour
                     totalDragArea += template.dragModifier;
             }
         }
+
+        // Hitung total ammo pool & rebuild cache
+        totalAmmoPoints = 0f;
+        foreach (var mod in installedModules)
+        {
+            if (mod.moduleTemplate != null && mod.moduleTemplate.ammoPoint > 0f)
+                totalAmmoPoints += mod.currentAmmoPoint;
+        }
+        foreach (var cp in criticalParts)
+        {
+            if (cp.ammoPoint > 0f)
+                totalAmmoPoints += cp.currentAmmoPoint;
+        }
+        RebuildAmmoCache();
 
         // Terapkan ke VehicleController — jangan auto-start engine!
         // Hanya matikan mesin kalau part Engine hancur/tidak ada.

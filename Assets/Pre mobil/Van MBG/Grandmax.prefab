@@ -6439,6 +6439,8 @@ MonoBehaviour:
   powerGeneration: 0
   extraBatteryCapacity: 0
   extraFuelCapacity: 40
+  ammoPoint: 120
+  currentAmmoPoint: 0
   extraMaxOutput: 0
   capacitorCapacity: 0
   chargeRate: 0
@@ -8713,6 +8715,8 @@ MonoBehaviour:
   powerGeneration: 0
   extraBatteryCapacity: 0
   extraFuelCapacity: 0
+  ammoPoint: 0
+  currentAmmoPoint: 0
   extraMaxOutput: 0
   capacitorCapacity: 0
   chargeRate: 0
@@ -10062,6 +10066,8 @@ MonoBehaviour:
   centerOfMassHeight: -0.3
   antiRollForce: 7000
   downforceMultiplier: 0.02
+  airDragCd: 0.5
+  frontalArea: 2.2
   preventWheelSlipRPM: 1
   currentRPM: 650.00006
   currentTorqueNm: 0
@@ -10116,6 +10122,7 @@ MonoBehaviour:
     origin: {fileID: 5959161589016137262}
     capacity: {x: 4, y: 6}
     cellSize: 0.25
+    affectDrag: 1
   installedModules: []
   currentTotalMass: 1900
   currentPowerConsumption: 0
@@ -10125,6 +10132,7 @@ MonoBehaviour:
   currentMaxOutput: 1000
   currentCapacitorCapacity: 0
   currentCapacitorChargeRate: 0
+  totalAmmoPoints: 0
   currentChassisArmor: 0
   currentFuelAmount: 0
   currentBatteryAmount: 0
@@ -14412,6 +14420,8 @@ MonoBehaviour:
   powerGeneration: 0
   extraBatteryCapacity: 0
   extraFuelCapacity: 0
+  ammoPoint: 0
+  currentAmmoPoint: 0
   extraMaxOutput: 0
   capacitorCapacity: 0
   chargeRate: 0
@@ -16246,6 +16256,8 @@ MonoBehaviour:
   powerGeneration: 95
   extraBatteryCapacity: 720
   extraFuelCapacity: 0
+  ammoPoint: 0
+  currentAmmoPoint: 0
   extraMaxOutput: 0
   capacitorCapacity: 0
   chargeRate: 0

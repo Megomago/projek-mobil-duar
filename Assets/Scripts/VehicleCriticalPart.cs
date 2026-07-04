@@ -44,6 +44,11 @@ public class VehicleCriticalPart : MonoBehaviour
     [Tooltip("Kapasitas penyimpanan bensin tambahan (L)")]
     public float extraFuelCapacity = 0f;
 
+    [Header("Ammo Settings")]
+    [Tooltip("Jumlah poin amunisi yang disediakan part ini. 0 = bukan sumber ammo.")]
+    public int ammoPoint = 0;
+    [HideInInspector] public float currentAmmoPoint;
+
     [Header("Capacitor Settings")]
     [Tooltip("Tambahan max output (W)")]
     public float extraMaxOutput = 0f;
@@ -69,6 +74,7 @@ public class VehicleCriticalPart : MonoBehaviour
     private void Awake()
     {
         currentHealth = maxHealth;
+        currentAmmoPoint = ammoPoint;
         _statsManager = GetComponentInParent<VehicleStatsManager>();
     }
 

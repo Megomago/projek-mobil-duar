@@ -32,7 +32,10 @@ namespace Weapons
         public float attackPower = 100f;
         [Tooltip("Penetration power vs DEF")]
         public float penetration = 150f;
-        
+
+        [Tooltip("Poin amunisi yang dikonsumsi per 1 tembakan. Contoh: 10 berarti nyedot 10 ammoPoint per peluru")]
+        public int ammoCostPerShot = 1;
+
         [Tooltip("Batas amunisi dalam satu magazine (0 = Infinite)")]
         public int maxAmmo = 30;
         [Tooltip("Otomatis melakukan reload saat peluru habis?")]
