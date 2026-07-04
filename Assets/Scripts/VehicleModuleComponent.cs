@@ -35,7 +35,7 @@ public class VehicleModuleComponent : MonoBehaviour
     /// </summary>
     public void TakeDamage(float damageAmount)
     {
-        if (isDestroyed || placedModuleData == null) return;
+        if (isDestroyed || placedModuleData == null || placedModuleData.moduleTemplate == null) return;
 
         currentHealth -= damageAmount;
         placedModuleData.currentHealth = currentHealth;
@@ -49,6 +49,13 @@ public class VehicleModuleComponent : MonoBehaviour
     private void DestroyModule()
     {
         isDestroyed = true;
+
+        if (placedModuleData == null || placedModuleData.moduleTemplate == null)
+        {
+            Destroy(gameObject);
+            return;
+        }
+
         Debug.Log($"Modul {placedModuleData.moduleTemplate.moduleName} HANCUR!");
 
         // Jika modul ini mudah meledak (seperti tangki bensin / aki)
