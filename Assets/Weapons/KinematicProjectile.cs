@@ -268,12 +268,25 @@ namespace Weapons
             }
             else
             {
-                // 3. Coba target lain (misal SimpleTarget)
-                var simpleTarget = hit.collider.GetComponentInParent<SimpleTarget>();
-                if (simpleTarget != null)
+                // 3. Coba damage ke VehicleModuleComponent langsung (standalone prefab modul di scene)
+                var directMod = hit.collider.GetComponentInParent<VehicleModuleComponent>();
+                if (directMod != null)
                 {
-                    dbgType = "target";
-                    result = simpleTarget.TakeDamage(_atk, _pen, _currentVelocity.magnitude);
+                    dbgType = "module";
+                    float def = (directMod.placedModuleData != null && directMod.placedModuleData.moduleTemplate != null)
+                        ? directMod.placedModuleData.moduleTemplate.armor : 10f;
+                    result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
+                    directMod.TakeDamage(result.Value.damage);
+                }
+                else
+                {
+                    // 4. Coba target lain (misal SimpleTarget)
+                    var simpleTarget = hit.collider.GetComponentInParent<SimpleTarget>();
+                    if (simpleTarget != null)
+                    {
+                        dbgType = "target";
+                        result = simpleTarget.TakeDamage(_atk, _pen, _currentVelocity.magnitude);
+                    }
                 }
             }
 
