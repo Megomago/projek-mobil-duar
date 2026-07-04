@@ -207,6 +207,15 @@ namespace Weapons
                     result = ApplyModuleDamage(hitModule, statsMgr);
                     goto AFTER_DAMAGE;
                 }
+
+                // 1a. Fallback: dictionary miss — cari langsung dari VehicleModuleComponent
+                var modComp = hit.collider.GetComponentInParent<VehicleModuleComponent>();
+                if (modComp != null && modComp.placedModuleData != null)
+                {
+                    dbgType = "module";
+                    result = ApplyModuleDamage(modComp.placedModuleData, statsMgr);
+                    goto AFTER_DAMAGE;
+                }
             }
 
             // 1.5 Coba damage ke individual wheel (sistem baru)
@@ -239,12 +248,22 @@ namespace Weapons
                 }
                 else
                 {
-                    dbgType = "body";
-                    float def = statsMgr.currentChassisArmor;
-                    result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
-                    #if UNITY_EDITOR
-                    Debug.Log($"[BODY] Chassis ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
-                    #endif
+                    // Final fallback: cek VehicleModuleComponent sebelum apply body damage
+                    var finalModComp = hit.collider.GetComponentInParent<VehicleModuleComponent>();
+                    if (finalModComp != null && finalModComp.placedModuleData != null)
+                    {
+                        dbgType = "module";
+                        result = ApplyModuleDamage(finalModComp.placedModuleData, statsMgr);
+                    }
+                    else
+                    {
+                        dbgType = "body";
+                        float def = statsMgr.currentChassisArmor;
+                        result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
+                        #if UNITY_EDITOR
+                        Debug.Log($"[BODY] Chassis ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
+                        #endif
+                    }
                 }
             }
             else
