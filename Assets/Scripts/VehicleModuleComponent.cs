@@ -87,10 +87,6 @@ public class VehicleModuleComponent : MonoBehaviour
         if (template.explosionSFX != null)
             AudioSource.PlayClipAtPoint(template.explosionSFX, pos);
 
-        // Camera shake
-        if (VehicleCamera.Instance != null)
-            VehicleCamera.Instance.Shake(Mathf.Min(template.explosionDamage * 0.0005f, 1.5f), Mathf.Min(template.explosionRadius * 0.1f, 0.5f));
-
         Debug.Log($"BOOM! {template.moduleName} MELEDAK dengan radius {template.explosionRadius}!");
     }
 }

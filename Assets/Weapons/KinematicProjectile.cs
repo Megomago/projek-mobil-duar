@@ -181,9 +181,6 @@ namespace Weapons
                 if (_explosionSFX != null)
                     AudioSource.PlayClipAtPoint(_explosionSFX, hit.point);
 
-                if (VehicleCamera.Instance != null)
-                    VehicleCamera.Instance.Shake(Mathf.Min(_explosiveDamage * 0.001f, 2f), Mathf.Min(_explosiveRadius * 0.15f, 1f));
-
                 #if UNITY_EDITOR
                 Debug.DrawLine(hit.point + Vector3.left * 0.3f, hit.point + Vector3.right * 0.3f, Color.red, 3f);
                 Debug.DrawLine(hit.point + Vector3.up * 0.3f, hit.point + Vector3.down * 0.3f, Color.red, 3f);
@@ -198,28 +195,62 @@ namespace Weapons
             OptResult? result = null;
             string dbgType = "unknown";
 
-            // 1. Coba damage ke modul grid (O(1) lookup pake dictionary)
-            if (statsMgr != null)
-            {
-                if (statsMgr.moduleColliderMap.TryGetValue(hit.collider, out var hitModule))
-                {
-                    dbgType = "module";
-                    result = ApplyModuleDamage(hitModule, statsMgr);
-                    goto AFTER_DAMAGE;
-                }
+            // ── Priority-based damage detection ──
+            // Semua GetComponentInParent unconditional, urutan prioritas:
+            //   1. Module (dictionary > GetComponentInParent)
+            //   2. Wheel
+            //   3. Critical Part
+            //   4. SimpleTarget
+            //   5. Chassis body (hanya jika statsMgr ada)
 
-                // 1a. Fallback: dictionary miss — cari langsung dari VehicleModuleComponent
-                var modComp = hit.collider.GetComponentInParent<VehicleModuleComponent>();
-                if (modComp != null && modComp.placedModuleData != null)
+            // Cari semua komponen target sekali di awal
+            var modComp = hit.collider.GetComponentInParent<VehicleModuleComponent>();
+            var wheelHealth = hit.collider.GetComponentInParent<WheelHealth>();
+            var critPart = hit.collider.GetComponentInParent<VehicleCriticalPart>();
+            var simpleTarget = hit.collider.GetComponentInParent<SimpleTarget>();
+
+            // Debug: kirim log nama target + hierarchy depth
+            #if UNITY_EDITOR
+            Transform depthCheck = hit.collider.transform;
+            int depth = 0;
+            string chain = hit.collider.gameObject.name;
+            while (depthCheck.parent != null && depth < 20)
+            {
+                depthCheck = depthCheck.parent;
+                chain += " > " + depthCheck.gameObject.name;
+                depth++;
+            }
+            Debug.Log($"[HIT] '{hit.collider.gameObject.name}' depth={depth} chain={chain} | modComp={(modComp != null ? modComp.gameObject.name : "null")} wheel={(wheelHealth != null)} crit={(critPart != null)} target={(simpleTarget != null)} statsMgr={(statsMgr != null ? statsMgr.gameObject.name : "null")}");
+            #endif
+
+            // 1. Module — dictionary lookup dulu, fallback GetComponentInParent
+            if (statsMgr != null && statsMgr.moduleColliderMap.TryGetValue(hit.collider, out var hitModule))
+            {
+                dbgType = "module";
+                result = ApplyModuleDamage(hitModule, statsMgr);
+                goto AFTER_DAMAGE;
+            }
+
+            if (modComp != null)
+            {
+                float def = (modComp.placedModuleData != null && modComp.placedModuleData.moduleTemplate != null)
+                    ? modComp.placedModuleData.moduleTemplate.armor : 10f;
+                result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
+                modComp.TakeDamage(result.Value.damage);
+
+                if (statsMgr != null && modComp.placedModuleData != null)
                 {
                     dbgType = "module";
                     result = ApplyModuleDamage(modComp.placedModuleData, statsMgr);
-                    goto AFTER_DAMAGE;
                 }
+                else
+                {
+                    dbgType = "module";
+                }
+                goto AFTER_DAMAGE;
             }
 
-            // 1.5 Coba damage ke individual wheel (sistem baru)
-            WheelHealth wheelHealth = hit.collider.GetComponentInParent<WheelHealth>();
+            // 2. Wheel
             if (wheelHealth != null)
             {
                 dbgType = "wheel";
@@ -231,63 +262,36 @@ namespace Weapons
                 goto AFTER_DAMAGE;
             }
 
-            // 2. Coba damage ke vehicle parts (component-based, gaperlu layer khusus)
+            // 3. Critical Part
+            if (critPart != null)
+            {
+                dbgType = "crit";
+                float def = critPart.armor;
+                result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
+                #if UNITY_EDITOR
+                Debug.Log($"[CRIT] {critPart.partName} ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
+                #endif
+                critPart.TakeDamage(result.Value.damage);
+                goto AFTER_DAMAGE;
+            }
+
+            // 4. SimpleTarget
+            if (simpleTarget != null)
+            {
+                dbgType = "target";
+                result = simpleTarget.TakeDamage(_atk, _pen, _currentVelocity.magnitude);
+                goto AFTER_DAMAGE;
+            }
+
+            // 5. Chassis body (hanya jika statsMgr valid)
             if (statsMgr != null && statsMgr.baseData != null)
             {
-                VehicleCriticalPart critPart = hit.collider.GetComponentInParent<VehicleCriticalPart>();
-                if (critPart != null)
-                {
-                    dbgType = "crit";
-                    float def = critPart.armor;
-                    result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
-                    #if UNITY_EDITOR
-                    Debug.Log($"[CRIT] {critPart.partName} ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
-                    #endif
-
-                    critPart.TakeDamage(result.Value.damage);
-                }
-                else
-                {
-                    // Final fallback: cek VehicleModuleComponent sebelum apply body damage
-                    var finalModComp = hit.collider.GetComponentInParent<VehicleModuleComponent>();
-                    if (finalModComp != null && finalModComp.placedModuleData != null)
-                    {
-                        dbgType = "module";
-                        result = ApplyModuleDamage(finalModComp.placedModuleData, statsMgr);
-                    }
-                    else
-                    {
-                        dbgType = "body";
-                        float def = statsMgr.currentChassisArmor;
-                        result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
-                        #if UNITY_EDITOR
-                        Debug.Log($"[BODY] Chassis ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
-                        #endif
-                    }
-                }
-            }
-            else
-            {
-                // 3. Coba damage ke VehicleModuleComponent langsung (standalone prefab modul di scene)
-                var directMod = hit.collider.GetComponentInParent<VehicleModuleComponent>();
-                if (directMod != null)
-                {
-                    dbgType = "module";
-                    float def = (directMod.placedModuleData != null && directMod.placedModuleData.moduleTemplate != null)
-                        ? directMod.placedModuleData.moduleTemplate.armor : 10f;
-                    result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
-                    directMod.TakeDamage(result.Value.damage);
-                }
-                else
-                {
-                    // 4. Coba target lain (misal SimpleTarget)
-                    var simpleTarget = hit.collider.GetComponentInParent<SimpleTarget>();
-                    if (simpleTarget != null)
-                    {
-                        dbgType = "target";
-                        result = simpleTarget.TakeDamage(_atk, _pen, _currentVelocity.magnitude);
-                    }
-                }
+                dbgType = "body";
+                float def = statsMgr.currentChassisArmor;
+                result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
+                #if UNITY_EDITOR
+                Debug.Log($"[BODY] Chassis ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
+                #endif
             }
 
         AFTER_DAMAGE:
