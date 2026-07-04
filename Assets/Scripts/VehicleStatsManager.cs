@@ -74,6 +74,8 @@ public class VehicleStatsManager : MonoBehaviour
     public float currentTotalMass;
     public float currentPowerConsumption;
     public float currentPowerGeneration;
+    public float totalLampPower;
+    public float activePowerConsumption;
 
     // Produksi daya dari Engine & Alternator (baru ditambahkan kalau engine hidup)
     private float _enginePowerGeneration;
@@ -192,12 +194,15 @@ public class VehicleStatsManager : MonoBehaviour
         float totalPowerGen = currentPowerGeneration;
         if (vc != null && vc.engineRunning)
             totalPowerGen += _enginePowerGeneration;
-        float netPower = totalPowerGen - currentPowerConsumption;
+        bool lightsOn = vc != null && vc.lightsOn;
+        float aktifConsumption = currentPowerConsumption;
+        if (!lightsOn) aktifConsumption -= totalLampPower;
+        activePowerConsumption = aktifConsumption;
+        float netPower = totalPowerGen - aktifConsumption;
         currentBatteryAmount += netPower * Time.deltaTime / 3600f; // Watt → Watt-hour
         currentBatteryAmount = Mathf.Clamp(currentBatteryAmount, 0f, currentBatteryCapacity);
 
         // Update lamp state untuk semua critical part bertipe lampu
-        bool lightsOn = vc != null && vc.lightsOn;
         VehicleCriticalPart[] criticalParts = GetComponentsInChildren<VehicleCriticalPart>();
         foreach (var part in criticalParts)
         {
@@ -309,6 +314,7 @@ public class VehicleStatsManager : MonoBehaviour
         currentPowerConsumption = 0f;
         currentPowerGeneration = 0f;
         _enginePowerGeneration = 0f;
+        totalLampPower = 0f;
         currentBatteryCapacity = 0f;
         currentFuelCapacity = 0f;
         currentCapacitorCapacity = 0f;
@@ -323,6 +329,7 @@ public class VehicleStatsManager : MonoBehaviour
             if (!part.gameObject.activeInHierarchy) continue;
 
             currentPowerConsumption   += part.powerConsumption;
+            if (part.isLamp) totalLampPower += part.powerConsumption;
             currentBatteryCapacity    += part.extraBatteryCapacity;
             currentFuelCapacity       += part.extraFuelCapacity;
             currentMaxOutput          += part.extraMaxOutput;
@@ -520,16 +527,16 @@ public class VehicleStatsManager : MonoBehaviour
             // Cek Base A vs Base B (selalu terlarang)
             if (HasIntersection(baseCellsA, baseCellsB)) return false;
 
-            // Cek Base A vs Clearance B (Boleh jika A kecil)
+            // Cek Base A vs Clearance B (Boleh jika A kecil DAN B mengizinkan akses)
             if (HasIntersection(baseCellsA, clearanceCellsB))
             {
-                if (!templateToPlace.isSmall) return false;
+                if (!templateToPlace.isSmall || !mod.moduleTemplate.enableAccessClearance) return false;
             }
 
-            // Cek Clearance A vs Base B (Boleh jika B kecil)
+            // Cek Clearance A vs Base B (Boleh jika B kecil DAN A mengizinkan akses)
             if (HasIntersection(clearanceCellsA, baseCellsB))
             {
-                if (!mod.moduleTemplate.isSmall) return false;
+                if (!mod.moduleTemplate.isSmall || !templateToPlace.enableAccessClearance) return false;
             }
 
             // Clearance A vs Clearance B selalu boleh

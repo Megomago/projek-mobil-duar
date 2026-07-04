@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb63ac7e609242f499101012a8337637, type: 3}
   m_Name: L21 Modul
   m_EditorClassIdentifier: 
-  moduleName: aaaaa
+  moduleName: L21 RARDEN
   moduleType: 0
   moduleIcon: {fileID: 0}
   weaponData: {fileID: 11400000, guid: 54ce7e9a5153ac740993e740be96da94, type: 2}
@@ -21,6 +21,7 @@ MonoBehaviour:
   height: 5
   isSmall: 0
   enableClearance: 1
+  enableAccessClearance: 1
   clearanceRight: 0
   clearanceLeft: 0
   clearanceFront: 6
@@ -36,6 +37,8 @@ MonoBehaviour:
   capacitorCapacity: 0
   chargeRate: 0
   hideFromModuleList: 0
+  ammoPoint: 0
+  dragModifier: 0.3
   volatileExplosive: 0
   explosionRadius: 1
   explosionDamage: 100

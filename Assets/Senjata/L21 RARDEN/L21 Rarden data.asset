@@ -22,6 +22,7 @@ MonoBehaviour:
   fireRateRPM: 90
   attackPower: 100
   penetration: 800
+  ammoCostPerShot: 10
   maxAmmo: 3
   autoReload: 1
   reloadTime: 2.85
@@ -42,6 +43,10 @@ MonoBehaviour:
   shootSound: {fileID: 8300000, guid: 440ff0a513a6c3a47bd663e828c612e7, type: 3}
   reloadSound: {fileID: 0}
   emptyClickSound: {fileID: 0}
+  minPitch: 0.85
+  maxPitch: 1
+  minVolume: 0.9
+  maxVolume: 1
   casingPrefab: {fileID: 8861373467729997680, guid: 07d19cd4efd487741a4e81b47f37da44,
     type: 3}
   casingEjectDelay: 0

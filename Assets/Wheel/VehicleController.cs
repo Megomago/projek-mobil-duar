@@ -242,6 +242,8 @@ public class VehicleController : MonoBehaviour
     private float       _shiftCooldown;
     private float       _brakeHoldTimer;
     private const float SHIFT_COOLDOWN_TIME = 0.8f;
+    [Tooltip("Faktor torsi yg mengalir ke roda saat transmisi sedang shifting (0 = putus total, 1 = ngalir terus). Default 0 biar realistis.")]
+    public float shiftTorqueFactor = 0f;
     private const float RPM_TO_RADS         = Mathf.PI / 30f;
     private const float RADS_TO_RPM         = 30f / Mathf.PI;
 
@@ -440,6 +442,11 @@ public class VehicleController : MonoBehaviour
                 if (!hasStarterPower) return;
 
                 engineRunning = true;
+                if (vsm != null && !vsm.isPreviewMode)
+                {
+                    float starterEnergyWh = starterPowerRequired * 2f / 3600f;
+                    vsm.currentBatteryAmount = Mathf.Max(0f, vsm.currentBatteryAmount - starterEnergyWh);
+                }
             }
         }
 
@@ -593,6 +600,11 @@ public class VehicleController : MonoBehaviour
                 revLimiterFactor = Mathf.InverseLerp(engine.maxRPM, engine.maxRPM * 0.98f, realEngineRPM);
 
             totalDriveTorque *= revLimiterFactor;
+
+            // ── SHIFT TORQUE INTERRUPTION ──
+            // Putus/sekat torsi selama transmisi sedang berganti gigi (cooldown)
+            if (_shiftCooldown > 0f)
+                totalDriveTorque *= shiftTorqueFactor;
 
             // Clutch slip
             if (transmissionType == TransmissionType.Manual && clutchInput)

@@ -115,7 +115,7 @@ Transform:
   m_GameObject: {fileID: 1979944428925729620}
   serializedVersion: 2
   m_LocalRotation: {x: -0.7071068, y: 0, z: 0, w: 0.7071068}
-  m_LocalPosition: {x: 0, y: 0, z: 0.13791275}
+  m_LocalPosition: {x: 0, y: 0, z: 0.094}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
@@ -306,6 +306,7 @@ GameObject:
   - component: {fileID: 5800793332422848552}
   - component: {fileID: 2536088811848740524}
   - component: {fileID: 6616661661021709076}
+  - component: {fileID: 5148450387025779990}
   m_Layer: 6
   m_Name: Big Buster
   m_TagString: Untagged
@@ -450,6 +451,23 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &5148450387025779990
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7133440297363014158}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35237a19d9f41cf4b850bce493591dc8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  template: {fileID: 11400000, guid: 20fdc7c8089cded49b1eb249a06aef26, type: 2}
+  cellSize: 0.25
+  baseColor: {r: 1, g: 0, b: 0, a: 0.8}
+  clearanceColor: {r: 1, g: 0.5, b: 0, a: 0.8}
+  showGizmos: 1
 --- !u!1 &7356724374313788430
 GameObject:
   m_ObjectHideFlags: 0

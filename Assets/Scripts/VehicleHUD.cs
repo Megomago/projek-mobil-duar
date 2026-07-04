@@ -122,9 +122,7 @@ public class VehicleHUD : MonoBehaviour
         if (batteryCapacityText    != null) batteryCapacityText.text    = statsManager.currentBatteryCapacity.ToString("0") + " Wh";
         if (powerGenerationText    != null)
         {
-            float totalGen = statsManager.currentPowerGeneration;
-            if (vc != null && vc.engineRunning)
-                totalGen += statsManager.enginePowerGeneration;
+            float totalGen = statsManager.currentPowerGeneration + statsManager.enginePowerGeneration;
             powerGenerationText.text = totalGen.ToString("0") + " W";
         }
         if (powerConsumptionText   != null) powerConsumptionText.text   = statsManager.currentPowerConsumption.ToString("0") + " W";

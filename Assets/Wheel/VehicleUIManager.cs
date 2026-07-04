@@ -161,8 +161,8 @@ public class VehicleUIManager : MonoBehaviour
         if (vehicle != null && vehicle.engineRunning)
             totalGen += statsManager.enginePowerGeneration;
         Row($"Power Gen : {totalGen:F0} W");
-        Row($"Power Cons: {statsManager.currentPowerConsumption:F0} W");
-        float netPower = totalGen - statsManager.currentPowerConsumption;
+        Row($"Power Cons: {statsManager.activePowerConsumption:F0} W");
+        float netPower = totalGen - statsManager.activePowerConsumption;
         Row($"Net Power : {netPower:F0} W {(netPower >= 0 ? "(charging)" : "(draining)")}");
         Row($"Max Out   : {statsManager.currentMaxOutput:F0} W");
         Row($"Capacitor : {statsManager.currentCapacitorCapacity:F0} Wh");
@@ -257,7 +257,7 @@ public class VehicleUIManager : MonoBehaviour
         }
 
         if (powerConsumptionText != null)
-            powerConsumptionText.text = statsManager.currentPowerConsumption.ToString("0") + " W";
+            powerConsumptionText.text = statsManager.activePowerConsumption.ToString("0") + " W";
 
         if (maxPowerOutputText != null)
             maxPowerOutputText.text = statsManager.currentMaxOutput.ToString("0") + " W";

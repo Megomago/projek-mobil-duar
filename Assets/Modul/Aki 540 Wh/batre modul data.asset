@@ -10,35 +10,36 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: eb63ac7e609242f499101012a8337637, type: 3}
-  m_Name: Big Buster 50 modul
+  m_Name: batre modul data
   m_EditorClassIdentifier: 
-  moduleName: www
-  moduleType: 0
+  moduleName: Aki Astra GS Premium 540 Wh
+  moduleType: 1
   moduleIcon: {fileID: 0}
-  weaponData: {fileID: 11400000, guid: 502122b4e45311047b86aa18e0004905, type: 2}
-  modulePrefab: {fileID: 0}
-  width: 2
-  height: 4
-  isSmall: 0
-  enableClearance: 1
-  enableAccessClearance: 0
+  weaponData: {fileID: 0}
+  modulePrefab: {fileID: 3768299996699101082, guid: db88cc5de2379bf4a8dbef996145f9cf,
+    type: 3}
+  width: 1
+  height: 1
+  isSmall: 1
+  enableClearance: 0
+  enableAccessClearance: 1
   clearanceRight: 0
   clearanceLeft: 0
-  clearanceFront: 5
+  clearanceFront: 0
   clearanceBack: 0
-  weight: 50
+  weight: 15
   maxHealth: 100
   armor: 10
   powerConsumption: 0
   powerGeneration: 0
-  extraBatteryCapacity: 0
+  extraBatteryCapacity: 540
   extraFuelCapacity: 0
   extraMaxOutput: 0
   capacitorCapacity: 0
   chargeRate: 0
   hideFromModuleList: 0
   ammoPoint: 0
-  dragModifier: 0
+  dragModifier: 0.1
   volatileExplosive: 0
   explosionRadius: 1
   explosionDamage: 100
