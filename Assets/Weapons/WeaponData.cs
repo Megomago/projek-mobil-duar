@@ -148,5 +148,21 @@ namespace Weapons
         [Tooltip("Kekuatan acak putaran (torque) magazine saat jatuh")]
         public float magazineDropTorque = 2f;
         #endregion
+
+        #region --- 12. EXPLOSIVE AMMO (HE/HEAT/APHE) ---
+        [Header("=== EXPLOSIVE AMMO (HE/HEAT/APHE) ===")]
+        [Tooltip("Aktifkan jika amunisi ini meledak saat benturan, bukan menembus target.")]
+        public bool isExplosive = false;
+        [Tooltip("Radius ledakan dalam meter (world units).")]
+        public float explosiveRadius = 5f;
+        [Tooltip("Damage maksimal di pusat ledakan (semakin jauh dikurangi distance falloff).")]
+        public float explosiveDamage = 200f;
+        [Tooltip("Kekuatan dorong (explosion force) ke Rigidbody di sekitar.")]
+        public float explosiveForce = 500f;
+        [Tooltip("Prefab VFX ledakan (WarFX Explosion atau kustom).")]
+        public GameObject explosionVFXPrefab;
+        [Tooltip("Clip suara ledakan.")]
+        public AudioClip explosionSFX;
+        #endregion
     }
 }

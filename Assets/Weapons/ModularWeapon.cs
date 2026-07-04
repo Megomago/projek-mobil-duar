@@ -444,6 +444,7 @@ namespace Weapons
                 KinematicProjectile kp = projObj.GetComponent<KinematicProjectile>();
                 if (kp != null)
                 {
+                    kp.SetExplosive(weaponData.isExplosive, weaponData.explosiveRadius, weaponData.explosiveDamage, weaponData.explosiveForce, weaponData.explosionVFXPrefab, weaponData.explosionSFX);
                     kp.Initialize(muzzleTransform.position, finalDirection, weaponData.muzzleVelocity, weaponData.attackPower, weaponData.penetration, _ownerStatsManager);
                 }
             }

@@ -1,4 +1,5 @@
 using UnityEngine;
+using Weapons;
 
 /// <summary>
 /// Script ini ditempelkan ke PREFAB 3D dari modul (misal model Tangki Bensin, Armor Plate, Generator, dll).
@@ -68,7 +69,28 @@ public class VehicleModuleComponent : MonoBehaviour
 
     private void Explode()
     {
-        Debug.Log($"BOOM! {placedModuleData.moduleTemplate.moduleName} MELEDAK dengan radius {placedModuleData.moduleTemplate.explosionRadius}!");
-        // TODO: Tambahkan efek partikel ledakan, suara, dan damage area ke modul lain di sekitarnya.
+        var template = placedModuleData.moduleTemplate;
+        Vector3 pos = transform.position;
+
+        // VFX
+        if (template.explosionVFXPrefab != null && ObjectPool.Instance != null)
+        {
+            GameObject vfx = ObjectPool.Instance.Spawn(template.explosionVFXPrefab, pos, Quaternion.identity);
+            if (vfx != null)
+            {
+                float vfxScale = template.explosionRadius * 0.25f * 0.5f;
+                vfx.transform.localScale = Vector3.one * Mathf.Max(vfxScale, 0.5f);
+            }
+        }
+
+        // SFX
+        if (template.explosionSFX != null)
+            AudioSource.PlayClipAtPoint(template.explosionSFX, pos);
+
+        // Camera shake
+        if (VehicleCamera.Instance != null)
+            VehicleCamera.Instance.Shake(Mathf.Min(template.explosionDamage * 0.0005f, 1.5f), Mathf.Min(template.explosionRadius * 0.1f, 0.5f));
+
+        Debug.Log($"BOOM! {template.moduleName} MELEDAK dengan radius {template.explosionRadius}!");
     }
 }

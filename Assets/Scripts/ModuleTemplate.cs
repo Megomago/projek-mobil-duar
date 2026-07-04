@@ -41,6 +41,8 @@ public class ModuleTemplate : ScriptableObject
     public bool isSmall = false;
     [Tooltip("Aktifkan ini jika modul memiliki laras atau atap yang menonjol dan memakan ruang (Clearance Zone)")]
     public bool enableClearance = false;
+    [Tooltip("Aktifkan agar modul isSmall boleh masuk ke clearance zone modul ini")]
+    public bool enableAccessClearance = true;
     [Tooltip("Ekstra grid clearance ke KANAN")]
     public int clearanceRight = 0;
     [Tooltip("Ekstra grid clearance ke KIRI")]
@@ -97,4 +99,8 @@ public class ModuleTemplate : ScriptableObject
     public int explosionRadius = 1;
     [Tooltip("Damage ledakan berantai")]
     public float explosionDamage = 100f;
+    [Tooltip("Prefab VFX ledakan saat modul ini meledak (WarFX atau kustom).")]
+    public GameObject explosionVFXPrefab;
+    [Tooltip("Clip suara ledakan saat modul ini meledak.")]
+    public AudioClip explosionSFX;
 }

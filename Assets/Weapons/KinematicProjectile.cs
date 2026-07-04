@@ -31,6 +31,15 @@ namespace Weapons
         private float _atk;
         private float _pen;
         private VehicleStatsManager _ownerStatsManager;
+
+        // Explosive State (di-set oleh ModularWeapon via SetExplosive)
+        private bool _isExplosive;
+        private float _explosiveRadius;
+        private float _explosiveDamage;
+        private float _explosiveForce;
+        private GameObject _explosionVFXPrefab;
+        private AudioClip _explosionSFX;
+
         // Pembatas spawn impact VFX per frame (ANTI LAG SPIKE)
         private static float _lastImpactFrameTime;
         private static int _impactsThisFrame;
@@ -72,6 +81,24 @@ namespace Weapons
             }
 
             _piercedColliders.Clear();
+
+            // Reset explosive state tiap kali dipake ulang dari pool
+            _isExplosive = false;
+            _explosiveRadius = 0f;
+            _explosiveDamage = 0f;
+            _explosiveForce = 0f;
+            _explosionVFXPrefab = null;
+            _explosionSFX = null;
+        }
+
+        public void SetExplosive(bool isExplosive, float radius, float damage, float force, GameObject vfx, AudioClip sfx)
+        {
+            _isExplosive = isExplosive;
+            _explosiveRadius = radius;
+            _explosiveDamage = damage;
+            _explosiveForce = force;
+            _explosionVFXPrefab = vfx;
+            _explosionSFX = sfx;
         }
 
         private void Update()
@@ -135,6 +162,38 @@ namespace Weapons
             var statsMgr = hit.collider.GetComponentInParent<VehicleStatsManager>();
             if (statsMgr != null && _ownerStatsManager != null && statsMgr == _ownerStatsManager)
                 return;
+
+            // Explosive ammo: bypass kinetic damage pipeline, langsung detonate
+            if (_isExplosive)
+            {
+                ExplosionManager.Detonate(hit.point, _explosiveRadius, _explosiveDamage, _explosiveForce, statsMgr, hitMask, _ownerStatsManager);
+
+                if (_explosionVFXPrefab != null && ObjectPool.Instance != null)
+                {
+                    GameObject vfx = ObjectPool.Instance.Spawn(_explosionVFXPrefab, hit.point, Quaternion.LookRotation(hit.normal));
+                    if (vfx != null)
+                    {
+                        float vfxScale = _explosiveRadius * 0.35f;
+                        vfx.transform.localScale = Vector3.one * Mathf.Max(vfxScale, 0.5f);
+                    }
+                }
+
+                if (_explosionSFX != null)
+                    AudioSource.PlayClipAtPoint(_explosionSFX, hit.point);
+
+                if (VehicleCamera.Instance != null)
+                    VehicleCamera.Instance.Shake(Mathf.Min(_explosiveDamage * 0.001f, 2f), Mathf.Min(_explosiveRadius * 0.15f, 1f));
+
+                #if UNITY_EDITOR
+                Debug.DrawLine(hit.point + Vector3.left * 0.3f, hit.point + Vector3.right * 0.3f, Color.red, 3f);
+                Debug.DrawLine(hit.point + Vector3.up * 0.3f, hit.point + Vector3.down * 0.3f, Color.red, 3f);
+                Debug.DrawLine(hit.point + Vector3.forward * 0.3f, hit.point + Vector3.back * 0.3f, Color.red, 3f);
+                Debug.Log($"[EXPLOSIVE] {_explosiveDamage} dmg radius {_explosiveRadius}m at {hit.point}");
+                #endif
+
+                DestroyProjectile();
+                return;
+            }
 
             OptResult? result = null;
             string dbgType = "unknown";
@@ -323,5 +382,19 @@ namespace Weapons
                 Destroy(gameObject);
             }
         }
+
+#if UNITY_EDITOR
+        private void OnDrawGizmosSelected()
+        {
+            if (!Application.isPlaying) return;
+            if (_explosiveRadius > 0f)
+            {
+                Gizmos.color = new Color(1f, 0.4f, 0f, 0.15f);
+                Gizmos.DrawSphere(transform.position, _explosiveRadius);
+                Gizmos.color = new Color(1f, 0.6f, 0f, 0.9f);
+                Gizmos.DrawWireSphere(transform.position, _explosiveRadius);
+            }
+        }
+#endif
     }
 }
