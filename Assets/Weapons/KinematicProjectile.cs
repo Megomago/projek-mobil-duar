@@ -233,8 +233,11 @@ namespace Weapons
 
             if (modComp != null)
             {
-                float def = (modComp.placedModuleData != null && modComp.placedModuleData.moduleTemplate != null)
-                    ? modComp.placedModuleData.moduleTemplate.armor : 10f;
+                float def = 10f;
+                if (modComp.placedModuleData != null && modComp.placedModuleData.moduleTemplate != null)
+                    def = modComp.placedModuleData.moduleTemplate.armor;
+                else if (modComp.moduleTemplate != null)
+                    def = modComp.moduleTemplate.armor;
                 result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
                 modComp.TakeDamage(result.Value.damage);
 

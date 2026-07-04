@@ -7,10 +7,13 @@ using Weapons;
 /// </summary>
 public class VehicleModuleComponent : MonoBehaviour
 {
-    [Header("Module Data (Auto-Linked at Runtime)")]
-    [Tooltip("Data runtime modul ini saat dipasang di grid.")]
+    [Header("Module Data")]
+    [Tooltip("Data runtime modul ini saat dipasang di grid. Untuk modul standalone (tidak dipasang di kendaraan), isi langsung Template-nya.")]
     public PlacedModule placedModuleData;
-    
+
+    [Tooltip("Template untuk modul standalone (tidak perlu placedModuleData). Prioritas: placedModuleData.moduleTemplate > moduleTemplate.")]
+    public ModuleTemplate moduleTemplate;
+
     [Tooltip("Referensi ke manager kendaraan tempat modul ini dipasang.")]
     public VehicleStatsManager statsManager;
 
@@ -21,6 +24,22 @@ public class VehicleModuleComponent : MonoBehaviour
     /// <summary>
     /// Dipanggil otomatis oleh VehicleStatsManager saat modul dipasang ke mobil.
     /// </summary>
+    private ModuleTemplate EffectiveTemplate
+    {
+        get
+        {
+            if (placedModuleData != null && placedModuleData.moduleTemplate != null)
+                return placedModuleData.moduleTemplate;
+            return moduleTemplate;
+        }
+    }
+
+    void Awake()
+    {
+        var t = EffectiveTemplate;
+        currentHealth = t != null ? t.maxHealth : 100f;
+    }
+
     public void Initialize(PlacedModule data, VehicleStatsManager manager)
     {
         placedModuleData = data;
@@ -29,16 +48,14 @@ public class VehicleModuleComponent : MonoBehaviour
         isDestroyed = false;
     }
 
-    /// <summary>
-    /// Fungsi untuk menerima damage (dipanggil oleh KinematicProjectile).
-    /// Damage udah dikalkulasi pake OptFormula dari projectile.
-    /// </summary>
     public void TakeDamage(float damageAmount)
     {
-        if (isDestroyed || placedModuleData == null || placedModuleData.moduleTemplate == null) return;
+        if (isDestroyed) return;
 
         currentHealth -= damageAmount;
-        placedModuleData.currentHealth = currentHealth;
+
+        if (placedModuleData != null)
+            placedModuleData.currentHealth = currentHealth;
 
         if (currentHealth <= 0f)
         {
@@ -50,36 +67,28 @@ public class VehicleModuleComponent : MonoBehaviour
     {
         isDestroyed = true;
 
-        if (placedModuleData == null || placedModuleData.moduleTemplate == null)
+        var template = EffectiveTemplate;
+        bool shouldExplode = template != null && template.volatileExplosive;
+
+        Debug.Log($"Modul {(template != null ? template.moduleName : gameObject.name)} HANCUR!");
+
+        if (shouldExplode)
         {
-            Destroy(gameObject);
-            return;
+            Explode(template);
         }
 
-        Debug.Log($"Modul {placedModuleData.moduleTemplate.moduleName} HANCUR!");
-
-        // Jika modul ini mudah meledak (seperti tangki bensin / aki)
-        if (placedModuleData.moduleTemplate.volatileExplosive)
-        {
-            Explode();
-        }
-
-        // Suruh StatsManager untuk melepas dan membuang modul ini dari grid
-        if (statsManager != null)
+        if (statsManager != null && placedModuleData != null)
         {
             statsManager.UninstallModule(placedModuleData);
         }
 
-        // Hancurkan game object fisik (atau ganti jadi model hancur)
-        Destroy(gameObject); 
+        Destroy(gameObject);
     }
 
-    private void Explode()
+    private void Explode(ModuleTemplate template)
     {
-        var template = placedModuleData.moduleTemplate;
         Vector3 pos = transform.position;
 
-        // VFX
         if (template.explosionVFXPrefab != null && ObjectPool.Instance != null)
         {
             GameObject vfx = ObjectPool.Instance.Spawn(template.explosionVFXPrefab, pos, Quaternion.identity);
@@ -90,7 +99,6 @@ public class VehicleModuleComponent : MonoBehaviour
             }
         }
 
-        // SFX
         if (template.explosionSFX != null)
             AudioSource.PlayClipAtPoint(template.explosionSFX, pos);
 
