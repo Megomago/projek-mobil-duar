@@ -118,7 +118,8 @@ GameObject:
   m_Component:
   - component: {fileID: 8507496765426180641}
   - component: {fileID: 3013196889656786615}
-  m_Layer: 0
+  - component: {fileID: 4070726007972084066}
+  m_Layer: 6
   m_Name: Aki 540Wh
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -158,3 +159,26 @@ MonoBehaviour:
   baseColor: {r: 1, g: 0, b: 0, a: 0.8}
   clearanceColor: {r: 1, g: 0.5, b: 0, a: 0.8}
   showGizmos: 1
+--- !u!114 &4070726007972084066
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3768299996699101082}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b9b1eac442207f43a38bdea98409aa6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  placedModuleData:
+    moduleTemplate: {fileID: 0}
+    zoneName: 
+    gridPosition: {x: 0, y: 0}
+    rotationAngle: 0
+    currentHealth: 0
+    spawnedPrefab: {fileID: 0}
+    currentAmmoPoint: 0
+  statsManager: {fileID: 0}
+  currentHealth: 0
+  isDestroyed: 0

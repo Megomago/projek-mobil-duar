@@ -206,6 +206,10 @@ public class VehicleController : MonoBehaviour
     [Tooltip("Gunakan RPM berdasarkan kecepatan nyata mobil (mencegah RPM fluktuatif karena roda slip / ngepot)")]
     public bool preventWheelSlipRPM = true;
 
+    [Header("=== CONTROL LOCK ===")]
+    [Tooltip("Kunci input dan gerak kendaraan saat tidak dikendalikan player")]
+    public bool movementLocked = true;
+
     #endregion
 
     #region --- RUNTIME STATE ---
@@ -264,6 +268,14 @@ public class VehicleController : MonoBehaviour
 
     private void Update()
     {
+        if (movementLocked)
+        {
+            ClearVehicleInput();
+            UpdateSpeedometer();
+            UpdateWheelMeshes();
+            return;
+        }
+
         GatherInput();
         UpdateSpeedometer();
 
@@ -278,6 +290,10 @@ public class VehicleController : MonoBehaviour
     private void FixedUpdate()
     {
         UpdateEngineRPM();
+
+        if (movementLocked)
+            return;
+
         ApplyDriveTorque();
         ApplyBraking();
         ApplySteering();
@@ -372,6 +388,15 @@ public class VehicleController : MonoBehaviour
     #endregion
 
     #region --- INPUT ---
+
+    private void ClearVehicleInput()
+    {
+        throttleInput = 0f;
+        brakeInput = 0f;
+        steerInput = 0f;
+        handbrakeInput = 0f;
+        clutchInput = false;
+    }
 
     private void GatherInput()
     {
@@ -805,9 +830,23 @@ public class VehicleController : MonoBehaviour
 
     private void ApplyAntiRollBar()
     {
-        // Pasangkan per-axle (asumsi 4 roda: 0,1 = depan; 2,3 = belakang)
-        if (wheels.Length >= 2) ApplyAntiRollAxle(wheels[0], wheels[1]);
-        if (wheels.Length >= 4) ApplyAntiRollAxle(wheels[2], wheels[3]);
+        if (wheels.Length >= 2)
+        {
+            if (IsAxleFunctional(wheels[0], wheels[1]))
+                ApplyAntiRollAxle(wheels[0], wheels[1]);
+        }
+        if (wheels.Length >= 4)
+        {
+            if (IsAxleFunctional(wheels[2], wheels[3]))
+                ApplyAntiRollAxle(wheels[2], wheels[3]);
+        }
+    }
+
+    private bool IsAxleFunctional(WheelSetup a, WheelSetup b)
+    {
+        if (a.collider == null || !a.collider.enabled) return false;
+        if (b.collider == null || !b.collider.enabled) return false;
+        return true;
     }
 
     private void ApplyAntiRollAxle(WheelSetup wL, WheelSetup wR)
@@ -904,6 +943,12 @@ public class VehicleController : MonoBehaviour
     {
         speedMs  = _rb.velocity.magnitude;
         speedKmh = speedMs * 3.6f;
+    }
+
+    public void SetMovementLocked(bool locked)
+    {
+        movementLocked = locked;
+        ClearVehicleInput();
     }
 
     #endregion

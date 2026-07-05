@@ -40,6 +40,8 @@ MonoBehaviour:
   hideFromModuleList: 0
   ammoPoint: 0
   dragModifier: 0.1
-  volatileExplosive: 0
+  volatileExplosive: 1
   explosionRadius: 1
   explosionDamage: 100
+  explosionVFXPrefab: {fileID: 100006, guid: a49596ebf788acd4ab1281bffea444b1, type: 3}
+  explosionSFX: {fileID: 0}

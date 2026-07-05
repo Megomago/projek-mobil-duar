@@ -658,6 +658,7 @@ GameObject:
   - component: {fileID: 3619569965256268993}
   - component: {fileID: 5657700743842120352}
   - component: {fileID: 8194406445601047371}
+  - component: {fileID: 3680923882066123965}
   m_Layer: 0
   m_Name: L21 Rarden
   m_TagString: Untagged
@@ -851,6 +852,29 @@ MonoBehaviour:
   baseColor: {r: 1, g: 0, b: 0, a: 0.8}
   clearanceColor: {r: 1, g: 0.5, b: 0, a: 0.8}
   showGizmos: 1
+--- !u!114 &3680923882066123965
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7099321997086278707}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b9b1eac442207f43a38bdea98409aa6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  placedModuleData:
+    moduleTemplate: {fileID: 0}
+    zoneName: 
+    gridPosition: {x: 0, y: 0}
+    rotationAngle: 0
+    currentHealth: 0
+    spawnedPrefab: {fileID: 0}
+    currentAmmoPoint: 0
+  statsManager: {fileID: 0}
+  currentHealth: 0
+  isDestroyed: 0
 --- !u!1 &7118828087197266962
 GameObject:
   m_ObjectHideFlags: 0

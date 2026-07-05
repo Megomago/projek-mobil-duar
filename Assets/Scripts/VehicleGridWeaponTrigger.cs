@@ -21,24 +21,18 @@ public class VehicleGridWeaponTrigger : MonoBehaviour
         _statsManager = GetComponent<VehicleStatsManager>();
     }
 
-    private void Start()
+    public void ClearHUDs()
     {
-        // Hanya inisialisasi senjata jika hudContainer sudah di-assign 
-        // (artinya kita berada di Battlefield, bukan di Lobby)
-        if (hudContainer != null)
-        {
-            InitializeWeapons();
-        }
-    }
-
-    public void InitializeWeapons()
-    {
-        // Bersihkan HUD lama
         foreach (var hud in _spawnedHUDs)
         {
             if (hud != null) Destroy(hud);
         }
         _spawnedHUDs.Clear();
+    }
+
+    public void InitializeWeapons()
+    {
+        ClearHUDs();
         _activeWeapons.Clear();
 
         if (_statsManager == null) return;

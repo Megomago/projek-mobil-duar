@@ -65,3 +65,9 @@ MonoBehaviour:
   magazineDespawnTime: 3
   magazineDropForce: {x: 0, y: 1, z: 0}
   magazineDropTorque: 1
+  isExplosive: 0
+  explosiveRadius: 3
+  explosiveDamage: 2000
+  explosiveForce: 50
+  explosionVFXPrefab: {fileID: 100006, guid: 2e7e92bc7175b744ea40878dedfa79e4, type: 3}
+  explosionSFX: {fileID: 8300000, guid: b62fda66cbbf9f141bab5055d0ce2bb3, type: 3}
