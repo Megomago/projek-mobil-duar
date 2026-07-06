@@ -1,0 +1,306 @@
+using System.Collections.Generic;
+using UnityEngine;
+using Weapons;
+
+[System.Serializable]
+public class GridZone
+{
+    [Tooltip("Nama unik zona ini (misal: 'Roof', 'Hood'). JANGAN ADA YANG SAMA!")]
+    public string zoneName = "NewZone";
+
+    [Tooltip("Titik awal grid zona ini")]
+    public Transform origin;
+
+    [Tooltip("Kapasitas grid zona ini (X, Y)")]
+    public Vector2Int capacity = new Vector2Int(4, 4);
+
+    [Tooltip("Ukuran 1 cell di zona ini")]
+    public float cellSize = 0.25f;
+
+    [Tooltip("Centang jika zona ini terkena angin (luar sasis)")]
+    public bool affectDrag = true;
+}
+
+[System.Serializable]
+public class PlacedModule
+{
+    public ModuleTemplate moduleTemplate;
+    public string zoneName;
+
+    [Tooltip("Posisi koordinat X, Y di grid")]
+    public Vector2Int gridPosition;
+
+    [Tooltip("Rotasi modul dalam derajat (0, 90, 180, 270)")]
+    public int rotationAngle;
+
+    [HideInInspector]
+    public float currentHealth;
+
+    [HideInInspector]
+    public GameObject spawnedPrefab;
+
+    [HideInInspector]
+    public float currentAmmoPoint;
+
+    public PlacedModule(ModuleTemplate template, string zone, Vector2Int position, int angle)
+    {
+        moduleTemplate = template;
+        zoneName = zone;
+        gridPosition = position;
+        rotationAngle = angle;
+        if (template != null)
+        {
+            currentHealth = template.maxHealth;
+            currentAmmoPoint = template.ammoPoint;
+        }
+    }
+}
+
+public class VehicleGridSystem : MonoBehaviour
+{
+    [Header("Modular Grid Setup")]
+    [Tooltip("Daftar semua zona grid di kendaraan ini (Atap, Kap, dll)")]
+    public List<GridZone> gridZones = new List<GridZone>();
+
+    [Header("Installed Modules")]
+    public List<PlacedModule> installedModules = new List<PlacedModule>();
+
+    [HideInInspector]
+    public Dictionary<Collider, PlacedModule> moduleColliderMap = new Dictionary<Collider, PlacedModule>();
+
+    private VehicleStatsManager _statsManager;
+
+    void Awake()
+    {
+        _statsManager = GetComponent<VehicleStatsManager>();
+    }
+
+    public List<Vector2Int> GetOccupiedCells(Vector2Int position, int width, int height, int angle)
+    {
+        List<Vector2Int> cells = new List<Vector2Int>();
+        int effectiveWidth = (angle == 90 || angle == 270) ? height : width;
+        int effectiveHeight = (angle == 90 || angle == 270) ? width : height;
+
+        for (int x = 0; x < effectiveWidth; x++)
+        {
+            for (int y = 0; y < effectiveHeight; y++)
+            {
+                cells.Add(new Vector2Int(position.x + x, position.y + y));
+            }
+        }
+        return cells;
+    }
+
+    public List<Vector2Int> GetClearanceCells(Vector2Int position, ModuleTemplate template, int angle)
+    {
+        List<Vector2Int> cells = new List<Vector2Int>();
+        if (template == null || !template.enableClearance) return cells;
+
+        int effectiveWidth = (angle == 90 || angle == 270) ? template.height : template.width;
+        int effectiveHeight = (angle == 90 || angle == 270) ? template.width : template.height;
+
+        int up = 0, down = 0, left = 0, right = 0;
+        if (angle == 0) { up = template.clearanceFront; down = template.clearanceBack; right = template.clearanceRight; left = template.clearanceLeft; }
+        else if (angle == 90) { right = template.clearanceFront; left = template.clearanceBack; down = template.clearanceRight; up = template.clearanceLeft; }
+        else if (angle == 180) { down = template.clearanceFront; up = template.clearanceBack; left = template.clearanceRight; right = template.clearanceLeft; }
+        else if (angle == 270) { left = template.clearanceFront; right = template.clearanceBack; up = template.clearanceRight; down = template.clearanceLeft; }
+
+        int minX = position.x - left;
+        int maxX = position.x + effectiveWidth - 1 + right;
+        int minY = position.y - down;
+        int maxY = position.y + effectiveHeight - 1 + up;
+
+        for (int x = minX; x <= maxX; x++)
+        {
+            for (int y = minY; y <= maxY; y++)
+            {
+                bool isBase = (x >= position.x && x < position.x + effectiveWidth) && (y >= position.y && y < position.y + effectiveHeight);
+                if (!isBase)
+                    cells.Add(new Vector2Int(x, y));
+            }
+        }
+        return cells;
+    }
+
+    private bool HasIntersection(List<Vector2Int> list1, List<Vector2Int> list2)
+    {
+        foreach (var a in list1)
+        {
+            if (list2.Contains(a)) return true;
+        }
+        return false;
+    }
+
+    public bool IsAreaFree(GridZone zone, Vector2Int position, ModuleTemplate templateToPlace, int angle, PlacedModule ignoreModule = null)
+    {
+        if (zone == null || templateToPlace == null) return false;
+
+        List<Vector2Int> baseCellsA = GetOccupiedCells(position, templateToPlace.width, templateToPlace.height, angle);
+        List<Vector2Int> clearanceCellsA = GetClearanceCells(position, templateToPlace, angle);
+
+        foreach (var cell in baseCellsA)
+        {
+            if (cell.x < 0 || cell.x >= zone.capacity.x || cell.y < 0 || cell.y >= zone.capacity.y)
+                return false;
+        }
+
+        foreach (var mod in installedModules)
+        {
+            if (mod == ignoreModule) continue;
+            if (mod.moduleTemplate == null) continue;
+            if (mod.zoneName != zone.zoneName) continue;
+
+            List<Vector2Int> baseCellsB = GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle);
+            List<Vector2Int> clearanceCellsB = GetClearanceCells(mod.gridPosition, mod.moduleTemplate, mod.rotationAngle);
+
+            if (HasIntersection(baseCellsA, baseCellsB)) return false;
+
+            if (HasIntersection(baseCellsA, clearanceCellsB))
+            {
+                if (!templateToPlace.isSmall || !mod.moduleTemplate.enableAccessClearance) return false;
+            }
+
+            if (HasIntersection(clearanceCellsA, baseCellsB))
+            {
+                if (!mod.moduleTemplate.isSmall || !templateToPlace.enableAccessClearance) return false;
+            }
+        }
+        return true;
+    }
+
+    public bool InstallModule(ModuleTemplate template, string targetZoneName, Vector2Int position, int angle)
+    {
+        if (template == null) return false;
+
+        GridZone targetZone = null;
+        foreach (var z in gridZones)
+        {
+            if (z == null) continue;
+            if (z.zoneName == targetZoneName) { targetZone = z; break; }
+        }
+
+        if (targetZone == null || targetZone.origin == null)
+        {
+            Debug.LogError("[VehicleGridSystem] Zona grid tidak ditemukan atau origin-nya null!");
+            return false;
+        }
+
+        if (!IsAreaFree(targetZone, position, template, angle))
+        {
+            Debug.LogWarning($"[VehicleGridSystem] Gagal memasang {template.moduleName} di zona {targetZoneName} posisi {position} karena area penuh atau di luar batas.");
+            return false;
+        }
+
+        PlacedModule newModule = new PlacedModule(template, targetZoneName, position, angle);
+
+        GameObject prefabToSpawn = template.modulePrefab;
+        if (template.moduleType == ModuleType.Weapon && template.weaponData != null && template.weaponData.weapon3DPrefab != null)
+        {
+            prefabToSpawn = template.weaponData.weapon3DPrefab;
+        }
+
+        if (prefabToSpawn != null && targetZone.origin != null)
+        {
+            int effectiveWidth = (angle == 90 || angle == 270) ? template.height : template.width;
+            int effectiveHeight = (angle == 90 || angle == 270) ? template.width : template.height;
+
+            float zoneCellSize = (targetZone.cellSize > 0f) ? targetZone.cellSize : 0.25f;
+            float offsetX = (position.x + effectiveWidth / 2f) * zoneCellSize;
+            float offsetZ = (position.y + effectiveHeight / 2f) * zoneCellSize;
+
+            Vector3 localPos = new Vector3(offsetX, 0f, offsetZ);
+            Vector3 worldPos = targetZone.origin.TransformPoint(localPos);
+
+            Quaternion rotation = targetZone.origin.rotation * Quaternion.Euler(0f, angle, 0f);
+
+            GameObject spawned = Instantiate(prefabToSpawn, worldPos, rotation, targetZone.origin);
+            newModule.spawnedPrefab = spawned;
+
+            int moduleLayer = LayerMask.NameToLayer("placedmodule");
+            if (moduleLayer != -1)
+                SetLayerRecursively(spawned, moduleLayer);
+
+            Collider[] modColliders = spawned.GetComponentsInChildren<Collider>(true);
+            foreach (var col in modColliders)
+                moduleColliderMap[col] = newModule;
+
+            VehicleModuleComponent moduleComp = spawned.GetComponent<VehicleModuleComponent>();
+            if (moduleComp != null)
+                moduleComp.Initialize(newModule, _statsManager);
+
+            if (_statsManager != null && _statsManager.isPreviewMode)
+            {
+                ManualTurretController[] newTurrets = spawned.GetComponentsInChildren<ManualTurretController>(true);
+                foreach (var turret in newTurrets)
+                    turret.enabled = false;
+
+                Animator[] newAnimators = spawned.GetComponentsInChildren<Animator>(true);
+                foreach (var anim in newAnimators)
+                    anim.enabled = false;
+
+                Rigidbody[] newRbs = spawned.GetComponentsInChildren<Rigidbody>(true);
+                foreach (var rb in newRbs)
+                {
+                    if (rb != spawned.GetComponentInParent<Rigidbody>())
+                    {
+                        rb.isKinematic = true;
+                        rb.constraints = RigidbodyConstraints.FreezeAll;
+                    }
+                }
+            }
+        }
+
+        installedModules.Add(newModule);
+
+        if (_statsManager != null)
+            _statsManager.MarkStatsDirty();
+
+        return true;
+    }
+
+    public void UninstallModule(PlacedModule module)
+    {
+        if (installedModules.Contains(module))
+        {
+            if (module.spawnedPrefab != null)
+            {
+                Collider[] modColliders = module.spawnedPrefab.GetComponentsInChildren<Collider>(true);
+                foreach (var col in modColliders)
+                    moduleColliderMap.Remove(col);
+            }
+
+            if (module.spawnedPrefab != null)
+                Destroy(module.spawnedPrefab);
+
+            installedModules.Remove(module);
+
+            if (_statsManager != null)
+                _statsManager.MarkStatsDirty();
+
+            GridSaveSystem.SaveGrid(gameObject.name, this);
+        }
+    }
+
+    public void ClearAllModules()
+    {
+        for (int i = installedModules.Count - 1; i >= 0; i--)
+        {
+            if (installedModules[i].spawnedPrefab != null)
+                Destroy(installedModules[i].spawnedPrefab);
+        }
+        installedModules.Clear();
+
+        if (_statsManager != null)
+            _statsManager.MarkStatsDirty();
+    }
+
+    private void SetLayerRecursively(GameObject obj, int newLayer)
+    {
+        if (obj == null) return;
+        obj.layer = newLayer;
+        foreach (Transform child in obj.transform)
+        {
+            SetLayerRecursively(child.gameObject, newLayer);
+        }
+    }
+}

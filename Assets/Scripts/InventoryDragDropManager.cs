@@ -234,7 +234,7 @@ public class InventoryDragDropManager : MonoBehaviour
                 if (success)
                 {
                     string vehicleName = _targetStatsManager.gameObject.name;
-                    GridSaveSystem.SaveGrid(vehicleName, _targetStatsManager);
+                    GridSaveSystem.SaveGrid(vehicleName, _targetStatsManager.gridSystem);
                 }
             }
             CancelDrag();

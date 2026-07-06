@@ -27,13 +27,13 @@ public static class GridSaveSystem
     }
 
     // --- SAVE ---
-    public static void SaveGrid(string vehicleName, VehicleStatsManager statsManager)
+    public static void SaveGrid(string vehicleName, VehicleGridSystem gridSystem)
     {
-        if (statsManager == null || string.IsNullOrEmpty(vehicleName)) return;
+        if (gridSystem == null || string.IsNullOrEmpty(vehicleName)) return;
 
         SavedGridLayout layout = new SavedGridLayout();
 
-        foreach (var placed in statsManager.installedModules)
+        foreach (var placed in gridSystem.installedModules)
         {
             if (placed.moduleTemplate == null) continue;
 
@@ -57,9 +57,9 @@ public static class GridSaveSystem
     }
 
     // --- LOAD ---
-    public static void LoadGrid(string vehicleName, VehicleStatsManager statsManager, ModuleDatabase moduleDatabase)
+    public static void LoadGrid(string vehicleName, VehicleGridSystem gridSystem, ModuleDatabase moduleDatabase)
     {
-        if (statsManager == null || moduleDatabase == null || string.IsNullOrEmpty(vehicleName)) return;
+        if (gridSystem == null || moduleDatabase == null || string.IsNullOrEmpty(vehicleName)) return;
 
         string key = SAVE_KEY_PREFIX + vehicleName;
         string json = PlayerPrefs.GetString(key, "");
@@ -73,7 +73,7 @@ public static class GridSaveSystem
         SavedGridLayout layout = JsonUtility.FromJson<SavedGridLayout>(json);
         if (layout == null || layout.modules.Count == 0) return;
 
-        statsManager.ClearAllModules();
+        gridSystem.ClearAllModules();
 
         int loaded = 0;
         foreach (var saved in layout.modules)
@@ -86,7 +86,7 @@ public static class GridSaveSystem
             }
 
             Vector2Int pos = new Vector2Int(saved.gridX, saved.gridY);
-            bool success = statsManager.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
+            bool success = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
             if (success) loaded++;
         }
         Debug.Log($"[GridSaveSystem] Dimuat {loaded}/{layout.modules.Count} modul untuk '{vehicleName}'");

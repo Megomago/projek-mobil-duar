@@ -126,8 +126,8 @@ namespace Weapons
                 if (vehicleHUD != null) vehicleHUD.SetVehicle(_currentStatsManager);
 
                 // Load grid DULU sebelum refresh module list
-                if (moduleDatabase != null)
-                    GridSaveSystem.LoadGrid(vehicleName, _currentStatsManager, moduleDatabase);
+                if (moduleDatabase != null && _currentStatsManager != null)
+                    GridSaveSystem.LoadGrid(vehicleName, _currentStatsManager.gridSystem, moduleDatabase);
 
                 VehicleModuleListUI moduleList = FindObjectOfType<VehicleModuleListUI>();
                 if (moduleList != null) moduleList.Initialize(_currentStatsManager);

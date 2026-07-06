@@ -60,7 +60,7 @@ namespace Weapons
 
             if (statsManager != null && moduleDatabase != null)
             {
-                GridSaveSystem.LoadGrid(vehicleName, statsManager, moduleDatabase);
+                GridSaveSystem.LoadGrid(vehicleName, statsManager.gridSystem, moduleDatabase);
             }
 
             var weaponTrigger = spawnedVehicle.GetComponent<VehicleGridWeaponTrigger>();
