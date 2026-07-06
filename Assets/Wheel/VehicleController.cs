@@ -96,12 +96,12 @@ public class VehicleController : MonoBehaviour
     [Header("=== ENGINE PARAMETERS ===")]
     public EngineParameters engine = new EngineParameters
     {
-        maxTorqueNm       = 280f,
-        idleRPM           = 650f,
-        maxRPM            = 7000f,
-        peakTorqueRPM     = 3800f,
-        flywheelInertia   = 0.35f,
-        maxFuelConsumptionRate = 0.05f
+        maxTorqueNm       = 250f,
+        idleRPM           = 750f,
+        maxRPM            = 6200f,
+        peakTorqueRPM     = 3000f,
+        flywheelInertia   = 0.18f,
+        maxFuelConsumptionRate = 0.025f
     };
 
     [Header("=== STARTER ===")]
@@ -124,17 +124,17 @@ public class VehicleController : MonoBehaviour
     [Tooltip("Index 0 = Reverse, Index 1 = Gear 1, dst.")]
     public GearRatio[] gearRatios = new GearRatio[]
     {
-        new GearRatio { gearName = "R",  ratio = -3.5f  },
+        new GearRatio { gearName = "R",  ratio = -3.91f },
         new GearRatio { gearName = "1",  ratio =  3.36f },
-        new GearRatio { gearName = "2",  ratio =  2.10f },
-        new GearRatio { gearName = "3",  ratio =  1.48f },
-        new GearRatio { gearName = "4",  ratio =  1.11f },
-        new GearRatio { gearName = "5",  ratio =  0.85f },
-        new GearRatio { gearName = "6",  ratio =  0.67f }
+        new GearRatio { gearName = "2",  ratio =  2.50f },
+        new GearRatio { gearName = "3",  ratio =  1.81f },
+        new GearRatio { gearName = "4",  ratio =  1.35f },
+        new GearRatio { gearName = "5",  ratio =  1.00f },
+        new GearRatio { gearName = "6",  ratio =  0.80f }
     };
 
     [Tooltip("Rasio final drive (differential)")]
-    public float finalDriveRatio = 3.7f;
+    public float finalDriveRatio = 3.90f;
 
     [Tooltip("Efisiensi transmisi (0.85 - 0.95 umumnya)")]
     [Range(0.5f, 1f)]
@@ -142,9 +142,9 @@ public class VehicleController : MonoBehaviour
 
     [Header("=== AUTO TRANSMISSION SETTINGS ===")]
     [Tooltip("RPM saat transmisi otomatis upshift")]
-    public float autoUpshiftRPM = 6200f;
+    public float autoUpshiftRPM = 4800f;
     [Tooltip("RPM saat transmisi otomatis downshift")]
-    public float autoDownshiftRPM = 1200f;
+    public float autoDownshiftRPM = 1800f;
 
     [Header("=== SUSPENSION CUSTOM ===")]
     public SuspensionParameters suspension = new SuspensionParameters
@@ -185,9 +185,9 @@ public class VehicleController : MonoBehaviour
 
     [Header("=== RIGIDBODY ===")]
     [Tooltip("Massa kendaraan dalam kg")]
-    public float vehicleMass = 1400f;
+    public float vehicleMass = 1200f;
     [Tooltip("Tinggi center of mass dari posisi pivot")]
-    public float centerOfMassHeight = -0.3f;
+    public float centerOfMassHeight = -0.2f;
 
     [Header("=== ANTI ROLL BAR ===")]
     [Tooltip("Kekuatan anti-roll bar")]
@@ -199,9 +199,9 @@ public class VehicleController : MonoBehaviour
 
     [Header("=== AIR DRAG ===")]
     [Tooltip("Koefisien drag (Cd) — diisi otomatis oleh VehicleStatsManager. Default 0.4")]
-    public float airDragCd = 0.40f;
-    [Tooltip("Luas frontal (m²) — diisi otomatis oleh VehicleStatsManager. Default 2.2")]
-    public float frontalArea = 2.2f;
+    public float airDragCd = 0.42f;
+    [Tooltip("Luas frontal (m²) — diisi otomatis oleh VehicleStatsManager. Default 2.6")]
+    public float frontalArea = 2.6f;
 
     [Tooltip("Gunakan RPM berdasarkan kecepatan nyata mobil (mencegah RPM fluktuatif karena roda slip / ngepot)")]
     public bool preventWheelSlipRPM = true;
