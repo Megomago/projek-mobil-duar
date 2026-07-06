@@ -69,7 +69,7 @@ Material:
     m_Floats:
     - _QueueControl: 0
     - _QueueOffset: 0
-    - _cerahan: 5
+    - _cerahan: 25
     - _warpstrength: 0.1
     m_Colors:
     - _macrotiling: {r: 10, g: 10, b: 0, a: 0}

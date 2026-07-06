@@ -1,135 +1,204 @@
-***
+# Projek Mobil Duuaar
 
-# VDSO — Vehicle, Drive, Shoot, Shoot Outside
+Game ekstraksi kendaraan modular berbasis Unity. Build kendaraan, pasang modul, lalu terjun ke zona ekstraksi seluas 4x4 km buat cari loot, bertahan dari pengejaran musuh, dan kabur.
 
-## Prototipe Vehicle Combat Berbasis Sistem Kompleks dan Supply-Driven
-*Dikembangkan menggunakan Unity 2022.3 (URP 14)*
+## 1. Game Overview
 
----
-
-https://github.com/user-attachments/assets/a7c98ed4-9867-477c-919f-eeab241ad898
-
-
-
-## 1. Gambaran Umum
-**VDSO (Vehicle, Drive, Shoot, Shoot Outside)** adalah proyek prototipe *vehicle combat* berbasis sistem kompleks (*systems-driven*) yang berfokus pada logistik, manajemen sumber daya, dan pertempuran taktis tingkat tinggi.
-
-Berbeda dengan game pertempuran kendaraan tradisional, sistem pertempuran dalam VDSO sepenuhnya bersifat **supply-driven** (bergantung pada pasokan). Daya tembak kendaraan dibatasi secara langsung oleh tata letak fisik dan infrastruktur energi kendaraan itu sendiri. Sebagai contoh, memasang senjata tingkat tinggi seperti *Railgun* membutuhkan integrasi bank kapasitor tambahan dan baterai berkapasitas besar. Sementara itu, penggunaan *Flamethrower* membutuhkan modul penyimpanan bahan bakar khusus atau trailer logistik yang ditarik di belakang kendaraan.
-
-Proyek ini mengintegrasikan **Custom Vehicle Physics**, **3D Diegetic Grid Inventory (ala Resident Evil 4)**, dan arsitektur kode **Zero-Allocation** untuk performa balistik yang optimal.
-
----
+Game ini adalah extraction shooter dengan kendaraan sebagai fokus utama. Pemain mulai di garasi, merakit kendaraan dari modul-modul yang dipasang di grid, lalu memasuki zona ekstraksi untuk mengumpulkan barang berharga. Sistem pengejaran musuh ala NFS Most Wanted — makin lama di zona, makin agresif pengejar. Bisa turun dari kendaraan untuk looting di dalam gedung, tapi combat utama tetap vehicle-to-vehicle.
 
 ## 2. Core Game Loop
-Alur permainan dirancang di sekitar perencanaan sumber daya, eksekusi taktis, dan adaptabilitas di lapangan:
 
+1. Masuk garasi, pilih kendaraan
+2. Buka inventory, pasang/lepas modul di grid
+3. Simpan konfigurasi kendaraan
+4. Spawn di test area (garasi scene, 200x200m)
+5. Jalan kaki ke mobil, masuk, hidupkan mesin
+6. Uji coba kendaraan — kalau oke, melaju ke border
+7. Border 200m → badai pasir (VFX transition + loading)
+8. Masuk Extraction Zone (scene terpisah, 4x4 km)
+9. Cari loot di dalam gedung (turun mobil, FPP)
+10. Hadapi pengejaran musuh (makin lama makin susah)
+11. Temukan titik extract dan kabur
+12. Balik ke garasi, upgrade dari hasil loot
+
+## 3. Game Flow
+
+### Garasi Scene (200x200m)
+
+- Mode preview kendaraan
+- Inventory modul + placement di grid zona
+- Simulasi stat kendaraan dari komposisi modul
+- Player spawn jalan kaki (FPP) — bisa langsung naik mobil
+- Area test terbatas 200x200m
+- Border berupa tembok badai pasir visual
+- Pas menembus badai → VFX badai gurun (3 detik) + loading ke scene extraction
+
+### Extraction Zone (4x4 km)
+
+- Open world dengan bangunan yang bisa dimasuki
+- Loot tersebar di dalam rumah/gedung
+- Musuh mengejar menggunakan kendaraan (sistem NFS Most Wanted)
+- Heat level meningkat seiring waktu → makin banyak + agresif pengejar
+- Titik ekstraksi tersebar di peta
+- Setelah extract → balik ke garasi
+
+### On-Foot Mode (FPP)
+
+- Hanya untuk looting di dalam gedung, bukan untuk combat
+- Tidak ada senjata on-foot khusus (cukup sidearm/melee sederhana)
+- Looting pakai progress bar (tahan F) — tanpa animasi tangan visible
+- Sistem inventory dengan weight limit (max carry load)
+- Mode sneak (jalan pelan, engine mati) biar musuh lewat
+- Pas turun dari kendaraan: `E` di dalam kendaraan → exit di exit point
+
+### Sistem Pengejaran (NFS Most Wanted Style)
+
+| Heat Level | Musuh | Perilaku |
+|------------|-------|----------|
+| 1 | 1-2 pengejar ringan | Ngejar, tabrakan ringan |
+| 2 | 2-3 pengejar medium | Ngejar + tembakan ringan |
+| 3 | 3-4 pengejar berat | Ngejar + senjata berat |
+| 4 | 4+ pengejar elite | Agresif, block jalur, jebakan |
+
+## 4. Loot System — 2 Layer Propagation
+
+### Fixed Loot (Blueprint, Kendaraan Parkir)
+- Posisi tetap, spawn tiap masuk scene
+- Punya `uniqueId` — sekali diambil, ilang permanen (disimpan di PlayerPrefs)
+- Cocok untuk item spesial: blueprint senjata, kendaraan baru, modul rare
+
+### Random Loot (Baut, Scrap, Barrel, dll)
+- Dispawn per `LootZone` — area trigger di dalam gedung
+- Item muncul di permukaan datar (meja, lantai, rak) via raycast ke bawah
+- Tiap zone punya `tier` (1-5) + `maxItems`
+- LootTable dengan weighted random biar variasi
+- Proximity spawn: item cuma dispwan dalam radius ~200m dari player (sisanya pool)
+
+```csharp
+public class LootZone : MonoBehaviour
+{
+    public int tier = 1;
+    public int maxItems = 5;
+    public float spawnRadius = 1f;
+    public LayerMask surfaceMask;  // Floor, Table, Shelf
+}
 ```
-Garasi (Perencanaan Sumber Daya & Loadout Grid 3D) 
-   └── Medan Tempur (Combat Sandbox & Simulasi Berkendara)
-         └── Keterlibatan Taktis (Membajak Kendaraan / Operasi Turret On-foot)
-               └── Eksfiltrasi (Menyimpan Loadout via PlayerPrefs)
-```
 
----
+## 5. Main Systems
 
-## 3. Arsitektur Sistem Pertempuran & Balistik
+### Vehicle Grid System
 
-### Pipeline Senjata Modular
-Persenjataan kendaraan didefinisikan sebagai `WeaponData` (*ScriptableObjects*) dan dieksekusi saat runtime melalui `ModularWeapon.cs`. Arsitektur yang terdekopel (*decoupled*) ini memungkinkan iterasi konten senjata tanpa perlu mengubah kode inti.
+`VehicleGridSystem` handle pemasangan modul di zona kendaraan, cek area kosong, rotasi modul, clearance antar modul, dan spawn prefab modul ke posisi yang tepat.
 
-*   **Zero-Allocation Ballistics:** Trajektori proyektil disimulasikan menggunakan *Kinematic Projectile* dengan metode *Raycast Sub-stepping*. Sistem *Object Pooling* diterapkan secara ketat untuk proyektil, selongsong (*casing*), *muzzle flash*, dan efek dampak (*VFX Impact*) guna meminimalisir lonjakan *Garbage Collection*.
-*   **Distribusi Pellet Gaussian:** Sebaran peluru jenis *shotgun* atau *shrapnel* menggunakan model distribusi Gaussian murni yang diatur oleh parameter *Choke* dinamis.
-*   **Manajemen Termal (Overheat):** Penembakan secara konstan akan meningkatkan akumulasi panas. Mendekati batas termal maksimum akan meningkatkan dispersi dasar senjata secara eksponensial hingga siklus pendinginan selesai.
+### Vehicle Stats
 
-*   https://github.com/user-attachments/assets/701ab109-da9d-4aab-a8a7-665468cfac92
+`VehicleStatsManager` menghitung stat kendaraan dari:
 
-### Matematika Penetrasi & Logika Armor
-Prototipe ini meninggalkan sistem pengurangan *health-bar* konvensional dan beralih ke model penetrasi armor deterministik:
+- `VehicleBaseData`
+- modul yang terpasang
+- critical parts di prefab kendaraan
 
-```
-Jika (PEN > DEF):
-    Damage Diterima = (ATK + DEF) - HP
-    Proyektil mempertahankan sisa penetrasi berdasarkan persentase (PEN - DEF) relatif terhadap PEN awal.
-```
-*Senjata kinetik dengan penetrasi tinggi (seperti APDS) dirancang untuk menembus pelat luar guna merusak komponen internal yang kritis secara langsung.*
+Stat yang dihitung mencakup massa, armor, power consumption, power generation, battery capacity, fuel capacity, capacitor, dan ammo pool. Stat dirty-flag di `LateUpdate`.
 
----
+### Loadout / Inventory
 
-## 4. Fisika Kendaraan & Sistem Grid
+`LoadoutManager` ngurus pemilihan kendaraan di garasi, spawn preview kendaraan, buka inventory, dan isi katalog modul dari `ModuleDatabase`.
 
-### Custom Hybrid Vehicle Controller
-Model berkendara menjembatani responsivitas kontrol *arcade* dengan parameter simulasi fisik yang realistis:
-*   **Mesin & Drivetrain:** Menyediakan simulasi kurva torsi dinamis, inersia *flywheel*, RPM *idle*, dan *rev-limiter*. Mendukung konfigurasi FWD, RWD, dan AWD.
-*   **Logika Transmisi:** Transmisi manual dilengkapi dengan simulasi input kopling. Transmisi otomatis dilengkapi dengan fitur *proactive upshifting*, *aggressive downshifting* saat pengereman keras, dan algoritma *kickdown* untuk mencegah mesin mati (*stall*) di tanjakan curam.
-*   **Dinamika Sasis:** Sistem suspensi yang dapat disesuaikan per roda (*spring rates*, *dampening*, *suspension travel*, *anti-roll bars*, dan *downforce* proporsional terhadap kecepatan).
-*   **Transfer Recoil:** Gaya dorong mundur (*recoil*) dari senjata dihitung secara fisik dan diterapkan sebagai vektor impuls negatif langsung ke komponen *Rigidbody* kendaraan.
-  
-https://github.com/user-attachments/assets/8c2fbfa8-3dbc-48d2-aeb2-35c17223bf1c
+### Battlefield Spawn
 
-### Loadout Grid 3D Diegetik
-Kendaraan dibatasi oleh tata letak grid fisik dan batas berat dasar (*Base Weight*) yang ketat.
-*   **Slot Internal:** Pemain harus menyeimbangkan tata letak grid antara persenjataan dan sumber daya penting (Baterai, Panel Surya, Sel Bahan Bakar, Rak Amunisi).
-*   **Umpan Balik Fisik:** Menambahkan modul akan meningkatkan total massa kendaraan, yang secara dinamis mengubah akselerasi, jarak pengereman, dan pusat gravitasi (*center of mass*).
+`BattlefieldManager` spawn player dan kendaraan di scene battlefield, lalu load konfigurasi grid yang sudah disimpan.
 
----
+### Weapons
 
-## 5. Modul Logistik Towing (Sistem Joint Physics)
-Untuk memperpanjang durasi pertempuran, pemain dapat memasang trailer fisik menggunakan sistem sambungan dinamis.
-*   **Trailer Modular:** Opsi yang tersedia mencakup Generator Portabel (Genset), Tangki Bahan Bakar, atau artileri berat (Meriam Anti-Tank 75mm).
-*   **Logika Pelepasan:** Trailer beroperasi sebagai entitas fisik terpisah dengan nilai HP dan DEF mandiri. Pemain dapat memicu pelepasan darurat saat runtime (memutuskan sambungan `HingeJoint`) untuk menukar pasokan energi dengan pengurangan berat instan demi mobilitas.
+Weapon disimpan sebagai `WeaponData` dan katalog senjata ada di `WeaponDatabase`. Modul senjata bisa dipasang lewat sistem grid, lalu memakai prefab 3D senjata yang sesuai. ModularWeapon handle firing, overheat, recoil, rotary barrel, reload, ammo pool consumption dari kendaraan.
 
----
+### Sandstorm Transition
 
-## 6. Transmisi On-Foot & Kontrol Turret Eksternal
-Untuk memaksimalkan kedalaman taktis, prototipe ini memfasilitasi transisi antara pengoperasian kendaraan dan mekanik infanteri di luar kendaraan (*on-foot*).
+Saat player menembus border 200m di garasi:
+- Particle system (3 layer: debu halus, butiran pasir, partikel besar)
+- Screen overlay (fade sandy brown + blur, durasi 3 detik)
+- Audio angin kencang fade in
+- Camera shake sinusoidal
+- Setelah selesai → `SceneManager.LoadScene("Extraction")`
 
-*   **Mode Infanteri:** Pemain dapat keluar dari kendaraan pada area koordinat tertentu. Untuk menjaga performa dan menghindari *bug* fisik (*clipping*), kontrol infanteri menggunakan model pergantian status/teleportasi cepat untuk mengalihkan kendali pemain antara kendaraan dan karakter.
-*   **Mekanik Pembajakan:** Pemain yang berada di luar kendaraan dapat mendekati dan membajak kendaraan musuh secara langsung.
-*   **Senjata Eksternal:** Pemain dapat menggunakan senjata tipe *External Control* secara manual (misalnya, senapan mesin DShK di atas bak kendaraan utilitas). Senjata-senjata ini beroperasi secara independen dari sistem kontrol utama kendaraan, berfungsi sebagai posisi pertahanan statis.
+### Player Controller
 
----
+`PlayerController` — FPP (First Person Perspective) dengan Character Controller:
+- Mouse look (yaw/pitch)
+- WASD movement + sprint (Shift) + jump (Space)
+- Kamera FPP di posisi mata (1.6m)
+- Pas masuk mobil: player di-disable, kamera switch ke VehicleCamera (TPP)
+- Pas turun: player di-enable di exit point
 
-## 7. Status Proyek & Rencana Pengembangan (Roadmap)
+## 6. Feature Highlights
 
-### Sistem yang Sudah Diimplementasikan
-*   *Core loop* yang dapat dimainkan (Garasi $\rightarrow$ Spawning medan tempur $\rightarrow$ Pertempuran $\rightarrow$ Persistensi data).
-*   *Custom vehicle controller* hybrid dengan opsi transmisi manual/otomatis.
-*   Sistem penyimpanan *loadout* 3D dengan persistensi data via PlayerPrefs.
-*   Verifikasi arsitektur senjata selesai (HVAP30 Mark. I) dengan VFX kustom, audio, dan sekuens *reload*.
+- Modular vehicle building dengan grid zone system (clearance, rotasi)
+- Extraction gameplay (loot → survive → extract)
+- Loot propagation 2 layer (fixed + random weighted)
+- Sistem pengejaran NFS Most Wanted (heat level)
+- Sandstorm VFX transisi seamless antar scene
+- FPP on-foot mode (looting di interior gedung)
+- Save / load loadout kendaraan
+- Vehicle stat recalculation otomatis (dirty flag)
+- Ammo, fuel, battery, dan capacitor tracking
+- Damage ke modul dan destruction + chain explosion
 
-### Rencana Pengembangan & Backlog
-| Sistem | Status Implementasi |
-| :--- | :--- |
-| **Kerusakan Komponen (Mesin/Ban)** | Direncanakan (Struktur awal tersedia di `KinematicProjectile.cs`) |
-| **AI Perilaku Musuh (Threat Behavior)** | Direncanakan |
-| **UI Grid Snapping 3D** | Dalam Pengembangan |
-| **Kalibrasi Stabilitas Towing Joint** | Dalam Tahap Pengujian |
+## 7. Scenes
 
----
+- `Garasi 2` — build / preview / test area (200x200m) + VFX sandstorm border
+- `Extraction` — open world 4x4 km, loot, pengejaran (rencana, belum diimplementasi)
 
-## 8. Spesifikasi Teknis & Referensi Script
+## 8. Controls
 
-*   **Versi Engine:** Unity 2022.3 (URP 14)
-*   **Target Platform:** PC / Mobile (Termasuk varian VFX yang dioptimalkan untuk perangkat mobile)
+| Input | Aksi |
+|-------|------|
+| `WASD` | Gerak (on-foot) / Gas & setir (kendaraan) |
+| `Mouse` | Lihat / aim |
+| `Space` | Jump (on-foot) |
+| `Shift` | Sprint (on-foot) |
+| `E` | Masuk/keluar kendaraan |
+| `I` | Starter mesin (on/off) |
+| `L` | Lampu (on/off) |
+| `R` | Reload senjata / rotasi modul saat placement |
+| `F` | Interaksi looting (tahan) |
+| `X` | Hapus modul yang dipilih |
+| `Esc` | Kembali ke Garasi |
+| `Klik Kiri` | Tembak (kendaraan) |
+| `Klik Kanan` | Batal drag (inventory) |
 
-### Direktori Script Utama
+## 9. Tech Stack
 
-| Class / Komponen | Path File | Deskripsi |
-| :--- | :--- | :--- |
-| `VehicleController` | `Assets/Wheel/VehicleController.cs` | Kontrol fisik kustom, kurva torsi, dan logika transmisi. |
-| `ModularWeapon` | `Assets/Weapons/ModularWeapon.cs` | Eksekusi parameter senjata dan sistem *pooling*. |
-| `ManualTurretController` | `Assets/Weapons/ManualTurretController.cs` | Perhitungan rotasi *aiming slerp* untuk mencegah *Gimbal Lock*. |
-| `LoadoutManager` | `Assets/Weapons/LoadoutManager.cs` | Mengelola tata letak grid persisten dan kueri database lokal. |
+- Unity `2022.3.32f1`
+- URP `14.0.11`
+- Cinemachine
+- TextMesh Pro
+- Timeline
 
----
+## 10. Project Structure
 
-## 9. Kolaborasi & Pengembangan
-Proyek ini saat ini dikembangkan secara mandiri oleh seorang **Systems Designer**.
+- `Assets/Scripts` — sistem inti gameplay (grid, stat, player, loot zone)
+- `Assets/Weapons` — data dan logic senjata
+- `Assets/Wheel` — vehicle control dan vehicle data
+- `Assets/Scenes` — scene utama
+- `Assets/JMO Assets/WarFX` — VFX asset (api, ledakan)
+- `Assets/TutorialInfo` — readme / tutorial asset bawaan Unity
 
-Saya membuka kesempatan kolaborasi aktif untuk peran berikut:
-1.  **Gameplay/AI Programmer:** Untuk mengembangkan kecerdasan buatan (*AI enemy*) yang dapat bereaksi secara dinamis terhadap keterbatasan sumber daya (panas senjata, manajemen energi).
-2.  **Physics Engineer:** Untuk mengoptimalkan batasan fisik sambungan (*joint constraints*) pada mekanik penarikan (*towing*) berkecepatan tinggi.
+## 11. How to Run
 
-Untuk pertanyaan teknis atau proposal kolaborasi, silakan buka *Issue* atau kirimkan *Pull Request* pada repositori ini.
+1. Buka project di Unity `2022.3.32f1`
+2. Buka scene `Garasi 2`
+3. Atur kendaraan di garasi
+4. Jalan ke mobil → tekan `E` untuk naik → `I` untuk starter
+5. Menuju border badai pasir untuk masuk Extraction zone (saat ini placeholder)
 
-***
+## 12. Key Technical Notes
+
+- `PlacedModule` dan `GridZone` didefinisikan di `VehicleGridSystem.cs`
+- `VehicleStatsManager` sekarang hanya koordinator — grid logic ada di `VehicleGridSystem`, runtime fuel/battery masih di VSM
+- GridSaveSystem pakai `VehicleGridSystem` parameter, bukan `VehicleStatsManager`
+- Semua pre-existing script tetap akses grid via forwarding properties di VSM (`vsm.installedModules`, `vsm.gridZones`, dll)
+- Pastikan prefab kendaraan punya component `VehicleGridSystem` + `VehicleStatsManager`
+
+## 13. Credits
+
+Project ini memakai asset kendaraan, texture, audio, dan VFX dari beberapa sumber. Kalau mau dipublish, tambahkan daftar kredit lengkap di bagian ini.

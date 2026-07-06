@@ -11055,6 +11055,7 @@ GameObject:
   - component: {fileID: -78592057881969603}
   - component: {fileID: 7622050489055512228}
   - component: {fileID: -5248754255226824073}
+  - component: {fileID: 5787838988388702711}
   m_Layer: 0
   m_Name: Grandmax
   m_TagString: Untagged
@@ -11162,9 +11163,9 @@ MonoBehaviour:
   engine:
     maxTorqueNm: 134
     idleRPM: 800
-    maxRPM: 6500
-    peakTorqueRPM: 3800
-    flywheelInertia: 0.6
+    maxRPM: 6200
+    peakTorqueRPM: 3000
+    flywheelInertia: 0.18
     torqueCurve:
       serializedVersion: 2
       m_Curve:
@@ -11234,7 +11235,7 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
-    maxFuelConsumptionRate: 0.05
+    maxFuelConsumptionRate: 0.025
   starterPowerRequired: 1500
   starterMinBatteryWh: 50
   engineBrakingTorque: 200
@@ -11247,17 +11248,17 @@ MonoBehaviour:
   - gearName: 1
     ratio: 3.36
   - gearName: 2
-    ratio: 2.04
+    ratio: 2.5
   - gearName: 3
-    ratio: 1.36
+    ratio: 1.81
   - gearName: 4
-    ratio: 1
+    ratio: 1.35
   - gearName: 5
-    ratio: 0.85
-  finalDriveRatio: 4.8
+    ratio: 1
+  finalDriveRatio: 3.9
   transmissionEfficiency: 0.85
-  autoUpshiftRPM: 5500
-  autoDownshiftRPM: 1200
+  autoUpshiftRPM: 4800
+  autoDownshiftRPM: 1800
   suspension:
     suspensionDistance: 0.2
     springRate: 32000
@@ -11323,8 +11324,9 @@ MonoBehaviour:
   antiRollForce: 7000
   downforceMultiplier: 0.02
   airDragCd: 0.5
-  frontalArea: 2.2
+  frontalArea: 2.6
   preventWheelSlipRPM: 1
+  movementLocked: 1
   currentRPM: 650.00006
   currentTorqueNm: 0
   engineLoad: 0
@@ -11374,13 +11376,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   baseData: {fileID: 11400000, guid: 9def05a98a4a9b940afbb8feb597f1c8, type: 2}
-  gridZones:
-  - zoneName: atas
-    origin: {fileID: 5959161589016137262}
-    capacity: {x: 4, y: 9}
-    cellSize: 0.25
-    affectDrag: 1
-  installedModules: []
+  gridSystem: {fileID: 0}
   currentTotalMass: 1900
   currentPowerConsumption: 0
   currentPowerGeneration: 95
@@ -11704,9 +11700,27 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   exitPoint: {fileID: 3149689880977666881}
-  driverSeat: {fileID: 4615713876861686230}
   interactionPrompt: {fileID: 0}
   enterExitKey: 101
+--- !u!114 &5787838988388702711
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5801169931204964018}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b021da229c7e4b449a243c5334c520cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  gridZones:
+  - zoneName: atas
+    origin: {fileID: 5959161589016137262}
+    capacity: {x: 4, y: 9}
+    cellSize: 0.25
+    affectDrag: 1
+  installedModules: []
 --- !u!1 &5840160850931072303
 GameObject:
   m_ObjectHideFlags: 0
