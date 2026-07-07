@@ -80,16 +80,16 @@ public class VehicleStatsManager : MonoBehaviour
         }
     }
 
-    public List<Vector2Int> GetOccupiedCells(Vector2Int position, int width, int height, int angle)
+    public void GetOccupiedCells(Vector2Int position, int width, int height, int angle, List<Vector2Int> dest)
     {
-        if (gridSystem == null) return new List<Vector2Int>();
-        return gridSystem.GetOccupiedCells(position, width, height, angle);
+        if (gridSystem == null) { dest.Clear(); return; }
+        gridSystem.GetOccupiedCells(position, width, height, angle, dest);
     }
 
-    public List<Vector2Int> GetClearanceCells(Vector2Int position, ModuleTemplate template, int angle)
+    public void GetClearanceCells(Vector2Int position, ModuleTemplate template, int angle, List<Vector2Int> dest)
     {
-        if (gridSystem == null) return new List<Vector2Int>();
-        return gridSystem.GetClearanceCells(position, template, angle);
+        if (gridSystem == null) { dest.Clear(); return; }
+        gridSystem.GetClearanceCells(position, template, angle, dest);
     }
 
     public bool IsAreaFree(GridZone zone, Vector2Int position, ModuleTemplate templateToPlace, int angle, PlacedModule ignoreModule = null)
@@ -141,6 +141,10 @@ public class VehicleStatsManager : MonoBehaviour
     void Start()
     {
         currentFuelAmount = 0f;
+
+        // Auto-init HitboxProxy pada base vehicle colliders (wheels, critical parts, dll)
+        if (GetComponent<VehicleHitboxInitializer>() == null)
+            gameObject.AddComponent<VehicleHitboxInitializer>();
 
         CalculateAndApplyStats();
 
@@ -200,15 +204,16 @@ public class VehicleStatsManager : MonoBehaviour
         currentBatteryAmount += netPower * Time.deltaTime / 3600f;
         currentBatteryAmount = Mathf.Clamp(currentBatteryAmount, 0f, currentBatteryCapacity);
 
-        VehicleCriticalPart[] criticalParts = GetComponentsInChildren<VehicleCriticalPart>();
-        foreach (var part in criticalParts)
+        int count = _cachedCriticalParts.Count;
+        for (int i = 0; i < count; i++)
         {
-            part.UpdateLampState(currentBatteryAmount, lightsOn);
+            _cachedCriticalParts[i].UpdateLampState(currentBatteryAmount, lightsOn);
         }
     }
 
     private List<PlacedModule> _ammoModuleCache;
     private List<VehicleCriticalPart> _ammoCriticalCache;
+    private List<VehicleCriticalPart> _cachedCriticalParts = new List<VehicleCriticalPart>();
     private int _ammoCacheIndex;
 
     public bool TryConsumeAmmo(float points)
@@ -340,6 +345,10 @@ public class VehicleStatsManager : MonoBehaviour
             else
                 currentPowerGeneration += part.powerGeneration;
         }
+
+        // Cache critical parts untuk Update() — zero hierarchy traversal per frame
+        _cachedCriticalParts.Clear();
+        _cachedCriticalParts.AddRange(criticalParts);
 
         // Akumulasi drag dari modul
         float totalDragArea = baseData.baseFrontalArea;

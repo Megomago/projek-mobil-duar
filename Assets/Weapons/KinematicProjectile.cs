@@ -48,6 +48,8 @@ namespace Weapons
         // Gravitasi bumi (-9.81), bisa diubah jika butuh balistik spesifik
         private readonly Vector3 _gravity = new Vector3(0f, -9.81f, 0f);
 
+        private static readonly RaycastHit[] _raycastHitsBuffer = new RaycastHit[16];
+
         private void Awake()
         {
             _trailRenderer = GetComponent<TrailRenderer>();
@@ -120,15 +122,16 @@ namespace Weapons
             Vector3 directionToNext = nextPosition - _currentPosition;
             float distanceToNext = directionToNext.magnitude;
 
-            // 4. Lakukan Raycast dari posisi saat ini ke posisi berikutnya menggunakan RaycastAll agar bisa ignore collider yg sudah ditembus
-            RaycastHit[] hits = Physics.RaycastAll(_currentPosition, directionToNext.normalized, distanceToNext, hitMask);
+            // 4. Lakukan Raycast dari posisi saat ini ke posisi berikutnya menggunakan RaycastNonAlloc agar zero GC allocation
+            int hitCount = Physics.RaycastNonAlloc(_currentPosition, directionToNext.normalized, _raycastHitsBuffer, distanceToNext, hitMask);
             
             RaycastHit closestHit = default;
             bool foundHit = false;
             float minDistance = float.MaxValue;
 
-            foreach (var h in hits)
+            for (int i = 0; i < hitCount; i++)
             {
+                var h = _raycastHitsBuffer[i];
                 // Ignore collider yang sudah pernah kita tembus di frame sebelumnya
                 if (_piercedColliders.Contains(h.collider)) 
                     continue;
@@ -158,8 +161,11 @@ namespace Weapons
 
         private void HandleHit(RaycastHit hit)
         {
+            // HitboxProxy: satu GetComponent flat, zero hierarchy traversal
+            var proxy = hit.collider.GetComponent<HitboxProxy>();
+
             // Skip hits on the shooter's own vehicle — prevent self-damage
-            var statsMgr = hit.collider.GetComponentInParent<VehicleStatsManager>();
+            var statsMgr = proxy != null ? proxy.statsManager : hit.collider.GetComponentInParent<VehicleStatsManager>();
             if (statsMgr != null && _ownerStatsManager != null && statsMgr == _ownerStatsManager)
                 return;
 
@@ -192,22 +198,32 @@ namespace Weapons
                 return;
             }
 
+            // Bukan kendaraan (terrain/tembok) — skip damage pipeline, cuma impact VFX
+            if (proxy == null && statsMgr == null)
+            {
+                if (hitImpactPrefab != null)
+                    SpawnImpactAt(hit.point, hit.normal);
+                DestroyProjectile();
+                return;
+            }
+
             OptResult? result = null;
             string dbgType = "unknown";
 
             // ── Priority-based damage detection ──
-            // Semua GetComponentInParent unconditional, urutan prioritas:
-            //   1. Module (dictionary > GetComponentInParent)
+            // Semua referensi dari HitboxProxy (zero GC, zero hierarchy traversal):
+            //   1. Module (dictionary > proxy.moduleComponent)
             //   2. Wheel
             //   3. Critical Part
             //   4. SimpleTarget
             //   5. Chassis body (hanya jika statsMgr ada)
 
-            // Cari semua komponen target sekali di awal
-            var modComp = hit.collider.GetComponentInParent<VehicleModuleComponent>();
-            var wheelHealth = hit.collider.GetComponentInParent<WheelHealth>();
-            var critPart = hit.collider.GetComponentInParent<VehicleCriticalPart>();
-            var simpleTarget = hit.collider.GetComponentInParent<SimpleTarget>();
+            // Cari semua komponen target dari proxy (cache, tanpa GetComponentInParent)
+            // Pasti proxy != null atau statsMgr != null di titik ini karena early return di atas
+            var modComp = proxy != null ? proxy.moduleComponent : null;
+            var wheelHealth = proxy != null ? proxy.wheelHealth : null;
+            var critPart = proxy != null ? proxy.criticalPart : null;
+            var simpleTarget = proxy != null ? proxy.simpleTarget : null;
 
             // Debug: kirim log nama target + hierarchy depth
             #if UNITY_EDITOR
@@ -317,19 +333,7 @@ namespace Weapons
 
             // Spawn efek ledakan/percikan api dengan pembatas maksimal per frame
             if (hitImpactPrefab != null)
-            {
-                if (Time.time != _lastImpactFrameTime)
-                {
-                    _lastImpactFrameTime = Time.time;
-                    _impactsThisFrame = 0;
-                }
-
-                if (_impactsThisFrame < MAX_IMPACTS_PER_FRAME)
-                {
-                    ObjectPool.Instance.Spawn(hitImpactPrefab, hit.point, Quaternion.LookRotation(hit.normal));
-                    _impactsThisFrame++;
-                }
-            }
+                SpawnImpactAt(hit.point, hit.normal);
 
             // Tambahkan dorongan fisik (Push) — pake Rigidbody cached dari statsMgr
             Rigidbody hitRb = statsMgr != null ? statsMgr.VehicleRigidbody : hit.collider.GetComponentInParent<Rigidbody>();
@@ -407,6 +411,21 @@ namespace Weapons
                     Debug.Log($"[CHAIN] {mod.moduleTemplate.moduleName} kena ledakan {dmg} → HP:{mod.currentHealth}");
                     if (mod.currentHealth <= 0f) mgr.UninstallModule(mod);
                 }
+            }
+        }
+
+        private void SpawnImpactAt(Vector3 point, Vector3 normal)
+        {
+            if (Time.time != _lastImpactFrameTime)
+            {
+                _lastImpactFrameTime = Time.time;
+                _impactsThisFrame = 0;
+            }
+
+            if (_impactsThisFrame < MAX_IMPACTS_PER_FRAME)
+            {
+                ObjectPool.Instance.Spawn(hitImpactPrefab, point, Quaternion.LookRotation(normal));
+                _impactsThisFrame++;
             }
         }
 

@@ -70,14 +70,20 @@ public class VehicleGridSystem : MonoBehaviour
 
     private VehicleStatsManager _statsManager;
 
+    // Cache collection untuk IsAreaFree — zero allocation di grid edit
+    private readonly List<Vector2Int> _tempBaseCellsA = new List<Vector2Int>();
+    private readonly List<Vector2Int> _tempBaseCellsB = new List<Vector2Int>();
+    private readonly List<Vector2Int> _tempClearanceCellsA = new List<Vector2Int>();
+    private readonly List<Vector2Int> _tempClearanceCellsB = new List<Vector2Int>();
+
     void Awake()
     {
         _statsManager = GetComponent<VehicleStatsManager>();
     }
 
-    public List<Vector2Int> GetOccupiedCells(Vector2Int position, int width, int height, int angle)
+    public void GetOccupiedCells(Vector2Int position, int width, int height, int angle, List<Vector2Int> dest)
     {
-        List<Vector2Int> cells = new List<Vector2Int>();
+        dest.Clear();
         int effectiveWidth = (angle == 90 || angle == 270) ? height : width;
         int effectiveHeight = (angle == 90 || angle == 270) ? width : height;
 
@@ -85,16 +91,15 @@ public class VehicleGridSystem : MonoBehaviour
         {
             for (int y = 0; y < effectiveHeight; y++)
             {
-                cells.Add(new Vector2Int(position.x + x, position.y + y));
+                dest.Add(new Vector2Int(position.x + x, position.y + y));
             }
         }
-        return cells;
     }
 
-    public List<Vector2Int> GetClearanceCells(Vector2Int position, ModuleTemplate template, int angle)
+    public void GetClearanceCells(Vector2Int position, ModuleTemplate template, int angle, List<Vector2Int> dest)
     {
-        List<Vector2Int> cells = new List<Vector2Int>();
-        if (template == null || !template.enableClearance) return cells;
+        dest.Clear();
+        if (template == null || !template.enableClearance) return;
 
         int effectiveWidth = (angle == 90 || angle == 270) ? template.height : template.width;
         int effectiveHeight = (angle == 90 || angle == 270) ? template.width : template.height;
@@ -116,10 +121,9 @@ public class VehicleGridSystem : MonoBehaviour
             {
                 bool isBase = (x >= position.x && x < position.x + effectiveWidth) && (y >= position.y && y < position.y + effectiveHeight);
                 if (!isBase)
-                    cells.Add(new Vector2Int(x, y));
+                    dest.Add(new Vector2Int(x, y));
             }
         }
-        return cells;
     }
 
     private bool HasIntersection(List<Vector2Int> list1, List<Vector2Int> list2)
@@ -135,11 +139,13 @@ public class VehicleGridSystem : MonoBehaviour
     {
         if (zone == null || templateToPlace == null) return false;
 
-        List<Vector2Int> baseCellsA = GetOccupiedCells(position, templateToPlace.width, templateToPlace.height, angle);
-        List<Vector2Int> clearanceCellsA = GetClearanceCells(position, templateToPlace, angle);
+        GetOccupiedCells(position, templateToPlace.width, templateToPlace.height, angle, _tempBaseCellsA);
+        GetClearanceCells(position, templateToPlace, angle, _tempClearanceCellsA);
 
-        foreach (var cell in baseCellsA)
+        int baseCountA = _tempBaseCellsA.Count;
+        for (int i = 0; i < baseCountA; i++)
         {
+            var cell = _tempBaseCellsA[i];
             if (cell.x < 0 || cell.x >= zone.capacity.x || cell.y < 0 || cell.y >= zone.capacity.y)
                 return false;
         }
@@ -150,17 +156,17 @@ public class VehicleGridSystem : MonoBehaviour
             if (mod.moduleTemplate == null) continue;
             if (mod.zoneName != zone.zoneName) continue;
 
-            List<Vector2Int> baseCellsB = GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle);
-            List<Vector2Int> clearanceCellsB = GetClearanceCells(mod.gridPosition, mod.moduleTemplate, mod.rotationAngle);
+            GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle, _tempBaseCellsB);
+            GetClearanceCells(mod.gridPosition, mod.moduleTemplate, mod.rotationAngle, _tempClearanceCellsB);
 
-            if (HasIntersection(baseCellsA, baseCellsB)) return false;
+            if (HasIntersection(_tempBaseCellsA, _tempBaseCellsB)) return false;
 
-            if (HasIntersection(baseCellsA, clearanceCellsB))
+            if (HasIntersection(_tempBaseCellsA, _tempClearanceCellsB))
             {
                 if (!templateToPlace.isSmall || !mod.moduleTemplate.enableAccessClearance) return false;
             }
 
-            if (HasIntersection(clearanceCellsA, baseCellsB))
+            if (HasIntersection(_tempClearanceCellsA, _tempBaseCellsB))
             {
                 if (!mod.moduleTemplate.isSmall || !templateToPlace.enableAccessClearance) return false;
             }
@@ -220,11 +226,19 @@ public class VehicleGridSystem : MonoBehaviour
             if (moduleLayer != -1)
                 SetLayerRecursively(spawned, moduleLayer);
 
+            VehicleModuleComponent moduleComp = spawned.GetComponent<VehicleModuleComponent>();
+
             Collider[] modColliders = spawned.GetComponentsInChildren<Collider>(true);
             foreach (var col in modColliders)
+            {
                 moduleColliderMap[col] = newModule;
 
-            VehicleModuleComponent moduleComp = spawned.GetComponent<VehicleModuleComponent>();
+                HitboxProxy proxy = col.gameObject.GetComponent<HitboxProxy>();
+                if (proxy == null)
+                    proxy = col.gameObject.AddComponent<HitboxProxy>();
+                proxy.moduleComponent = moduleComp;
+                proxy.statsManager = _statsManager;
+            }
             if (moduleComp != null)
                 moduleComp.Initialize(newModule, _statsManager);
 
