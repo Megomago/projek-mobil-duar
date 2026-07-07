@@ -1,5 +1,3 @@
---- START OF FILE Paste June 29, 2026 - 2:15AM ---
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -714,6 +712,126 @@
         .calc-toggle-btn:hover {
             transform: scale(1.1);
         }
+
+        /* ─── Pierce Simulation Panel ─── */
+        .pierce-section { margin-bottom: 20px; }
+        .pierce-section:last-child { margin-bottom: 0; }
+        .pierce-section h3 {
+            font-size: 12px;
+            font-weight: 700;
+            text-transform: uppercase;
+            color: var(--text-secondary);
+            letter-spacing: 1px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            padding-bottom: 6px;
+        }
+
+        .pierce-proj-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 12px;
+            align-items: end;
+        }
+        .pierce-proj-row .control-group { width: auto; }
+        .pierce-proj-row .control-group select,
+        .pierce-proj-row .control-group input { width: 110px; }
+
+        .pierce-global-row {
+            display: flex;
+            gap: 12px;
+            align-items: end;
+            flex-wrap: wrap;
+        }
+        .pierce-global-row .control-group input { width: 80px; }
+
+        /* Collider Config Grid */
+        .collider-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 8px;
+            margin-top: 8px;
+            max-height: 240px;
+            overflow-y: auto;
+            background: rgba(0,0,0,0.2);
+            border-radius: 8px;
+            padding: 10px;
+        }
+        .collider-entry {
+            background: var(--bg-input);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 8px 10px;
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+            min-width: 160px;
+            flex: 1 1 160px;
+            transition: border-color 0.2s;
+        }
+        .collider-entry.destroyed {
+            border-color: var(--danger);
+            opacity: 0.5;
+        }
+        .collider-entry-label {
+            font-size: 10px;
+            font-weight: 700;
+            color: var(--text-secondary);
+            text-transform: uppercase;
+            display: flex;
+            justify-content: space-between;
+        }
+        .collider-entry select,
+        .collider-entry input {
+            background: var(--bg-main);
+            border: 1px solid var(--border-color);
+            color: var(--text-primary);
+            padding: 3px 6px;
+            border-radius: 4px;
+            font-size: 11px;
+            font-weight: 600;
+            width: 100%;
+        }
+        .collider-entry .collider-stats {
+            display: flex;
+            gap: 4px;
+        }
+        .collider-entry .collider-stats input { width: 50%; }
+
+        /* Tactical Diagram (Trajectory Canvas) */
+        .pierce-canvas-wrapper {
+            position: relative;
+            width: 100%;
+            background-color: #0b0c10;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            overflow: hidden;
+            margin-top: 8px;
+        }
+        #pierceCanvas {
+            display: block;
+            width: 100%;
+            height: 280px;
+        }
+
+        /* Pierce Results Table */
+        .pierce-results-wrapper { overflow-x: auto; margin-top: 10px; }
+        .pierce-results-wrapper table { font-size: 12px; }
+        .pierce-results-wrapper th { font-size: 10px; padding: 8px 10px; }
+        .pierce-results-wrapper td { font-size: 12px; padding: 8px 10px; }
+
+        .status-destroyed { color: var(--danger); font-weight: 700; }
+        .status-intact { color: var(--success); }
+        .status-damaged { color: var(--accent); }
+        .pierce-yes { color: var(--success); }
+        .pierce-no { color: var(--danger); }
+
+        .pierce-chart-wrapper {
+            position: relative;
+            height: 200px;
+            width: 100%;
+            margin-top: 10px;
+        }
     </style>
 </head>
 <body onload="init()">
@@ -721,7 +839,7 @@
     <!-- HEADER PANEL -->
     <header>
         <div class="header-title">
-            <h1>🚗 VDSO | Balistics & Balancing Suite</h1>
+            <h1>🚗 VDSO | Ballistics & Balancing Suite</h1>
             <p>Simulasikan Balistik Proyektil (Tanpa Drag / Dengan Drag), Deviasi Gaussian (Box-Muller), Overheat, dan Kurva DPS Efektif Kendaraan.</p>
         </div>
         <div class="header-actions">
@@ -771,6 +889,10 @@
                     <input type="number" id="targetHP" value="1000" min="1" onchange="updateSimulation()">
                 </div>
                 <div class="control-group">
+                    <label>Target Armor (DEF)</label>
+                    <input type="number" id="targetDef" value="100" min="0" onchange="updateSimulation()">
+                </div>
+                <div class="control-group">
                     <label>Target Distance (m)</label>
                     <input type="number" id="targetDist" value="300" min="10" max="2000" onchange="updateSimulation()">
                 </div>
@@ -813,9 +935,12 @@
                             <th>Tipe Mekanis</th>
                             <th>Raw DPS (Ideal)</th>
                             <th>Simulated Avg DPS</th>
+                            <th>Eff DMG/Pellet</th>
                             <th>TTK (s)</th>
                             <th>Time of Flight (TOF)</th>
                             <th>Gravity Drop</th>
+                            <th>Pierce</th>
+                            <th>Sisa PEN</th>
                             <th>Akurasi Awal (Hit %)</th>
                             <th>Akurasi Overheat (Hit %)</th>
                         </tr>
@@ -866,6 +991,116 @@
                 </div>
                 <div class="chart-wrapper">
                     <canvas id="rangeChart"></canvas>
+                </div>
+            </div>
+        </div>
+
+        <!-- PIERCE DEPTH SIMULATION -->
+        <div class="panel">
+            <div class="panel-header">
+                <h2>🔫 Pierce Depth Simulation</h2>
+            </div>
+
+            <!-- Projectile Source -->
+            <div class="pierce-section">
+                <h3>Projectile</h3>
+                <div class="pierce-proj-row">
+                    <div class="control-group">
+                        <label>Weapon</label>
+                        <select id="pierceWeapon" onchange="pierceWeaponChanged()">
+                            <option value="">— Manual Input —</option>
+                        </select>
+                    </div>
+                    <div class="control-group">
+                        <label>ATK (Damage)</label>
+                        <input type="number" id="pierceATK" value="85" min="0" onchange="queuePierceSim()">
+                    </div>
+                    <div class="control-group">
+                        <label>PEN</label>
+                        <input type="number" id="piercePEN" value="180" min="0" onchange="queuePierceSim()">
+                    </div>
+                    <div class="control-group">
+                        <label>VEL (m/s)</label>
+                        <input type="number" id="pierceVEL" value="800" min="0" onchange="queuePierceSim()">
+                    </div>
+                    <div class="control-group">
+                        <label>Drag Coeff</label>
+                        <input type="number" id="pierceDrag" value="0" step="0.0001" min="0" onchange="queuePierceSim()">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Collider Configuration -->
+            <div class="pierce-section">
+                <h3>Colliders</h3>
+                <div class="pierce-global-row">
+                    <div class="control-group">
+                        <label>Jumlah</label>
+                        <input type="number" id="pierceCount" value="5" min="1" max="20" onchange="rebuildColliderConfigs()">
+                    </div>
+                    <div class="control-group">
+                        <label>Jarak Antar (m)</label>
+                        <input type="number" id="pierceSpacing" value="10" min="1" step="0.5" onchange="queuePierceSim()">
+                    </div>
+                    <div class="control-group" style="margin-left:auto;">
+                        <button onclick="applyGlobalDEF()" style="font-size:11px; padding:6px 10px;">Set All DEF</button>
+                        <input type="number" id="pierceGlobalDEF" value="100" min="0" style="width:70px; margin-left:4px; background:var(--bg-input); border:1px solid var(--border-color); color:var(--text-primary); padding:6px 8px; border-radius:6px; font-size:12px;">
+                    </div>
+                </div>
+                <div class="collider-grid" id="colliderGrid">
+                    <!-- Filled by JS -->
+                </div>
+            </div>
+
+            <!-- Run Button -->
+            <div class="pierce-section" style="text-align:right;">
+                <button class="btn-primary" onclick="runPierceSimulation()">
+                    ▶ Jalankan Simulasi
+                </button>
+            </div>
+
+            <!-- Results -->
+            <div id="pierceResults" style="display:none;">
+                <!-- Tactical Diagram (Trajectory Canvas) -->
+                <div class="pierce-section">
+                    <h3>Tactical Path Trajectory</h3>
+                    <div class="pierce-canvas-wrapper">
+                        <canvas id="pierceCanvas"></canvas>
+                    </div>
+                </div>
+
+                <!-- Results Table -->
+                <div class="pierce-section">
+                    <h3>Penetration Log</h3>
+                    <div class="pierce-results-wrapper">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>#</th>
+                                    <th>Nama</th>
+                                    <th>DEF</th>
+                                    <th>HP</th>
+                                    <th>DMG</th>
+                                    <th>Status</th>
+                                    <th>Pierce</th>
+                                    <th>Exit VEL</th>
+                                    <th>Sisa PEN</th>
+                                    <th>Sisa ATK</th>
+                                </tr>
+                            </thead>
+                            <tbody id="pierceTableBody">
+                                <!-- Filled by JS -->
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Velocity Decay Chart -->
+                <div class="pierce-section">
+                    <h3>Velocity Decay</h3>
+                    <div class="pierce-chart-wrapper">
+                        <canvas id="velocityDecayChart"></canvas>
+                    </div>
                 </div>
             </div>
         </div>
@@ -927,6 +1162,28 @@
             }
             renderWeaponCards();
             updateSimulation();
+            initPiercePanel();
+        }
+
+        function initPiercePanel() {
+            refreshPierceWeaponDropdown();
+            rebuildColliderConfigs();
+            runPierceSimulation();
+        }
+
+        function refreshPierceWeaponDropdown() {
+            let sel = document.getElementById('pierceWeapon');
+            let currentVal = sel.value;
+            sel.innerHTML = '<option value="">— Manual Input —</option>';
+            weapons.forEach((w, i) => {
+                let opt = document.createElement('option');
+                opt.value = i;
+                opt.textContent = w.name;
+                sel.appendChild(opt);
+            });
+            if (currentVal && weapons[parseInt(currentVal)]) {
+                sel.value = currentVal;
+            }
         }
 
         function saveToLocalStorage() {
@@ -952,6 +1209,7 @@
                     color: "#fcca46",
                     type: "mag",
                     dmg: 85,
+                    pen: 180,
                     pellets: 1,
                     rpm: 450,
                     mag: 30,
@@ -973,6 +1231,7 @@
                     color: "#00d2c4",
                     type: "mag",
                     dmg: 18,
+                    pen: 50,
                     pellets: 8,
                     rpm: 120,
                     mag: 6,
@@ -994,6 +1253,7 @@
                     color: "#ff4a5a",
                     type: "heat",
                     dmg: 45,
+                    pen: 120,
                     pellets: 1,
                     rpm: 1200,
                     mag: 0, // infinite / overheat based
@@ -1017,13 +1277,13 @@
             let wp = null;
             let now = Date.now();
             if (type === 'autocannon') {
-                wp = { id: now, name: "30mm HVAP Autocannon Mk II", color: "#fcca46", type: "mag", dmg: 90, pellets: 1, rpm: 500, mag: 40, reload: 2.0, heatPerShot: 3.0, maxHeat: 100, coolRate: 20, vel: 820, drag: 0, spread: 0.2, choke: 1.0, heatMult: 4.0, overheatDispersionThreshold: 0.8, rest: true };
+                wp = { id: now, name: "30mm HVAP Autocannon Mk II", color: "#fcca46", type: "mag", dmg: 90, pen: 200, pellets: 1, rpm: 500, mag: 40, reload: 2.0, heatPerShot: 3.0, maxHeat: 100, coolRate: 20, vel: 820, drag: 0, spread: 0.2, choke: 1.0, heatMult: 4.0, overheatDispersionThreshold: 0.8, rest: true };
             } else if (type === 'shotgun') {
-                wp = { id: now, name: "12g Shredder Shotgun", color: "#00d2c4", type: "mag", dmg: 15, pellets: 12, rpm: 150, mag: 8, reload: 3.5, heatPerShot: 25, maxHeat: 100, coolRate: 15, vel: 380, drag: 0, spread: 4.0, choke: 0.7, heatMult: 2.0, overheatDispersionThreshold: 0.8, rest: false };
+                wp = { id: now, name: "12g Shredder Shotgun", color: "#00d2c4", type: "mag", dmg: 15, pen: 60, pellets: 12, rpm: 150, mag: 8, reload: 3.5, heatPerShot: 25, maxHeat: 100, coolRate: 15, vel: 380, drag: 0, spread: 4.0, choke: 0.7, heatMult: 2.0, overheatDispersionThreshold: 0.8, rest: false };
             } else if (type === 'minigun') {
-                wp = { id: now, name: "Viper 20mm Rotary Cannon", color: "#ff4a5a", type: "heat", dmg: 55, pellets: 1, rpm: 1500, mag: 0, reload: 0, heatPerShot: 1.2, maxHeat: 150, coolRate: 25, vel: 900, drag: 0, spread: 1.1, choke: 1.1, heatMult: 3.0, overheatDispersionThreshold: 0.6, rest: true };
+                wp = { id: now, name: "Viper 20mm Rotary Cannon", color: "#ff4a5a", type: "heat", dmg: 55, pen: 140, pellets: 1, rpm: 1500, mag: 0, reload: 0, heatPerShot: 1.2, maxHeat: 150, coolRate: 25, vel: 900, drag: 0, spread: 1.1, choke: 1.1, heatMult: 3.0, overheatDispersionThreshold: 0.6, rest: true };
             } else if (type === 'railgun') {
-                wp = { id: now, name: "Magnetic Gauss Railgun", color: "#00ff87", type: "mag", dmg: 650, pellets: 1, rpm: 20, mag: 1, reload: 4.0, heatPerShot: 80, maxHeat: 100, coolRate: 10, vel: 1800, drag: 0, spread: 0.02, choke: 0.5, heatMult: 1.0, overheatDispersionThreshold: 0.8, rest: false };
+                wp = { id: now, name: "Magnetic Gauss Railgun", color: "#00ff87", type: "mag", dmg: 650, pen: 500, pellets: 1, rpm: 20, mag: 1, reload: 4.0, heatPerShot: 80, maxHeat: 100, coolRate: 10, vel: 1800, drag: 0, spread: 0.02, choke: 0.5, heatMult: 1.0, overheatDispersionThreshold: 0.8, rest: false };
             }
 
             if (wp) {
@@ -1045,7 +1305,6 @@
 
         // --- Core Ballistics & Overheat Dispersion Engine ---
 
-        // Fungsi pembantu untuk kalkulasi spread berdasarkan threshold (Sinkron sama Unity)
         function calculateOverheatSpread(w, currentHeat) {
             if (w.type !== 'heat' || !w.maxHeat) return w.spread;
             
@@ -1056,7 +1315,6 @@
             
             if (heatFactor >= threshold) {
                 let divisor = 1.0 - threshold;
-                // Jika threshold diset 1.0, langsung loncat ke dispersi terburuk pas 100% heat
                 let normalizedFactor = divisor > 0 ? (heatFactor - threshold) / divisor : 1.0;
                 return w.spread + (w.spread * w.heatMult - w.spread) * normalizedFactor;
             }
@@ -1071,7 +1329,6 @@
 
             while (x < targetX && t < 10) { 
                 let v = Math.sqrt(vx*vx + vy*vy);
-                // Jika drag = 0, vx konstan seperti di game Unity
                 vx += (-dragCoeff * v * vx) * dt;
                 vy += (-GRAVITY - (dragCoeff * v * vy)) * dt;
                 x += vx * dt; 
@@ -1093,11 +1350,9 @@
             let sigmaDegrees = spreadDegrees * chokeMult;
             let sigmaMeters = targetDist * Math.tan(sigmaDegrees * Math.PI / 180);
             if (sigmaMeters <= 0) return 1.0;
-            // Rayleigh CDF: P(r <= R) = 1 - e^(-R^2 / (2 * sigma^2))
             return 1.0 - Math.exp(-Math.pow(targetRadius, 2) / (2 * Math.pow(sigmaMeters, 2)));
         }
 
-        // Generating a circle outline for Target Profile
         function generateCircleLine(radius) {
             let points = [];
             for(let a=0; a<=360; a+=5) {
@@ -1107,7 +1362,6 @@
             return points;
         }
 
-        // Generate scatter points for a single shot based on Box-Muller Gaussian transform
         function generateGaussianScatterForShot(spreadDegrees, chokeMult, targetDist, pelletCount) {
             let points = [];
             let sigmaDegrees = spreadDegrees * chokeMult;
@@ -1117,8 +1371,7 @@
                 if (sigmaDegrees <= 0 || sigmaMeters <= 0) {
                     points.push({ x: 0, y: 0 });
                 } else {
-                    // Box-Muller Transform
-                    let u1 = Math.max(Math.random(), 0.0001); // avoid log(0)
+                    let u1 = Math.max(Math.random(), 0.0001);
                     let u2 = Math.random();
                     let gaussMagnitude = Math.sqrt(-2 * Math.log(u1)) * sigmaMeters;
                     let angle = u2 * 2 * Math.PI;
@@ -1132,7 +1385,33 @@
             return points;
         }
 
+        // OptFormula: mirrors Unity's OptFormula.Calculate(atk, pen, def, muzzleVel)
+        function optFormula(atk, pen, def, muzzleVel) {
+            if (atk <= 0 || pen <= 0) {
+                return { damage: 0, pierce: false, exitVel: 0, remainingPen: 0, remainingAtk: 0 };
+            }
+            if (def <= 0) {
+                return { damage: atk * 2, pierce: true, exitVel: muzzleVel, remainingPen: pen, remainingAtk: atk };
+            }
+            let ratio = pen / def;
+            if (ratio < 1.0) {
+                return { damage: 0, pierce: false, exitVel: 0, remainingPen: 0, remainingAtk: 0 };
+            }
+            let bonusPercent = Math.min(Math.max(ratio - 1.0, 0), 1.0);
+            let effectiveAtk = atk * (1 + bonusPercent);
+            if (ratio < 2.0) {
+                return { damage: effectiveAtk, pierce: false, exitVel: 0, remainingPen: 0, remainingAtk: 0 };
+            }
+            let resistance = (def / pen) * 2;
+            let velRatio = Math.max(0, 1 - resistance);
+            let exitVel = muzzleVel * velRatio;
+            let remainingAtk = atk * velRatio;
+            let remainingPen = Math.max(0, pen - def);
+            return { damage: effectiveAtk, pierce: true, exitVel, remainingPen, remainingAtk };
+        }
+
         function renderWeaponCards() {
+            refreshPierceWeaponDropdown();
             const grid = document.getElementById('weapon-grid');
             grid.innerHTML = '';
             
@@ -1142,6 +1421,20 @@
             weapons.forEach((w, index) => {
                 let ballistics = calculateBallistics(w.vel, w.drag, targetDist);
                 let hitProbBase = calculateHitProbability(w.spread, w.choke, targetDist, targetRadius);
+                let targetDef = parseFloat(document.getElementById('targetDef').value) || 100;
+                let pen = w.pen !== undefined ? w.pen : 0;
+                let effDmgCardText = w.dmg.toFixed(1);
+                let effDmgCardClass = '';
+                if (pen > 0) {
+                    let rPen = optFormula(w.dmg, pen, targetDef, w.vel);
+                    if (rPen.damage > 0) {
+                        effDmgCardText = rPen.damage.toFixed(1) + (rPen.pierce ? ' ✓' : '');
+                        effDmgCardClass = rPen.pierce ? 'text-success' : '';
+                    } else {
+                        effDmgCardText = '0 (Blokir)';
+                        effDmgCardClass = 'text-danger';
+                    }
+                }
                 
                 let tofStr = typeof ballistics.tof === "number" ? ballistics.tof.toFixed(2) + "s" : "Fails";
                 let hitProbStr = (hitProbBase * 100).toFixed(1) + "%";
@@ -1178,7 +1471,6 @@
                     </div>
                     
                     <div class="card-body">
-                        <!-- BALLISTICS & ACCURACY -->
                         <div class="card-input-wrapper">
                             <label>Base Dispersion (°)</label>
                             <input type="number" step="0.05" value="${w.spread}" oninput="updateWeapon(${index}, 'spread', this.value)">
@@ -1199,7 +1491,6 @@
 
                         <div class="section-divider"></div>
 
-                        <!-- CORE SYSTEMS -->
                         <div class="card-input-wrapper">
                             <label>Trigger Mechanics</label>
                             <select onchange="updateWeapon(${index}, 'type', this.value)">
@@ -1216,13 +1507,16 @@
                             <input type="number" value="${w.dmg}" oninput="updateWeapon(${index}, 'dmg', this.value)">
                         </div>
                         <div class="card-input-wrapper">
+                            <label>Penetration (PEN)</label>
+                            <input type="number" min="0" value="${w.pen !== undefined ? w.pen : 0}" oninput="updateWeapon(${index}, 'pen', this.value)">
+                        </div>
+                        <div class="card-input-wrapper">
                             <label>Pellets Count</label>
                             <input type="number" min="1" value="${w.pellets}" oninput="updateWeapon(${index}, 'pellets', this.value)">
                         </div>
 
                         <div class="section-divider"></div>
 
-                        <!-- CONDITIONAL SYSTEMS -->
                         <div class="card-input-wrapper">
                             <label>Magazine Size (0 = Inf)</label>
                             <input type="number" min="0" value="${w.mag}" oninput="updateWeapon(${index}, 'mag', this.value)">
@@ -1248,14 +1542,11 @@
                             <label>Heat Disp. Multiplier</label>
                             <input type="number" step="0.1" value="${w.heatMult || 1.0}" oninput="updateWeapon(${index}, 'heatMult', this.value)">
                         </div>
-                        <!-- SLOT BARU: OVERHEAT THRESHOLD -->
                         <div class="card-input-wrapper">
                             <label>Overheat Disp. Threshold</label>
                             <input type="number" step="0.05" min="0" max="1" value="${w.overheatDispersionThreshold !== undefined ? w.overheatDispersionThreshold : 0.8}" oninput="updateWeapon(${index}, 'overheatDispersionThreshold', this.value)">
                         </div>
-                        <div class="card-input-wrapper" style="opacity: 0; pointer-events: none;">
-                            <!-- Placeholder spacing -->
-                        </div>
+                        <div class="card-input-wrapper" style="opacity: 0; pointer-events: none;"></div>
                         <div class="card-input-wrapper span-2" style="flex-direction:row; justify-content:space-between; align-items:center; margin-top: 5px;">
                             <label style="cursor:pointer;" for="rest-chk-${index}">Simulate Cooldown Rest (Release Trigger)</label>
                             <input type="checkbox" id="rest-chk-${index}" ${w.rest ? 'checked' : ''} onchange="updateWeapon(${index}, 'rest', this.checked)">
@@ -1271,6 +1562,10 @@
                         <div class="readout-box">
                             <label>Hit Probability</label>
                             <span class="${isMissing ? 'text-danger' : 'text-success'}">${hitProbStr}</span>
+                        </div>
+                        <div class="readout-box">
+                            <label>Eff DMG (vs DEF)</label>
+                            <span style="font-size:13px;" class="${effDmgCardClass}">${effDmgCardText}</span>
                         </div>
                     </div>
                 `;
@@ -1290,7 +1585,6 @@
             
             saveToLocalStorage();
 
-            // Re-render only if critical UI fields are modified (like toggle triggers)
             if (field === 'type' || field === 'name' || field === 'color' || field === 'enabled') {
                 renderWeaponCards();
             }
@@ -1312,6 +1606,7 @@
                 color: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
                 type: "mag",
                 dmg: 50,
+                pen: 100,
                 pellets: 1,
                 rpm: 300,
                 mag: 20,
@@ -1332,7 +1627,6 @@
             updateSimulation();
         }
 
-        // --- IMPORT UNITY SCRIPTABLE OBJECT OR JSON ---
         function openImportModal() {
             document.getElementById('addWeaponModal').style.display = 'flex';
             document.getElementById('jsonInput').value = '';
@@ -1351,7 +1645,6 @@
             
             let data = {};
             
-            // SMART PARSER: Handles Unity's native .asset YAML format OR pure JSON
             if (input.startsWith('%YAML') || input.includes('MonoBehaviour:')) {
                 let lines = input.split('\n');
                 lines.forEach(line => {
@@ -1360,7 +1653,6 @@
                         let key = parts[0].trim();
                         let val = parts.slice(1).join(':').trim();
                         
-                        // Strip quotes if any
                         if(val.startsWith("'") && val.endsWith("'")) val = val.substring(1, val.length-1);
                         if(val.startsWith('"') && val.endsWith('"')) val = val.substring(1, val.length-1);
                         
@@ -1372,7 +1664,6 @@
                     }
                 });
                 
-                // Fix Unity YAML boolean quirks (1 = true, 0 = false)
                 if(data.enableOverheat === 1) data.enableOverheat = true;
                 if(data.enableOverheat === 0) data.enableOverheat = false;
                 
@@ -1385,7 +1676,6 @@
                 }
             }
             
-            // Mapping parsed parameters to VDSO simulator variables
             let isHeat = data.enableOverheat === true || data.enableOverheat === 'true' || data.enableOverheat === 1;
             
             let newWp = {
@@ -1393,7 +1683,8 @@
                 name: data.weaponName || "Imported Weapon",
                 color: "#" + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0'),
                 type: isHeat ? "heat" : "mag",
-                dmg: 100, // default placeholder
+                dmg: 100,
+                pen: data.penetration !== undefined ? data.penetration : 100,
                 pellets: data.pelletCount !== undefined ? data.pelletCount : 1,
                 rpm: data.fireRateRPM !== undefined ? data.fireRateRPM : 600,
                 mag: data.maxAmmo !== undefined ? data.maxAmmo : 30,
@@ -1402,7 +1693,7 @@
                 maxHeat: data.maxHeat !== undefined ? data.maxHeat : 100,
                 coolRate: data.coolingRate !== undefined ? data.coolingRate : 15,
                 vel: data.muzzleVelocity !== undefined ? data.muzzleVelocity : 800,
-                drag: 0, // Default to 0 matching Unity
+                drag: 0,
                 spread: data.baseDispersion !== undefined ? data.baseDispersion : 0.5,
                 choke: data.chokeMultiplier !== undefined ? data.chokeMultiplier : 1.0,
                 heatMult: data.heatDispersionMultiplier !== undefined ? data.heatDispersionMultiplier : 4.0,
@@ -1417,7 +1708,6 @@
             closeModal();
         }
 
-        // --- EXPORT WEAPONS AS JSON FILE ---
         function exportWeaponsJSON() {
             let dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(weapons, null, 4));
             let downloadAnchor = document.createElement('a');
@@ -1428,7 +1718,6 @@
             downloadAnchor.remove();
         }
 
-        // --- IMPORT WEAPONS FROM JSON FILE ---
         function importWeaponsJSON(event) {
             let file = event.target.files[0];
             if (!file) return;
@@ -1452,10 +1741,8 @@
             reader.readAsText(file);
         }
 
-        // Cache simulation timeseries data to export as CSV later
         let lastSimulationTimeSeries = null;
 
-        // --- EXPORT SIMULATION TIMESERIES AS CSV ---
         function exportCSV() {
             if (!lastSimulationTimeSeries || lastSimulationTimeSeries.length === 0) {
                 alert("Simulasi belum dijalankan.");
@@ -1464,14 +1751,12 @@
 
             let csvContent = "data:text/csv;charset=utf-8,";
             
-            // Header Row
             let headers = ["Time (s)"];
             weapons.filter(w => w.enabled !== false).forEach(w => {
                 headers.push(`${w.name} (CumDamage)`);
             });
             csvContent += headers.join(",") + "\n";
 
-            // Data Rows
             for (let i = 0; i < lastSimulationTimeSeries[0].dataPoints.length; i++) {
                 let row = [lastSimulationTimeSeries[0].dataPoints[i].time.toFixed(2)];
                 lastSimulationTimeSeries.forEach(series => {
@@ -1489,14 +1774,14 @@
             downloadAnchor.remove();
         }
 
-
         // --- MAIN SIMULATION LOGIC ---
         function updateSimulation() {
             const maxTime = parseFloat(document.getElementById('simTime').value) || 10;
             const targetDist = parseFloat(document.getElementById('targetDist').value) || 300;
             const targetRadius = parseFloat(document.getElementById('targetRadius').value) || 2.5;
             const targetHP = parseFloat(document.getElementById('targetHP').value) || 1000;
-            const dt = 0.05; // 50ms time-steps
+            const targetDef = parseFloat(document.getElementById('targetDef').value) || 100;
+            const dt = 0.05;
             const timeLabels = [];
             
             let combatDatasets = [];
@@ -1512,11 +1797,9 @@
                 manualShotsGroup.style.display = 'none';
             }
 
-            // Redraw table body
             const tableBody = document.getElementById('comparison-table-body');
             tableBody.innerHTML = '';
 
-            // Spread chart default dataset: Target Profile Circle
             let spreadDatasets = [{
                 label: 'Target Profile Hitbox',
                 data: generateCircleLine(targetRadius),
@@ -1529,18 +1812,16 @@
             }];
 
             let maxSpreadRadius = targetRadius + 1.0; 
-            let simulationTimeSeries = []; // clear cache
+            let simulationTimeSeries = [];
 
             weapons.filter(w => w.enabled !== false).forEach((w, i) => {
                 let ballistics = calculateBallistics(w.vel, w.drag, targetDist);
                 let tof = typeof ballistics.tof === "number" ? ballistics.tof : 0; 
                 let baseHitProb = calculateHitProbability(w.spread, w.choke || 1.0, targetDist, targetRadius);
 
-                // --- 1. Spread Scatter Gaussian Data Points ---
                 let scatterPoints = [];
 
                 if (scatterMode === 'manual') {
-                    // Simulasikan tembakan manual sejumlah N tembakan
                     const numShots = parseInt(document.getElementById('manualShots').value) || 5;
                     let heat = 0;
                     let ammo = w.mag;
@@ -1557,7 +1838,6 @@
                             ammo = w.mag;
                         }
                         
-                        // HITUNG SPREAD PAKE LOGIKA THRESHOLD BARU
                         let currentSpread = calculateOverheatSpread(w, heat);
 
                         let pts = generateGaussianScatterForShot(currentSpread, w.choke || 1.0, targetDist, w.pellets);
@@ -1569,7 +1849,7 @@
                             if (heat >= w.maxHeat) {
                                 heat = w.maxHeat;
                                 if (w.rest) {
-                                    heat = 0; // Cooled down
+                                    heat = 0;
                                     simT += (w.maxHeat / w.coolRate);
                                 }
                             }
@@ -1589,7 +1869,6 @@
                     }
                 }
 
-                // --- 2. Ballistic Trajectory Curve ---
                 trajectoryDatasets.push({
                     label: w.name,
                     data: ballistics.path.map(p => ({x: p.x, y: p.y})),
@@ -1600,7 +1879,6 @@
                     showLine: true
                 });
 
-                // --- 3. Dynamic Effective DPS Simulation (Euler Time-stepping) ---
                 let dmgEvents = [];
                 let state = { 
                     interval: 60 / (w.rpm || 1), 
@@ -1635,11 +1913,16 @@
                         state.timer = state.interval;
                     } else {
                         if (state.timer <= 0) {
-                            // HITUNG SPREAD DINAMIS PAKE LOGIKA THRESHOLD BARU
                             let currentSpread = calculateOverheatSpread(w, state.heat);
                             
                             let currentHitProb = calculateHitProbability(currentSpread, w.choke || 1.0, targetDist, targetRadius);
-                            let expectedShotDmg = (w.dmg * w.pellets) * currentHitProb;
+                            let pen = w.pen !== undefined ? w.pen : 0;
+                            let shotBaseDmg = w.dmg;
+                            if (pen > 0) {
+                                let optResult = optFormula(w.dmg, pen, targetDef, w.vel);
+                                shotBaseDmg = optResult.damage;
+                            }
+                            let expectedShotDmg = (shotBaseDmg * w.pellets) * currentHitProb;
                             
                             dmgEvents.push({ time: t + tof, dmg: expectedShotDmg }); 
                             
@@ -1678,7 +1961,6 @@
                     }
                 }
 
-                // Resolve Damage Events into Cumulative Time Series Plot Data
                 let plotData = [];
                 let seriesCache = [];
                 let cumulativeDmg = 0;
@@ -1714,7 +1996,6 @@
                     tension: w.type === 'mag' ? 0 : 0.1 
                 });
 
-                // Auto-zoom bounds chart berdasarkan titik sebaran yang terbentuk
                 scatterPoints.forEach(p => {
                     let r = Math.sqrt(p.x*p.x + p.y*p.y);
                     if (r > maxSpreadRadius) maxSpreadRadius = r;
@@ -1729,13 +2010,11 @@
                     showLine: false
                 });
 
-                // Calculations for Comparison Table
                 let totalDamageSimulated = cumulativeDmg;
                 let simulatedAvgDps = totalDamageSimulated / maxTime;
                 
                 let rawIdealDps = ((w.dmg * w.pellets * w.rpm) / 60);
                 if (w.mag > 0) {
-                    // Factoring in magazine reload time for Ideal DPS
                     let secondsPerMag = (w.mag - 1) * (60 / w.rpm);
                     let cycleTime = secondsPerMag + w.reload;
                     rawIdealDps = (w.dmg * w.pellets * w.mag) / cycleTime;
@@ -1747,12 +2026,19 @@
                 let hitProbPct = (baseHitProb * 100).toFixed(1) + "%";
                 let hitProbOverheatPct = "N/A";
                 if (w.type === 'heat') {
-                    // Hit prob worst dihitung pake dispersi maksimal (heat ratio = 1.0)
                     let hitProbWorst = calculateHitProbability(w.spread * w.heatMult, w.choke || 1.0, targetDist, targetRadius);
                     hitProbOverheatPct = (hitProbWorst * 100).toFixed(1) + "%";
                 }
 
-                // Range Curve Calculation
+                let pen = w.pen !== undefined ? w.pen : 0;
+                let optTableResult = null;
+                if (pen > 0) {
+                    optTableResult = optFormula(w.dmg, pen, targetDef, w.vel);
+                }
+                let effDmgText = optTableResult ? optTableResult.damage.toFixed(1) : w.dmg.toFixed(1);
+                let pierceText = optTableResult ? (optTableResult.pierce ? '✓ Tembus' : '✗') : 'N/A';
+                let remPenText = optTableResult ? (optTableResult.pierce ? optTableResult.remainingPen.toFixed(1) : '0') : 'N/A';
+
                 let rangeData = [];
                 for(let dist = 50; dist <= 1000; dist += 50) {
                     let hp = calculateHitProbability(w.spread, w.choke || 1.0, dist, targetRadius);
@@ -1784,16 +2070,18 @@
                     <td>${w.type === 'mag' ? 'Magazine Only' : (w.mag > 0 ? 'Hybrid (Mag+Heat)' : 'Overheat Only')}</td>
                     <td style="font-family:'JetBrains Mono', monospace">${rawIdealDps.toFixed(1)}</td>
                     <td class="text-accent" style="font-family:'JetBrains Mono', monospace; font-weight: 700;">${simulatedAvgDps.toFixed(1)}</td>
+                    <td style="font-family:'JetBrains Mono', monospace">${effDmgText}</td>
                     <td style="font-family:'JetBrains Mono', monospace">${ttk !== null ? ttk.toFixed(2) + 's' : '> ' + maxTime + 's'}</td>
                     <td style="font-family:'JetBrains Mono', monospace">${tofText}</td>
                     <td style="font-family:'JetBrains Mono', monospace" class="text-danger">${dropText}</td>
+                    <td style="font-family:'JetBrains Mono', monospace" class="${optTableResult && optTableResult.pierce ? 'text-success' : ''}">${pierceText}</td>
+                    <td style="font-family:'JetBrains Mono', monospace">${remPenText}</td>
                     <td style="font-family:'JetBrains Mono', monospace" class="text-success">${hitProbPct}</td>
                     <td style="font-family:'JetBrains Mono', monospace" class="${w.type === 'heat' ? 'text-danger' : ''}">${hitProbOverheatPct}</td>
                 `;
                 tableBody.appendChild(tableRow);
             });
 
-            // Balance Analysis Calculation
             let dpsArrayValues = dpsArray.map(item => item.dps);
             if(dpsArrayValues.length > 0) {
                 let mean = dpsArrayValues.reduce((a, b) => a + b, 0) / dpsArrayValues.length;
@@ -1824,7 +2112,6 @@
                     `;
                 });
                 
-                // Overall score based on max deviation
                 let maxAbsZ = Math.max(...dpsArrayValues.map(v => Math.abs((v - mean) / stdDev)));
                 if(isNaN(maxAbsZ) || !isFinite(maxAbsZ)) maxAbsZ = 0;
                 let score = Math.max(0, 100 - (maxAbsZ * 20));
@@ -1838,14 +2125,12 @@
                 document.getElementById('overall-balance-score').innerText = `${grade} (${score.toFixed(0)}/100)`;
             }
 
-            lastSimulationTimeSeries = simulationTimeSeries; // Cache for CSV exports
+            lastSimulationTimeSeries = simulationTimeSeries;
             drawCharts(timeLabels, combatDatasets, trajectoryDatasets, spreadDatasets, maxSpreadRadius, rangeDatasets);
         }
 
-        // Draw and refresh all ChartJS elements
         function drawCharts(timeLabels, combatDatasets, trajectoryDatasets, spreadDatasets, maxSpreadRadius, rangeDatasets) {
             
-            // 1. Combat Cumulative Damage Chart
             if (combatChartInst) combatChartInst.destroy();
             combatChartInst = new Chart(document.getElementById('combatChart').getContext('2d'), {
                 type: 'line', 
@@ -1872,7 +2157,6 @@
                 }
             });
 
-            // 2. Gaussian Cone Scatter Display
             if (spreadChartInst) spreadChartInst.destroy();
             spreadChartInst = new Chart(document.getElementById('spreadChart').getContext('2d'), {
                 type: 'scatter', 
@@ -1891,7 +2175,6 @@
                 }
             });
 
-            // 3. Projectile Gravity Drop Chart
             if (trajectoryChartInst) trajectoryChartInst.destroy();
             trajectoryChartInst = new Chart(document.getElementById('trajectoryChart').getContext('2d'), {
                 type: 'scatter', 
@@ -1924,7 +2207,6 @@
                 }
             });
 
-            // 4. Range Effectiveness Curve
             if (rangeChartInst) rangeChartInst.destroy();
             rangeChartInst = new Chart(document.getElementById('rangeChart').getContext('2d'), {
                 type: 'line', 
@@ -1957,7 +2239,560 @@
                 }
             });
         }
+
+        /* ─── Pierce Simulation (2D Physical Trajectory) ─── */
+
+        const COLLIDER_PRESETS = [
+            { name: 'Active Armor (ERA)', def: 200, hp: 50 },
+            { name: 'Chassis Outer Plate', def: 120, hp: 500 },
+            { name: 'Engine Block', def: 80, hp: 200 },
+            { name: 'Ammo Rack', def: 30, hp: 100 },
+            { name: 'Crew Cabin', def: 5, hp: 70 },
+            { name: 'Custom', def: 100, hp: 300 }
+        ];
+
+        let velocityDecayChartInst = null;
+        let pierceSimTimeout = null;
+
+        function queuePierceSim() {
+            clearTimeout(pierceSimTimeout);
+            pierceSimTimeout = setTimeout(() => runPierceSimulation(), 400);
+        }
+
+        function pierceWeaponChanged() {
+            let sel = document.getElementById('pierceWeapon');
+            let idx = parseInt(sel.value);
+            if (!isNaN(idx) && weapons[idx]) {
+                let w = weapons[idx];
+                document.getElementById('pierceATK').value = w.dmg;
+                document.getElementById('piercePEN').value = w.pen || 0;
+                document.getElementById('pierceVEL').value = w.vel;
+                document.getElementById('pierceDrag').value = w.drag || 0;
+            }
+            queuePierceSim();
+        }
+
+        function rebuildColliderConfigs() {
+            let count = parseInt(document.getElementById('pierceCount').value) || 5;
+            if (count < 1) count = 1;
+            if (count > 20) count = 20;
+            let grid = document.getElementById('colliderGrid');
+            let existing = grid.querySelectorAll('.collider-entry');
+            let oldData = [];
+            existing.forEach((el, i) => {
+                oldData[i] = {
+                    presetIdx: parseInt(el.querySelector('.collider-preset').value),
+                    def: parseFloat(el.querySelector('.collider-def').value) || 100,
+                    hp: parseFloat(el.querySelector('.collider-hp').value) || 300
+                };
+            });
+            grid.innerHTML = '';
+            for (let i = 0; i < count; i++) {
+                let old = oldData[i] || { presetIdx: 5, def: 100, hp: 300 };
+                let entry = document.createElement('div');
+                entry.className = 'collider-entry';
+                entry.innerHTML = `
+                    <div class="collider-entry-label">
+                        <span>#${i + 1}</span>
+                        <span class="collider-entry-status"></span>
+                    </div>
+                    <select class="collider-preset" onchange="applyColliderPreset(this, ${i})">
+                        ${COLLIDER_PRESETS.map((p, pi) =>
+                            `<option value="${pi}" ${pi === old.presetIdx ? 'selected' : ''}>${p.name}</option>`
+                        ).join('')}
+                    </select>
+                    <div class="collider-stats">
+                        <input type="number" class="collider-def" value="${old.def}" min="0" placeholder="DEF" onchange="queuePierceSim()">
+                        <input type="number" class="collider-hp" value="${old.hp}" min="0" placeholder="HP" onchange="queuePierceSim()">
+                    </div>
+                `;
+                grid.appendChild(entry);
+            }
+            document.getElementById('pierceResults').style.display = 'none';
+        }
+
+        function applyColliderPreset(sel, idx) {
+            let pi = parseInt(sel.value);
+            let preset = COLLIDER_PRESETS[pi];
+            let entry = sel.closest('.collider-entry');
+            entry.querySelector('.collider-def').value = preset.def;
+            entry.querySelector('.collider-hp').value = preset.hp;
+            queuePierceSim();
+        }
+
+        function applyGlobalDEF() {
+            let def = parseFloat(document.getElementById('pierceGlobalDEF').value) || 100;
+            document.querySelectorAll('.collider-def').forEach(el => el.value = def);
+            queuePierceSim();
+        }
+
+        function runPierceSimulation() {
+            let atk = parseFloat(document.getElementById('pierceATK').value) || 0;
+            let pen = parseFloat(document.getElementById('piercePEN').value) || 0;
+            let vel = parseFloat(document.getElementById('pierceVEL').value) || 0;
+            let drag = parseFloat(document.getElementById('pierceDrag').value) || 0;
+            let spacing = parseFloat(document.getElementById('pierceSpacing').value) || 10;
+
+            let colliderEls = document.querySelectorAll('#colliderGrid .collider-entry');
+            let results = [];
+            
+            // Pre-populate semua collider positions (biar unreached colliders ikut terender di canvas)
+            let colliderPositions = [];
+            for (let i = 0; i < colliderEls.length; i++) {
+                let el = colliderEls[i];
+                let def = parseFloat(el.querySelector('.collider-def').value) || 0;
+                let hp = parseFloat(el.querySelector('.collider-hp').value) || 0;
+                let name = COLLIDER_PRESETS[parseInt(el.querySelector('.collider-preset').value)].name;
+                let targetX = (i + 1) * spacing;
+                colliderPositions.push({ index: i, x: targetX, name: name, def: def, hp: hp });
+            }
+
+            // Atur posisi awal peluru
+            let currentATK = atk;
+            let currentPEN = pen;
+            let vx = vel; // Peluru meluncur horizontal di awal
+            let vy = 0;
+            let x = 0;
+            let y = 12; // Ketinggian laras awal (meter)
+            
+            let trajectoryPoints = [{ x: x, y: y, vx: vx, vy: vy }];
+
+            for (let i = 0; i < colliderEls.length; i++) {
+                let def = colliderPositions[i].def;
+                let hp = colliderPositions[i].hp;
+                let name = colliderPositions[i].name;
+                let targetX = colliderPositions[i].x;
+                colliderPositions.push({ index: i, x: targetX, name: name, def: def, hp: hp });
+
+                // Integrasi fisika langkah-demi-langkah ke collider berikutnya
+                let dt = 0.0005; // 0.5ms untuk akurasi tinggi
+                let stepsLimit = 50000;
+                let step = 0;
+                let hitGround = false;
+
+                while (x < targetX && step < stepsLimit) {
+                    step++;
+                    let v = Math.sqrt(vx * vx + vy * vy);
+                    let ax = -drag * v * vx;
+                    let ay = -GRAVITY - (drag * v * vy);
+
+                    vx += ax * dt;
+                    vy += ay * dt;
+                    x += vx * dt;
+                    y += vy * dt;
+
+                    // Jika peluru jatuh ke tanah
+                    if (y <= 0) {
+                        y = 0;
+                        trajectoryPoints.push({ x: x, y: 0, vx: vx, vy: vy });
+                        hitGround = true;
+                        break;
+                    }
+                    trajectoryPoints.push({ x: x, y: y, vx: vx, vy: vy });
+                }
+
+                if (hitGround) {
+                    let lastTraj = trajectoryPoints[trajectoryPoints.length - 1] || { vx: 0, vy: 0 };
+                    let groundVel = Math.sqrt(lastTraj.vx * lastTraj.vx + lastTraj.vy * lastTraj.vy);
+                    results.push({
+                        idx: i + 1,
+                        name: name,
+                        def: def,
+                        hp: hp,
+                        dmg: 0,
+                        pierce: false,
+                        exitVel: 0,
+                        remainingPen: 0,
+                        remainingAtk: 0,
+                        destroyed: false,
+                        remains: false,
+                        stoppedReason: "Hit Ground",
+                        incomingATK: currentATK,
+                        incomingPEN: currentPEN,
+                        incomingVEL: groundVel
+                    });
+                    break; 
+                }
+
+                // Peluru menghantam collider di targetX
+                let incomingVEL = Math.sqrt(vx * vx + vy * vy);
+                // Scale PEN by velocity ratio: peluru yg udah lambat = penetrasi rendah
+                let velRatioPen = Math.min(incomingVEL / vel, 1.0);
+                let effectivePEN = currentPEN * velRatioPen;
+                let r = optFormula(currentATK, effectivePEN, def, incomingVEL);
+                let destroyed = r.damage >= hp;
+                let remains = r.damage > 0 && r.damage < hp;
+
+                results.push({
+                    idx: i + 1,
+                    name: name,
+                    def: def,
+                    hp: hp,
+                    dmg: r.damage,
+                    pierce: r.pierce,
+                    exitVel: r.exitVel,
+                    remainingPen: r.remainingPen,
+                    remainingAtk: r.remainingAtk,
+                    destroyed: destroyed,
+                    remains: remains,
+                    stoppedReason: r.pierce ? "" : (r.damage > 0 ? "Stopped" : "Blocked"),
+                    incomingATK: currentATK,
+                    incomingPEN: currentPEN,
+                    incomingVEL: incomingVEL
+                });
+
+                if (r.pierce) {
+                    currentATK = r.remainingAtk;
+                    currentPEN = r.remainingPen;
+                    // Skalakan vektor kecepatan sesuai dengan kecepatan keluar pasca tembus
+                    if (incomingVEL > 0) {
+                        vx = (vx / incomingVEL) * r.exitVel;
+                        vy = (vy / incomingVEL) * r.exitVel;
+                    } else {
+                        vx = 0; vy = 0;
+                    }
+                } else {
+                    // Proyektil tertahan di collider ini
+                    break;
+                }
+            }
+
+            // Jika collider terakhir berhasil ditembus, biarkan peluru meluncur sesaat sebelum jatuh
+            let lastRes = results[results.length - 1];
+            if (lastRes && lastRes.pierce && y > 0) {
+                let limitX = x + spacing; 
+                let dt = 0.001;
+                while (x < limitX && y > 0) {
+                    let v = Math.sqrt(vx * vx + vy * vy);
+                    let ax = -drag * v * vx;
+                    let ay = -GRAVITY - (drag * v * vy);
+                    vx += ax * dt;
+                    vy += ay * dt;
+                    x += vx * dt;
+                    y += vy * dt;
+                    trajectoryPoints.push({ x: x, y: y, vx: vx, vy: vy });
+                    if (y <= 0) {
+                        y = 0;
+                        break;
+                    }
+                }
+            }
+
+            renderPierceCanvas(trajectoryPoints, colliderPositions, results, spacing);
+            renderPierceResultsTable(results, trajectoryPoints);
+        }
+
+        // --- Render Trajectory Baru (Canvas 2D) ---
+        function renderPierceCanvas(trajectoryPoints, colliderPositions, results, spacing) {
+            document.getElementById('pierceResults').style.display = 'block';
+            let canvas = document.getElementById('pierceCanvas');
+            
+            // Set up resolusi tinggi untuk layar DPI tinggi (Retina)
+            let rect = canvas.getBoundingClientRect();
+            if (rect.width < 1 || rect.height < 1) {
+                // Canvas belum di-layout — skip render
+                return;
+            }
+            let dpr = window.devicePixelRatio || 1;
+            canvas.width = rect.width * dpr;
+            canvas.height = rect.height * dpr;
+            
+            let ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            
+            let w = rect.width;
+            let h = rect.height;
+
+            // Batas Gambar
+            let padLeft = 60;
+            let padRight = 40;
+            let padTop = 40;
+            let padBottom = 50;
+
+            // Skala dimensi simulasi ke piksel kanvas
+            let maxX = Math.max(spacing * (colliderPositions.length + 0.5), 20);
+            let maxY = 15; // Batas ketinggian maksimum tampilan (meter)
+
+            function getPixelCoords(sx, sy) {
+                let cx = padLeft + (sx / maxX) * (w - padLeft - padRight);
+                let cy = h - padBottom - (sy / maxY) * (h - padTop - padBottom);
+                return { x: cx, y: cy };
+            }
+
+            // 1. Bersihkan Canvas
+            ctx.fillStyle = '#0b0c10';
+            ctx.fillRect(0, 0, w, h);
+
+            // 2. Gambar Grid & Label Ketinggian (Y)
+            ctx.strokeStyle = 'rgba(43, 48, 69, 0.4)';
+            ctx.lineWidth = 1;
+            ctx.fillStyle = '#9ea4c1';
+            ctx.font = '10px "JetBrains Mono", monospace';
+            ctx.textAlign = 'right';
+
+            for (let yVal = 0; yVal <= maxY; yVal += 3) {
+                let pt = getPixelCoords(0, yVal);
+                // Garis Grid Horizontal
+                ctx.beginPath();
+                ctx.moveTo(padLeft, pt.y);
+                ctx.lineTo(w - padRight, pt.y);
+                ctx.stroke();
+                // Label
+                ctx.fillText(yVal + "m", padLeft - 10, pt.y + 3);
+            }
+
+            // 3. Gambar Garis Tanah (Ground)
+            let groundPt = getPixelCoords(0, 0);
+            ctx.strokeStyle = '#2b3045';
+            ctx.lineWidth = 3;
+            ctx.beginPath();
+            ctx.moveTo(padLeft, groundPt.y);
+            ctx.lineTo(w - padRight, groundPt.y);
+            ctx.stroke();
+
+            // 4. Gambar Collider (Pelat Tegak)
+            colliderPositions.forEach((col) => {
+                let colXPt = getPixelCoords(col.x, 0);
+                let colResult = results.find(r => r.idx === col.index + 1);
+
+                // Default dimensi visual collider (tinggi laras + overhead)
+                let colHeight = 13.0; // meter
+                let topPt = getPixelCoords(col.x, colHeight);
+
+                let isReached = !!colResult;
+                let isPierced = colResult && colResult.pierce;
+                let isDestroyed = colResult && colResult.destroyed;
+
+                // Atur warna berdasarkan status penetrasi
+                if (!isReached) {
+                    ctx.fillStyle = 'rgba(43, 48, 69, 0.3)';
+                    ctx.strokeStyle = 'rgba(43, 48, 69, 0.6)';
+                } else if (isPierced) {
+                    ctx.fillStyle = 'rgba(0, 255, 135, 0.12)';
+                    ctx.strokeStyle = '#00ff87';
+                } else {
+                    ctx.fillStyle = 'rgba(255, 74, 90, 0.18)';
+                    ctx.strokeStyle = '#ff4a5a';
+                }
+
+                // Gambar Pelat Tegak (Ketebalan Visual 16px)
+                let rectWidth = 16;
+                let rx = colXPt.x - rectWidth / 2;
+                let ry = topPt.y;
+                let rh = colXPt.y - topPt.y;
+
+                ctx.lineWidth = 2;
+                ctx.fillRect(rx, ry, rectWidth, rh);
+                ctx.strokeRect(rx, ry, rectWidth, rh);
+
+                // Gambar Label Nama & DEF di atas pelat
+                ctx.fillStyle = isReached ? '#e4e7f2' : '#9ea4c1';
+                ctx.font = 'bold 9px "Inter", sans-serif';
+                ctx.textAlign = 'center';
+                ctx.fillText(`#${col.index + 1} ${col.name}`, colXPt.x, topPt.y - 15);
+                ctx.fillStyle = '#fcca46';
+                ctx.fillText(`DEF: ${col.def}`, colXPt.x, topPt.y - 5);
+
+                // Tambah efek ledakan kecil jika hancur
+                if (isDestroyed) {
+                    ctx.font = '14px "Inter"';
+                    ctx.fillText('💥', colXPt.x, topPt.y + 15);
+                }
+            });
+
+            // 5. Gambar Trajektori Fisik Peluru (Glow effect)
+            if (trajectoryPoints.length > 1) {
+                // Glow bawah
+                ctx.beginPath();
+                let start = getPixelCoords(trajectoryPoints[0].x, trajectoryPoints[0].y);
+                ctx.moveTo(start.x, start.y);
+                for (let j = 1; j < trajectoryPoints.length; j++) {
+                    let p = getPixelCoords(trajectoryPoints[j].x, trajectoryPoints[j].y);
+                    ctx.lineTo(p.x, p.y);
+                }
+                ctx.strokeStyle = 'rgba(0, 210, 196, 0.35)';
+                ctx.lineWidth = 5;
+                ctx.stroke();
+
+                // Core Line utama
+                ctx.strokeStyle = '#00d2c4';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+            }
+
+            // 6. Gambar Titik Hantaman Terakhir (Impact Point)
+            let lastPtData = trajectoryPoints[trajectoryPoints.length - 1];
+            let lastPt = getPixelCoords(lastPtData.x, lastPtData.y);
+            let stoppedCollider = results.find(r => !r.pierce);
+
+            if (stoppedCollider) {
+                // Dihentikan oleh collider (Gambarkan Cross Merah)
+                ctx.strokeStyle = '#ff4a5a';
+                ctx.lineWidth = 3;
+                let size = 6;
+                ctx.beginPath();
+                ctx.moveTo(lastPt.x - size, lastPt.y - size);
+                ctx.lineTo(lastPt.x + size, lastPt.y + size);
+                ctx.moveTo(lastPt.x + size, lastPt.y - size);
+                ctx.lineTo(lastPt.x - size, lastPt.y + size);
+                ctx.stroke();
+            } else if (lastPtData.y <= 0.05) {
+                // Jatuh ke tanah sebelum menembus semua target
+                ctx.fillStyle = '#ff4a5a';
+                ctx.beginPath();
+                ctx.arc(lastPt.x, lastPt.y, 5, 0, 2 * Math.PI);
+                ctx.fill();
+            } else {
+                // Berhasil menembus seluruh rintangan (Panah hijau keluar bebas)
+                ctx.fillStyle = '#00ff87';
+                ctx.beginPath();
+                ctx.arc(lastPt.x, lastPt.y, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+
+            // 7. Gambar Garis Dimensi Ukur (Bracket Jarak) seperti coretan sketsa
+            if (colliderPositions.length >= 2) {
+                let c1 = getPixelCoords(colliderPositions[0].x, 0);
+                let c2 = getPixelCoords(colliderPositions[1].x, 0);
+                
+                // Letakkan bracket 25 piksel di bawah garis tanah
+                let dimY = groundPt.y + 25;
+
+                ctx.strokeStyle = '#fcca46';
+                ctx.lineWidth = 1;
+                ctx.beginPath();
+                // Garis horizontal dimensi
+                ctx.moveTo(c1.x, dimY);
+                ctx.lineTo(c2.x, dimY);
+                // Batas vertikal kiri-kanan
+                ctx.moveTo(c1.x, dimY - 4);
+                ctx.lineTo(c1.x, dimY + 4);
+                ctx.moveTo(c2.x, dimY - 4);
+                ctx.lineTo(c2.x, dimY + 4);
+                ctx.stroke();
+
+                // Cetak teks jarak di tengah bracket
+                ctx.fillStyle = '#fcca46';
+                ctx.font = 'bold 10px "JetBrains Mono", monospace';
+                ctx.textAlign = 'center';
+                ctx.fillText(`${spacing.toFixed(0)} meter`, (c1.x + c2.x) / 2, dimY - 6);
+            }
+        }
+
+        // --- Render Tabel Hasil Logs ---
+        function renderPierceResultsTable(results, trajectoryPoints) {
+            let tbody = document.getElementById('pierceTableBody');
+            tbody.innerHTML = '';
+
+            results.forEach(r => {
+                let statusClass = r.destroyed ? 'status-destroyed' : (r.remains ? 'status-damaged' : 'status-intact');
+                let statusText = r.destroyed ? 'DESTROYED! 💥' : (r.remains ? `Damaged (${(r.hp - r.dmg).toFixed(0)} HP remain)` : 'INTACT');
+                
+                if (r.stoppedReason === "Hit Ground") {
+                    statusText = "UNREACHED (Bullet hit ground before target)";
+                    statusClass = "status-damaged";
+                }
+
+                let pierceClass = r.pierce ? 'pierce-yes' : 'pierce-no';
+                let pierceText = r.pierce ? '✓ Tembus' : (r.dmg > 0 ? '✗ Berhenti' : '✗ Blokir');
+                if (r.stoppedReason === "Hit Ground") pierceText = "N/A";
+
+                let row = document.createElement('tr');
+                row.innerHTML = `
+                    <td>${r.idx}</td>
+                    <td style="font-weight:600;">${r.name}</td>
+                    <td>${r.def}</td>
+                    <td>${r.hp}</td>
+                    <td style="font-family:'JetBrains Mono',monospace; font-weight:700;">${r.dmg > 0 ? r.dmg.toFixed(1) : '0'}</td>
+                    <td class="${statusClass}">${statusText}</td>
+                    <td class="${pierceClass}" style="font-family:'JetBrains Mono',monospace;">${pierceText}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;">${r.pierce ? r.exitVel.toFixed(1) : '0'}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;">${r.pierce ? r.remainingPen.toFixed(1) : '0'}</td>
+                    <td style="font-family:'JetBrains Mono',monospace;">${r.pierce ? r.remainingAtk.toFixed(1) : '0'}</td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            // 8. Gambarkan Grafik Grafik Peluruhan Kecepatan (ChartJS)
+            let chartData = [];
+            let spacing = parseFloat(document.getElementById('pierceSpacing').value) || 10;
+            let initialVel = parseFloat(document.getElementById('pierceVEL').value) || 0;
+
+            chartData.push({ dist: 0, vel: initialVel });
+            results.forEach((r, i) => {
+                if (r.stoppedReason === "Hit Ground") {
+                    // Peluru jatuh sebelum mencapai collider ini — cari posisi x dari trajektori
+                    let groundTraj = null;
+                    for (let k = trajectoryPoints.length - 1; k >= 0; k--) {
+                        if (trajectoryPoints[k].y <= 0.1) {
+                            groundTraj = trajectoryPoints[k];
+                            break;
+                        }
+                    }
+                    if (groundTraj) {
+                        chartData.push({ dist: groundTraj.x, vel: r.incomingVEL });
+                        chartData.push({ dist: groundTraj.x, vel: 0 });
+                    }
+                    return;
+                }
+                let cumulativeX = (i + 1) * spacing;
+                chartData.push({ dist: cumulativeX, vel: r.incomingVEL });
+                if (r.pierce) {
+                    chartData.push({ dist: cumulativeX, vel: r.exitVel });
+                } else {
+                    chartData.push({ dist: cumulativeX, vel: 0 });
+                }
+            });
+
+            if (velocityDecayChartInst) velocityDecayChartInst.destroy();
+            let labels = chartData.map(d => d.dist.toFixed(0) + 'm');
+            velocityDecayChartInst = new Chart(document.getElementById('velocityDecayChart').getContext('2d'), {
+                type: 'line',
+                data: {
+                    labels: labels,
+                    datasets: [{
+                        label: 'Velocity (m/s)',
+                        data: chartData.map(d => d.vel),
+                        borderColor: '#00ff87',
+                        backgroundColor: 'rgba(0,255,135,0.1)',
+                        borderWidth: 3,
+                        pointRadius: 4,
+                        pointBackgroundColor: '#00ff87',
+                        pointBorderColor: '#111',
+                        pointBorderWidth: 2,
+                        fill: true,
+                        tension: 0
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: (ctx) => `VEL: ${ctx.parsed.y.toFixed(1)} m/s at ${ctx.label}`
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            title: { display: true, text: 'Cumulative Distance (m)', color: '#aaa' },
+                            ticks: { color: '#aaa' },
+                            grid: { color: 'rgba(255,255,255,0.05)' }
+                        },
+                        y: {
+                            title: { display: true, text: 'Velocity (m/s)', color: '#aaa' },
+                            ticks: { color: '#aaa' },
+                            grid: { color: 'rgba(255,255,255,0.05)' },
+                            min: 0
+                        }
+                    }
+                }
+            });
+        }
     </script>
+    
     <!-- Floating Calculator -->
     <button class="calc-toggle-btn" id="calcToggleBtn" onclick="toggleCalc()">🖩</button>
     <div class="floating-calc hidden" id="floatingCalc">
