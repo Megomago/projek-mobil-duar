@@ -176,7 +176,8 @@ public class GridVisualizer : MonoBehaviour
         {
             if (mod.moduleTemplate == null || !mod.moduleTemplate.enableClearance) continue;
             
-            List<Vector2Int> clearance = _statsManager.GetClearanceCells(mod.gridPosition, mod.moduleTemplate, mod.rotationAngle);
+            List<Vector2Int> clearance = new List<Vector2Int>();
+            _statsManager.GetClearanceCells(mod.gridPosition, mod.moduleTemplate, mod.rotationAngle, clearance);
             foreach (var pos in clearance)
             {
                 string key = $"{mod.zoneName}_{pos.x}_{pos.y}";
@@ -196,7 +197,8 @@ public class GridVisualizer : MonoBehaviour
         {
             if (mod.moduleTemplate == null) continue;
 
-            List<Vector2Int> occupied = _statsManager.GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle);
+            List<Vector2Int> occupied = new List<Vector2Int>();
+            _statsManager.GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle, occupied);
             
             foreach (var pos in occupied)
             {
@@ -214,8 +216,10 @@ public class GridVisualizer : MonoBehaviour
             var mgr = InventoryDragDropManager.Instance;
             if (mgr.CurrentTemplate != null && !string.IsNullOrEmpty(mgr.CurrentZoneName) && mgr.CurrentGridPos.x != -1)
             {
-                List<Vector2Int> previewBase = _statsManager.GetOccupiedCells(mgr.CurrentGridPos, mgr.CurrentTemplate.width, mgr.CurrentTemplate.height, mgr.CurrentAngle);
-                List<Vector2Int> previewClearance = _statsManager.GetClearanceCells(mgr.CurrentGridPos, mgr.CurrentTemplate, mgr.CurrentAngle);
+                List<Vector2Int> previewBase = new List<Vector2Int>();
+                _statsManager.GetOccupiedCells(mgr.CurrentGridPos, mgr.CurrentTemplate.width, mgr.CurrentTemplate.height, mgr.CurrentAngle, previewBase);
+                List<Vector2Int> previewClearance = new List<Vector2Int>();
+                _statsManager.GetClearanceCells(mgr.CurrentGridPos, mgr.CurrentTemplate, mgr.CurrentAngle, previewClearance);
                 
                 // Kuning kalau areanya kosong/bisa dipasang, Merah kalau nabrak/keluar batas
                 Color highlightBaseColor = mgr.CanPlace ? previewColor : occupiedColor; 
