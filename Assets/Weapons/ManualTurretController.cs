@@ -44,6 +44,8 @@ namespace Weapons
         private float _activeMaxPitch;
         private bool _isSideMounted = false;
 
+        private static readonly RaycastHit[] _turretRaycastBuffer = new RaycastHit[32];
+
         void Start()
         {
             if (playerCamera == null) playerCamera = Camera.main;
@@ -142,13 +144,14 @@ namespace Weapons
         private Vector3 GetCrosshairTarget()
         {
             Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            RaycastHit[] hits = Physics.RaycastAll(ray, maxAimDistance, aimMask);
+            int hitCount = Physics.RaycastNonAlloc(ray, _turretRaycastBuffer, maxAimDistance, aimMask);
             
             float closestDistance = float.MaxValue;
             Vector3 targetPoint = ray.GetPoint(maxAimDistance);
 
-            foreach (var hit in hits)
+            for (int i = 0; i < hitCount; i++)
             {
+                var hit = _turretRaycastBuffer[i];
                 if (hit.transform.root == transform.root) continue;
                 if (hit.collider != null && hit.collider.isTrigger) continue;
 
@@ -214,12 +217,13 @@ namespace Weapons
                 Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
                 targetPt = ray.GetPoint(maxAimDistance);
                 
-                RaycastHit[] hits = Physics.RaycastAll(ray, maxAimDistance, aimMask);
+                int hitCount = Physics.RaycastNonAlloc(ray, _turretRaycastBuffer, maxAimDistance, aimMask);
                 float closestDistance = float.MaxValue;
                 bool hitValid = false;
 
-                foreach (var hit in hits)
+                for (int i = 0; i < hitCount; i++)
                 {
+                    var hit = _turretRaycastBuffer[i];
                     if (hit.transform.root == transform.root) continue;
                     
                     if (hit.distance < closestDistance)
