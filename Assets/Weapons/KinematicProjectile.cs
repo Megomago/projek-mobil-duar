@@ -408,7 +408,9 @@ namespace Weapons
                 if (dx <= radius && dy <= radius)
                 {
                     mod.currentHealth -= dmg;
+                    #if UNITY_EDITOR
                     Debug.Log($"[CHAIN] {mod.moduleTemplate.moduleName} kena ledakan {dmg} → HP:{mod.currentHealth}");
+                    #endif
                     if (mod.currentHealth <= 0f) mgr.UninstallModule(mod);
                 }
             }
