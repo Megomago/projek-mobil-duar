@@ -144,6 +144,37 @@ namespace Weapons
         public event Action OnReloadStart;
         public event Action OnReloadFinished;
         public event Action<int, int> OnAmmoChanged;
+
+        // Pending recoil — di-accumulate di Fire(), diaplikasikan di FixedUpdate()
+        private Vector3 _pendingRecoilImpulse;
+        private Vector3 _pendingRecoilPosition;
+        #endregion
+
+        #region --- STATIC SPREAD LUT (Shared SEMUA senjata — zero trig runtime) ---
+        private static float[] _magLUT;
+        private static Vector2[] _dirLUT;
+        private static bool _lutInitialized = false;
+
+        private static void InitializeSpreadLUT()
+        {
+            _magLUT = new float[1024];
+            _dirLUT = new Vector2[1024];
+
+            for (int i = 0; i < 1024; i++)
+            {
+                float mag = 99f;
+                while (mag > 3f)
+                {
+                    float u1 = Mathf.Max(Random.value, 0.0001f);
+                    mag = Mathf.Sqrt(-2f * Mathf.Log(u1));
+                }
+                _magLUT[i] = mag;
+
+                float angle = Random.value * 2f * Mathf.PI;
+                _dirLUT[i] = new Vector2(Mathf.Cos(angle), Mathf.Sin(angle));
+            }
+            _lutInitialized = true;
+        }
         #endregion
 
         private void Awake()
@@ -179,6 +210,10 @@ namespace Weapons
             // Mencari Rigidbody kendaraan induk secara otomatis
             _vehicleRb = GetComponentInParent<Rigidbody>();
             _ownerStatsManager = GetComponentInParent<VehicleStatsManager>();
+
+            // Static LUT: sekali buat, semua senjata pake
+            if (!_lutInitialized)
+                InitializeSpreadLUT();
         }
 
         private void Start()
@@ -424,13 +459,11 @@ namespace Weapons
             {
                 float sigma = dispersionAngle * weaponData.chokeMultiplier;
 
-                float u1 = Mathf.Max(Random.value, 0.0001f);
-                float u2 = Random.value;
-                float gaussMagnitude = Mathf.Sqrt(-2f * Mathf.Log(u1)) * sigma;
-                float angle = u2 * 2f * Mathf.PI;
+                float rawMag = _magLUT[Random.Range(0, 1024)];
+                Vector2 dir2D = _dirLUT[Random.Range(0, 1024)];
 
-                float deviationX = gaussMagnitude * Mathf.Cos(angle);
-                float deviationY = gaussMagnitude * Mathf.Sin(angle);
+                float deviationX = dir2D.x * rawMag * sigma;
+                float deviationY = dir2D.y * rawMag * sigma;
 
                 Quaternion deviation = Quaternion.AngleAxis(deviationX, muzzleTransform.up) *
                                        Quaternion.AngleAxis(deviationY, muzzleTransform.right);
@@ -438,15 +471,11 @@ namespace Weapons
                 finalDirection = deviation * muzzleTransform.forward;
             }
 
-            GameObject projObj = ObjectPool.Instance.Spawn(weaponData.projectilePrefab, muzzleTransform.position, Quaternion.identity);
-            if (projObj != null)
+            KinematicProjectile kp = ObjectPool.Instance.Spawn<KinematicProjectile>(weaponData.projectilePrefab, muzzleTransform.position, Quaternion.identity);
+            if (kp != null)
             {
-                KinematicProjectile kp = projObj.GetComponent<KinematicProjectile>();
-                if (kp != null)
-                {
-                    kp.SetExplosive(weaponData.isExplosive, weaponData.explosiveRadius, weaponData.explosiveDamage, weaponData.explosiveForce, weaponData.explosionVFXPrefab, weaponData.explosionSFX);
-                    kp.Initialize(muzzleTransform.position, finalDirection, weaponData.muzzleVelocity, weaponData.attackPower, weaponData.penetration, _ownerStatsManager);
-                }
+                kp.SetExplosive(weaponData.isExplosive, weaponData.explosiveRadius, weaponData.explosiveDamage, weaponData.explosiveForce, weaponData.explosionVFXPrefab, weaponData.explosionSFX);
+                kp.Initialize(muzzleTransform.position, finalDirection, weaponData.muzzleVelocity, weaponData.attackPower, weaponData.penetration, _ownerStatsManager);
             }
         }
 
@@ -454,8 +483,7 @@ namespace Weapons
         {
             if (weaponData.casingPrefab == null || ejectionPortTransform == null) return;
 
-            GameObject casing = ObjectPool.Instance.Spawn(weaponData.casingPrefab, ejectionPortTransform.position, ejectionPortTransform.rotation);
-            Rigidbody casingRb = casing.GetComponent<Rigidbody>();
+            Rigidbody casingRb = ObjectPool.Instance.Spawn<Rigidbody>(weaponData.casingPrefab, ejectionPortTransform.position, ejectionPortTransform.rotation);
             if (casingRb != null)
             {
                 casingRb.velocity = Vector3.zero;
@@ -480,9 +508,18 @@ namespace Weapons
         if (_vehicleRb != null && muzzleTransform != null)
         {
             Vector3 recoilDir = -muzzleTransform.forward;
-            float velocityRecoilForce = weaponData.recoilForce / _vehicleRb.mass;
-            _vehicleRb.velocity += recoilDir * (velocityRecoilForce * 0.5f);
-            _vehicleRb.AddForceAtPosition(recoilDir * (velocityRecoilForce * 0.5f), muzzleTransform.position, ForceMode.VelocityChange);
+            float impulseMag = weaponData.recoilForce / _vehicleRb.mass;
+            _pendingRecoilImpulse += recoilDir * impulseMag;
+            _pendingRecoilPosition = muzzleTransform.position;
+        }
+    }
+
+    private void FixedUpdate()
+    {
+        if (_pendingRecoilImpulse.sqrMagnitude > 0f && _vehicleRb != null)
+        {
+            _vehicleRb.AddForceAtPosition(_pendingRecoilImpulse, _pendingRecoilPosition, ForceMode.VelocityChange);
+            _pendingRecoilImpulse = Vector3.zero;
         }
     }
 
@@ -688,7 +725,7 @@ namespace Weapons
             if (weaponData.magazineDropPrefab == null || magazineDropPoint == null) return;
 
             GameObject mag = ObjectPool.Instance.Spawn(weaponData.magazineDropPrefab, magazineDropPoint.position, magazineDropPoint.rotation);
-            Rigidbody magRb = mag.GetComponent<Rigidbody>();
+            Rigidbody magRb = mag != null ? mag.GetComponent<Rigidbody>() : null;
             if (magRb != null)
             {
                 magRb.velocity = Vector3.zero;

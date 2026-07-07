@@ -35,6 +35,12 @@ namespace Weapons
         /// <summary>
         /// Mengambil objek dari pool, atau membuat yang baru jika kosong.
         /// </summary>
+        public T Spawn<T>(GameObject prefab, Vector3 position, Quaternion rotation) where T : Component
+        {
+            GameObject obj = Spawn(prefab, position, rotation);
+            return obj != null ? obj.GetComponent<T>() : null;
+        }
+
         public GameObject Spawn(GameObject prefab, Vector3 position, Quaternion rotation)
         {
             if (prefab == null) return null;
