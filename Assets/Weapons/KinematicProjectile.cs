@@ -25,6 +25,7 @@ namespace Weapons
         // Internal State
         private System.Collections.Generic.HashSet<Collider> _piercedColliders = new System.Collections.Generic.HashSet<Collider>();
         private Vector3 _currentVelocity;
+        private float _initialVelocity;
         private Vector3 _currentPosition;
         private float _aliveTime;
         private TrailRenderer _trailRenderer;
@@ -48,6 +49,9 @@ namespace Weapons
         // Gravitasi bumi (-9.81), bisa diubah jika butuh balistik spesifik
         private readonly Vector3 _gravity = new Vector3(0f, -9.81f, 0f);
 
+        // PEN di-scale oleh velocity ratio: peluru lambat = penetrasi rendah
+        private float EffectivePen => _pen * Mathf.Clamp01(_currentVelocity.magnitude / _initialVelocity);
+
         private static readonly RaycastHit[] _raycastHitsBuffer = new RaycastHit[16];
 
         private void Awake()
@@ -69,6 +73,7 @@ namespace Weapons
             transform.position = startPos;
             transform.forward = startDir;
 
+            _initialVelocity = muzzleVelocity;
             _currentVelocity = startDir.normalized * muzzleVelocity;
             _aliveTime = 0f;
             _atk = atk;
@@ -254,7 +259,7 @@ namespace Weapons
                     def = modComp.placedModuleData.moduleTemplate.armor;
                 else if (modComp.moduleTemplate != null)
                     def = modComp.moduleTemplate.armor;
-                result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
+                result = OptFormula.Calculate(_atk, EffectivePen, def, _currentVelocity.magnitude);
                 modComp.TakeDamage(result.Value.damage);
 
                 if (statsMgr != null && modComp.placedModuleData != null)
@@ -273,7 +278,7 @@ namespace Weapons
             if (wheelHealth != null)
             {
                 dbgType = "wheel";
-                result = OptFormula.Calculate(_atk, _pen, wheelHealth.armor, _currentVelocity.magnitude);
+                result = OptFormula.Calculate(_atk, EffectivePen, wheelHealth.armor, _currentVelocity.magnitude);
                 wheelHealth.TakeDamage(result.Value.damage);
                 #if UNITY_EDITOR
                 Debug.Log($"[WHEEL] {wheelHealth.gameObject.name} ATK:{_atk} PEN:{_pen} DEF:{wheelHealth.armor} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel} | HP:{wheelHealth.currentHealth}/{wheelHealth.maxHealth}");
@@ -286,7 +291,7 @@ namespace Weapons
             {
                 dbgType = "crit";
                 float def = critPart.armor;
-                result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
+                result = OptFormula.Calculate(_atk, EffectivePen, def, _currentVelocity.magnitude);
                 #if UNITY_EDITOR
                 Debug.Log($"[CRIT] {critPart.partName} ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
                 #endif
@@ -298,7 +303,7 @@ namespace Weapons
             if (simpleTarget != null)
             {
                 dbgType = "target";
-                result = simpleTarget.TakeDamage(_atk, _pen, _currentVelocity.magnitude);
+                result = simpleTarget.TakeDamage(_atk, EffectivePen, _currentVelocity.magnitude);
                 goto AFTER_DAMAGE;
             }
 
@@ -307,7 +312,7 @@ namespace Weapons
             {
                 dbgType = "body";
                 float def = statsMgr.currentChassisArmor;
-                result = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
+                result = OptFormula.Calculate(_atk, EffectivePen, def, _currentVelocity.magnitude);
                 #if UNITY_EDITOR
                 Debug.Log($"[BODY] Chassis ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
                 #endif
@@ -362,7 +367,7 @@ namespace Weapons
         private OptResult ApplyModuleDamage(PlacedModule mod, VehicleStatsManager mgr)
         {
             float def = mod.moduleTemplate.armor;
-            var r = OptFormula.Calculate(_atk, _pen, def, _currentVelocity.magnitude);
+            var r = OptFormula.Calculate(_atk, EffectivePen, def, _currentVelocity.magnitude);
 
             VehicleModuleComponent modComp = mod.spawnedPrefab != null
                 ? mod.spawnedPrefab.GetComponent<VehicleModuleComponent>()
