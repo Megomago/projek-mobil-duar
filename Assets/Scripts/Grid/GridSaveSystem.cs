@@ -1,20 +1,24 @@
 using UnityEngine;
 using System.Collections.Generic;
+using System.IO;
+using System.Collections;
 
 /// <summary>
 /// Sistem penyimpanan Grid Inventaris antar scene.
-/// Menyimpan daftar modul yang terpasang beserta posisi dan rotasinya ke PlayerPrefs dalam format JSON.
+/// Menyimpan daftar modul yang terpasang beserta posisi dan rotasinya ke file JSON di persistentDataPath.
 /// </summary>
 public static class GridSaveSystem
 {
-    private const string SAVE_KEY_PREFIX = "GridLayout_";
+    private static string SavePath(string vehicleName)
+    {
+        return Path.Combine(Application.persistentDataPath, $"Grid_{vehicleName}.json");
+    }
 
-    // --- DATA YANG BISA DI-SERIALISASI ---
     [System.Serializable]
     public class SavedModule
     {
-        public string zoneName; // Zona tempat modul terpasang
-        public string moduleName;  // Nama modul di ModuleTemplate (digunakan sebagai key lookup)
+        public string zoneName;
+        public string moduleName;
         public int gridX;
         public int gridY;
         public int rotationAngle;
@@ -49,27 +53,24 @@ public static class GridSaveSystem
         }
 
         string json = JsonUtility.ToJson(layout);
-        string key = SAVE_KEY_PREFIX + vehicleName;
-        PlayerPrefs.SetString(key, json);
-        PlayerPrefs.Save();
+        File.WriteAllText(SavePath(vehicleName), json);
 
         Debug.Log($"[GridSaveSystem] Disimpan {layout.modules.Count} modul untuk '{vehicleName}'");
     }
 
-    // --- LOAD ---
+    // --- LOAD (sync) ---
     public static void LoadGrid(string vehicleName, VehicleGridSystem gridSystem, ModuleDatabase moduleDatabase)
     {
         if (gridSystem == null || moduleDatabase == null || string.IsNullOrEmpty(vehicleName)) return;
 
-        string key = SAVE_KEY_PREFIX + vehicleName;
-        string json = PlayerPrefs.GetString(key, "");
-
-        if (string.IsNullOrEmpty(json))
+        string path = SavePath(vehicleName);
+        if (!File.Exists(path))
         {
             Debug.Log($"[GridSaveSystem] Tidak ada data tersimpan untuk '{vehicleName}'");
             return;
         }
 
+        string json = File.ReadAllText(path);
         SavedGridLayout layout = JsonUtility.FromJson<SavedGridLayout>(json);
         if (layout == null || layout.modules.Count == 0) return;
 
@@ -92,19 +93,64 @@ public static class GridSaveSystem
         Debug.Log($"[GridSaveSystem] Dimuat {loaded}/{layout.modules.Count} modul untuk '{vehicleName}'");
     }
 
+    // --- LOAD (async — spread across frames) ---
+    public static IEnumerator LoadGridAsync(string vehicleName, VehicleGridSystem gridSystem, ModuleDatabase moduleDatabase, System.Action<int, int> onProgress = null)
+    {
+        if (gridSystem == null || moduleDatabase == null || string.IsNullOrEmpty(vehicleName)) yield break;
+
+        string path = SavePath(vehicleName);
+        if (!File.Exists(path))
+        {
+            Debug.Log($"[GridSaveSystem] Tidak ada data tersimpan untuk '{vehicleName}'");
+            yield break;
+        }
+
+        string json = File.ReadAllText(path);
+        SavedGridLayout layout = JsonUtility.FromJson<SavedGridLayout>(json);
+        if (layout == null || layout.modules.Count == 0) yield break;
+
+        gridSystem.ClearAllModules();
+
+        int loaded = 0;
+        int total = layout.modules.Count;
+        int counter = 0;
+
+        foreach (var saved in layout.modules)
+        {
+            ModuleTemplate template = moduleDatabase.GetModuleByName(saved.moduleName);
+            if (template == null)
+            {
+                Debug.LogWarning($"[GridSaveSystem] ModuleTemplate '{saved.moduleName}' tidak ditemukan di database! Dilewati.");
+                continue;
+            }
+
+            Vector2Int pos = new Vector2Int(saved.gridX, saved.gridY);
+            bool success = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
+            if (success) loaded++;
+
+            counter++;
+            onProgress?.Invoke(counter, total);
+
+            if (counter % 5 == 0)
+                yield return null;
+        }
+        Debug.Log($"[GridSaveSystem] Dimuat {loaded}/{total} modul untuk '{vehicleName}'");
+    }
+
     // --- DELETE ---
     public static void DeleteGrid(string vehicleName)
     {
-        string key = SAVE_KEY_PREFIX + vehicleName;
-        PlayerPrefs.DeleteKey(key);
-        PlayerPrefs.Save();
-        Debug.Log($"[GridSaveSystem] Data grid untuk '{vehicleName}' dihapus.");
+        string path = SavePath(vehicleName);
+        if (File.Exists(path))
+        {
+            File.Delete(path);
+            Debug.Log($"[GridSaveSystem] Data grid untuk '{vehicleName}' dihapus.");
+        }
     }
 
     // --- CEK ADA DATA ---
     public static bool HasSavedGrid(string vehicleName)
     {
-        string key = SAVE_KEY_PREFIX + vehicleName;
-        return PlayerPrefs.HasKey(key);
+        return File.Exists(SavePath(vehicleName));
     }
 }

@@ -26,12 +26,6 @@ public class VehicleCamera : MonoBehaviour
         Instance = this;
     }
 
-    private void Start()
-    {
-        Cursor.lockState = CursorLockMode.Locked;
-        Cursor.visible = false;
-    }
-
     private void Update()
     {
         if (Input.GetKey(KeyCode.LeftAlt) || Input.GetKey(KeyCode.RightAlt))

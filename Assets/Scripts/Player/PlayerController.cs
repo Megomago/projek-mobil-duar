@@ -15,6 +15,7 @@ public class PlayerController : MonoBehaviour
     public float cameraHeight = 1.6f;
 
     private CharacterController _controller;
+    private Camera _cam;
     private float _yaw;
     private float _pitch;
     private Vector3 _verticalVelocity;
@@ -25,6 +26,7 @@ public class PlayerController : MonoBehaviour
         _controller = GetComponent<CharacterController>();
         if (_controller == null)
             _controller = gameObject.AddComponent<CharacterController>();
+        _cam = Camera.main;
     }
 
     private void OnEnable()
@@ -32,10 +34,9 @@ public class PlayerController : MonoBehaviour
         if (VehicleCamera.Instance != null)
             VehicleCamera.Instance.SetTarget(null);
 
-        Camera cam = Camera.main;
-        if (cam == null) return;
-        cam.transform.position = transform.position + Vector3.up * cameraHeight;
-        cam.transform.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
+        if (_cam == null) return;
+        _cam.transform.position = transform.position + Vector3.up * cameraHeight;
+        _cam.transform.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
     }
 
     private void Update()
@@ -76,9 +77,8 @@ public class PlayerController : MonoBehaviour
         if (VehicleCamera.Instance != null)
             VehicleCamera.Instance.SetTarget(null);
 
-        Camera cam = Camera.main;
-        if (cam == null) return;
-        cam.transform.position = transform.position + Vector3.up * cameraHeight;
-        cam.transform.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
+        if (_cam == null) return;
+        _cam.transform.position = transform.position + Vector3.up * cameraHeight;
+        _cam.transform.rotation = Quaternion.Euler(_pitch, _yaw, 0f);
     }
 }

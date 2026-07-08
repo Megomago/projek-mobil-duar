@@ -70,12 +70,14 @@ public class VehicleCriticalPart : MonoBehaviour
     public float explosionDamage = 200f;
 
     private VehicleStatsManager _statsManager;
+    private Light[] _cachedLights;
 
     private void Awake()
     {
         currentHealth = maxHealth;
         currentAmmoPoint = ammoPoint;
         _statsManager = GetComponentInParent<VehicleStatsManager>();
+        _cachedLights = GetComponentsInChildren<Light>(true);
     }
 
     public void UpdateLampState(float currentBattery, bool lightsOn)
@@ -99,9 +101,11 @@ public class VehicleCriticalPart : MonoBehaviour
 
     private void SetLightsEnabled(bool enabled)
     {
-        Light[] lights = GetComponentsInChildren<Light>(true);
-        foreach (var light in lights)
-            light.enabled = enabled;
+        foreach (var light in _cachedLights)
+        {
+            if (light != null)
+                light.enabled = enabled;
+        }
     }
 
     public void TakeDamage(float damage)

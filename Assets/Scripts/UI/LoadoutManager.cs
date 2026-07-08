@@ -54,22 +54,10 @@ namespace Weapons
             string savedVehicle = PlayerPrefs.GetString("SelectedVehicle", "");
             if (!string.IsNullOrEmpty(savedVehicle))
             {
-                for (int i = 0; i < vehicleDatabase.allVehicles.Count; i++)
+                VehicleData found = vehicleDatabase.GetVehicleByName(savedVehicle);
+                if (found != null)
                 {
-                    VehicleData vd = vehicleDatabase.allVehicles[i];
-                    if (vd == null || vd.vehiclePrefab == null) continue;
-
-                    // Baca nama dari VehicleBaseData di dalam prefab
-                    VehicleStatsManager sm = vd.vehiclePrefab.GetComponent<VehicleStatsManager>();
-                    string nameInPrefab = (sm != null && sm.baseData != null)
-                        ? sm.baseData.vehicleName
-                        : vd.name;
-
-                    if (nameInPrefab == savedVehicle)
-                    {
-                        _currentVehicleIndex = i;
-                        break;
-                    }
+                    _currentVehicleIndex = vehicleDatabase.allVehicles.IndexOf(found);
                 }
             }
 
@@ -105,19 +93,18 @@ namespace Weapons
 
             _currentPreviewVehicle = Instantiate(currentData.vehiclePrefab, vehiclePreviewPivot.position, vehiclePreviewPivot.rotation);
 
-            // ── Baca nama dari VehicleBaseData di dalam Prefab ────────────
-            _currentStatsManager = _currentPreviewVehicle.GetComponent<VehicleStatsManager>();
-            string vehicleName = (_currentStatsManager != null && _currentStatsManager.baseData != null)
-                ? _currentStatsManager.baseData.vehicleName
-                : currentData.name; // fallback ke nama file asset
+            // ── Baca nama dari VehicleData ────────────
+            string vehicleName = currentData.vehicleName;
 
             _currentPreviewVehicle.name = vehicleName;
             if (vehicleNameText != null) vehicleNameText.text = vehicleName;
 
-            // Simpan pilihan terakhir pakai nama dari BaseData
+            _currentStatsManager = _currentPreviewVehicle.GetComponent<VehicleStatsManager>();
+
+            // Simpan pilihan terakhir pakai nama dari VehicleData
             PlayerPrefs.SetString("SelectedVehicle", vehicleName);
             PlayerPrefs.Save();
-            // ─────────────────────────────────────────────────────────────
+            // ─────────────────────────────────────────
 
             if (_currentStatsManager != null)
             {
@@ -125,12 +112,24 @@ namespace Weapons
                 _currentStatsManager.hud = vehicleHUD;
                 if (vehicleHUD != null) vehicleHUD.SetVehicle(_currentStatsManager);
 
-                // Load grid DULU sebelum refresh module list
-                if (moduleDatabase != null && _currentStatsManager != null)
-                    GridSaveSystem.LoadGrid(vehicleName, _currentStatsManager.gridSystem, moduleDatabase);
-
-                VehicleModuleListUI moduleList = FindObjectOfType<VehicleModuleListUI>();
-                if (moduleList != null) moduleList.Initialize(_currentStatsManager);
+                // Load grid async — spread across frames
+                if (moduleDatabase != null && _currentStatsManager.gridSystem != null)
+                {
+                    var gridSys = _currentStatsManager.gridSystem;
+                    StartCoroutine(GridSaveSystem.LoadGridAsync(vehicleName, gridSys, moduleDatabase, (current, total) =>
+                    {
+                        if (current >= total)
+                        {
+                            VehicleModuleListUI moduleList = FindObjectOfType<VehicleModuleListUI>();
+                            if (moduleList != null) moduleList.Initialize(_currentStatsManager);
+                        }
+                    }));
+                }
+                else
+                {
+                    VehicleModuleListUI moduleList = FindObjectOfType<VehicleModuleListUI>();
+                    if (moduleList != null) moduleList.Initialize(_currentStatsManager);
+                }
             }
 
             if (_currentPreviewVehicle.TryGetComponent<VehicleController>(out var vc)) vc.enabled = false;

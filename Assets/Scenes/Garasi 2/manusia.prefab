@@ -47,8 +47,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5973233b19169a24bafc6664aa6edf07, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  moveSpeed: 6
+  moveSpeed: 3
   sprintMultiplier: 1.5
+  acceleration: 12
   jumpForce: 1
   mouseSensitivity: 2
   cameraHeight: 0.66

@@ -74,7 +74,7 @@ namespace Weapons
         [HideInInspector] public float targetAngle;
         [HideInInspector] public Quaternion savedBaseRot;
         [HideInInspector] public bool hasSavedBaseRot;
-        [HideInInspector] public Queue<float> pendingRotationTimes;
+        [HideInInspector] public CircularBuffer pendingRotationTimes;
     }
 
     /// <summary>
@@ -96,7 +96,7 @@ namespace Weapons
         private bool _isReloading;
         private float _reloadTimer;
         private float _pendingMagDrop = -1f;
-        private Queue<float> _pendingCasings = new Queue<float>();
+        private CircularBuffer _pendingCasings;
         private float _fireCooldown;
         [SerializeField] private float _currentHeat = 0f;
         private float _currentSpinLerp = 0f;
@@ -192,6 +192,8 @@ namespace Weapons
                 }
             }
 
+            _pendingCasings = new CircularBuffer(32);
+
             // Simpan rotasi awal semua rotatable part
             if (rotatableParts != null)
             {
@@ -202,7 +204,7 @@ namespace Weapons
                         part.originalLocalRot = part.mesh.localRotation;
                         part.currentAngle = 0f;
                         part.targetAngle = 0f;
-                        part.pendingRotationTimes = new Queue<float>();
+                        part.pendingRotationTimes = new CircularBuffer(32);
                     }
                 }
             }
@@ -358,27 +360,25 @@ namespace Weapons
                     flashSpawnPoint.rotation
                 );
 
-                MuzzleFlashFX mfFX = flash.GetComponent<MuzzleFlashFX>();
-                if (mfFX != null)
+                if (flash != null)
                 {
-                    mfFX.Play();
-                }
+                    MuzzleFlashFX mfFX = flash.GetComponent<MuzzleFlashFX>();
+                    if (mfFX != null)
+                        mfFX.Play();
 
-                ObjectPool.Instance.Despawn(flash, weaponData.muzzleFlashDuration);
+                    ObjectPool.Instance.Despawn(flash, weaponData.muzzleFlashDuration);
+                }
             }
 
-            // Hitung multiplier dispersi dari kepanasan
-            float heatFactor = weaponData.enableOverheat ? (_currentHeat / weaponData.maxHeat) : 0f;
             float currentDispersion = weaponData.baseDispersion;
 
             if (weaponData.enableOverheat)
             {
-                float heatRatio = _currentHeat / weaponData.maxHeat; 
-                float threshold = 0.8f; // 80% ambang batas
+                float heatRatio = _currentHeat / weaponData.maxHeat;
 
-                if (heatRatio >= threshold)
+                if (heatRatio >= weaponData.overheatDispersionThreshold)
                 {
-                    float normalizedFactor = (heatRatio - threshold) / (1f - threshold);
+                    float normalizedFactor = (heatRatio - weaponData.overheatDispersionThreshold) / (1f - weaponData.overheatDispersionThreshold);
                     currentDispersion = Mathf.Lerp(weaponData.baseDispersion, weaponData.baseDispersion * weaponData.heatDispersionMultiplier, normalizedFactor);
                 }
             }
@@ -500,7 +500,7 @@ namespace Weapons
                 casingRb.AddTorque(Random.insideUnitSphere * 10f, ForceMode.Impulse);
             }
 
-            ObjectPool.Instance.Despawn(casing, 3f);
+            ObjectPool.Instance.Despawn(casingRb.gameObject, 3f);
         }
 
      private void ApplyVehicleRecoil()

@@ -1,6 +1,41 @@
 using UnityEngine;
 using System.Collections.Generic;
 
+public readonly struct GridKey : System.IEquatable<GridKey>
+{
+    public readonly string zone;
+    public readonly int x;
+    public readonly int y;
+
+    public GridKey(string zone, int x, int y)
+    {
+        this.zone = zone;
+        this.x = x;
+        this.y = y;
+    }
+
+    public bool Equals(GridKey other)
+    {
+        return x == other.x && y == other.y && zone == other.zone;
+    }
+
+    public override bool Equals(object obj)
+    {
+        return obj is GridKey other && Equals(other);
+    }
+
+    public override int GetHashCode()
+    {
+        int hash = zone != null ? zone.GetHashCode() : 0;
+        hash = (hash * 397) ^ x;
+        hash = (hash * 397) ^ y;
+        return hash;
+    }
+
+    public static bool operator ==(GridKey a, GridKey b) => a.Equals(b);
+    public static bool operator !=(GridKey a, GridKey b) => !a.Equals(b);
+}
+
 [RequireComponent(typeof(VehicleStatsManager))]
 [ExecuteAlways]
 public class GridVisualizer : MonoBehaviour
@@ -26,8 +61,13 @@ public class GridVisualizer : MonoBehaviour
 
     private VehicleStatsManager _statsManager;
     private List<GameObject> _cellObjects = new List<GameObject>();
-    private Dictionary<string, SpriteRenderer> _cellRenderers = new Dictionary<string, SpriteRenderer>();
+    private Dictionary<GridKey, SpriteRenderer> _cellRenderers = new Dictionary<GridKey, SpriteRenderer>();
     private bool _isGridVisible = false;
+
+    private readonly List<Vector2Int> _clearanceCells = new List<Vector2Int>();
+    private readonly List<Vector2Int> _occupiedCells = new List<Vector2Int>();
+    private readonly List<Vector2Int> _previewBaseCells = new List<Vector2Int>();
+    private readonly List<Vector2Int> _previewClearanceCells = new List<Vector2Int>();
 
     private void Awake()
     {
@@ -154,7 +194,7 @@ public class GridVisualizer : MonoBehaviour
                         }
 
                         _cellObjects.Add(cellObj);
-                        _cellRenderers[$"{zone.zoneName}_{x}_{y}"] = sr;
+                        _cellRenderers[new GridKey(zone.zoneName, x, y)] = sr;
                     }
                 }
             }
@@ -176,11 +216,10 @@ public class GridVisualizer : MonoBehaviour
         {
             if (mod.moduleTemplate == null || !mod.moduleTemplate.enableClearance) continue;
             
-            List<Vector2Int> clearance = new List<Vector2Int>();
-            _statsManager.GetClearanceCells(mod.gridPosition, mod.moduleTemplate, mod.rotationAngle, clearance);
-            foreach (var pos in clearance)
+            _statsManager.GetClearanceCells(mod.gridPosition, mod.moduleTemplate, mod.rotationAngle, _clearanceCells);
+            foreach (var pos in _clearanceCells)
             {
-                string key = $"{mod.zoneName}_{pos.x}_{pos.y}";
+                var key = new GridKey(mod.zoneName, pos.x, pos.y);
                 if (_cellRenderers.TryGetValue(key, out SpriteRenderer sr) && sr != null)
                 {
                     // Hanya timpa jika warnanya masih normal (biar nggak nimpa kotak merah base)
@@ -197,12 +236,11 @@ public class GridVisualizer : MonoBehaviour
         {
             if (mod.moduleTemplate == null) continue;
 
-            List<Vector2Int> occupied = new List<Vector2Int>();
-            _statsManager.GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle, occupied);
+            _statsManager.GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle, _occupiedCells);
             
-            foreach (var pos in occupied)
+            foreach (var pos in _occupiedCells)
             {
-                string key = $"{mod.zoneName}_{pos.x}_{pos.y}";
+                var key = new GridKey(mod.zoneName, pos.x, pos.y);
                 if (_cellRenderers.TryGetValue(key, out SpriteRenderer sr) && sr != null)
                 {
                     sr.color = occupiedColor;
@@ -216,19 +254,17 @@ public class GridVisualizer : MonoBehaviour
             var mgr = InventoryDragDropManager.Instance;
             if (mgr.CurrentTemplate != null && !string.IsNullOrEmpty(mgr.CurrentZoneName) && mgr.CurrentGridPos.x != -1)
             {
-                List<Vector2Int> previewBase = new List<Vector2Int>();
-                _statsManager.GetOccupiedCells(mgr.CurrentGridPos, mgr.CurrentTemplate.width, mgr.CurrentTemplate.height, mgr.CurrentAngle, previewBase);
-                List<Vector2Int> previewClearance = new List<Vector2Int>();
-                _statsManager.GetClearanceCells(mgr.CurrentGridPos, mgr.CurrentTemplate, mgr.CurrentAngle, previewClearance);
+                _statsManager.GetOccupiedCells(mgr.CurrentGridPos, mgr.CurrentTemplate.width, mgr.CurrentTemplate.height, mgr.CurrentAngle, _previewBaseCells);
+                _statsManager.GetClearanceCells(mgr.CurrentGridPos, mgr.CurrentTemplate, mgr.CurrentAngle, _previewClearanceCells);
                 
                 // Kuning kalau areanya kosong/bisa dipasang, Merah kalau nabrak/keluar batas
                 Color highlightBaseColor = mgr.CanPlace ? previewColor : occupiedColor; 
                 Color highlightClearanceColor = mgr.CanPlace ? clearanceColor : occupiedColor;
                 
                 // Gambar clearance preview dulu
-                foreach (var pos in previewClearance)
+                foreach (var pos in _previewClearanceCells)
                 {
-                    string key = $"{mgr.CurrentZoneName}_{pos.x}_{pos.y}";
+                    var key = new GridKey(mgr.CurrentZoneName, pos.x, pos.y);
                     if (_cellRenderers.TryGetValue(key, out SpriteRenderer sr) && sr != null)
                     {
                         sr.color = highlightClearanceColor;
@@ -236,9 +272,9 @@ public class GridVisualizer : MonoBehaviour
                 }
 
                 // Gambar base preview (menimpa clearance preview kalau berpotongan, walau secara logika tak mungkin)
-                foreach (var pos in previewBase)
+                foreach (var pos in _previewBaseCells)
                 {
-                    string key = $"{mgr.CurrentZoneName}_{pos.x}_{pos.y}";
+                    var key = new GridKey(mgr.CurrentZoneName, pos.x, pos.y);
                     if (_cellRenderers.TryGetValue(key, out SpriteRenderer sr) && sr != null)
                     {
                         sr.color = highlightBaseColor;

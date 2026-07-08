@@ -179,6 +179,8 @@ GameObject:
   - component: {fileID: 2089168835082071214}
   - component: {fileID: 1471887033154397165}
   - component: {fileID: 7141239936673893848}
+  - component: {fileID: 9004611889664407632}
+  - component: {fileID: -5409325958096860286}
   m_Layer: 0
   m_Name: Unprecison 4slash15
   m_TagString: Untagged
@@ -345,6 +347,47 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &9004611889664407632
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1979767797767021919}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 35237a19d9f41cf4b850bce493591dc8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  template: {fileID: 11400000, guid: 4c30588e55e8c6f43bc7b851471911ca, type: 2}
+  cellSize: 0.25
+  baseColor: {r: 1, g: 0, b: 0, a: 0.8}
+  clearanceColor: {r: 1, g: 0.5, b: 0, a: 0.8}
+  showGizmos: 1
+--- !u!114 &-5409325958096860286
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1979767797767021919}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3b9b1eac442207f43a38bdea98409aa6, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  placedModuleData:
+    moduleTemplate: {fileID: 0}
+    zoneName: 
+    gridPosition: {x: 0, y: 0}
+    rotationAngle: 0
+    currentHealth: 0
+    spawnedPrefab: {fileID: 0}
+    currentAmmoPoint: 0
+  moduleTemplate: {fileID: 0}
+  statsManager: {fileID: 0}
+  currentHealth: 0
+  isDestroyed: 0
 --- !u!1 &2206686067122289499
 GameObject:
   m_ObjectHideFlags: 0
@@ -502,7 +545,8 @@ GameObject:
   - component: {fileID: 7222967544133210738}
   - component: {fileID: 2487801853493295286}
   - component: {fileID: 8463630898270330292}
-  m_Layer: 0
+  - component: {fileID: 4329847021230633370}
+  m_Layer: 6
   m_Name: body pitch
   m_TagString: Untagged
   m_Icon: {fileID: 0}
@@ -580,6 +624,27 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &4329847021230633370
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 5343776054650811699}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.20905805, y: 0.47582597, z: 0.12201969}
+  m_Center: {x: 0, y: 0.12210215, z: -0.038239837}
 --- !u!1 &6149675281067823116
 GameObject:
   m_ObjectHideFlags: 0
@@ -839,8 +904,12 @@ MonoBehaviour:
   aimMask:
     serializedVersion: 2
     m_Bits: 4294967295
+  autoDetectSideMount: 1
   minPitch: -45
   maxPitch: 10
+  minPitchSide: -3
+  maxPitchSide: 45
+  foldInBlindSpot: 1
   usePlayerInput: 1
   freeLookKey: 99
 --- !u!1 &8090536527958656832
@@ -886,6 +955,11 @@ PrefabInstance:
         type: 3}
       propertyPath: m_Name
       value: mag
+      objectReference: {fileID: 0}
+    - target: {fileID: 2241373006531986686, guid: 4d0fdcf90afab344cbf6d9985f1db92f,
+        type: 3}
+      propertyPath: m_Layer
+      value: 0
       objectReference: {fileID: 0}
     - target: {fileID: 8457085241620585175, guid: 4d0fdcf90afab344cbf6d9985f1db92f,
         type: 3}

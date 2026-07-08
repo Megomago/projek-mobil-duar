@@ -52,16 +52,12 @@ namespace Weapons
 
             GameObject spawnedVehicle = Instantiate(selectedData.vehiclePrefab, spawnPos, spawnRot);
 
-            VehicleStatsManager statsManager = spawnedVehicle.GetComponent<VehicleStatsManager>();
-            string vehicleName = (statsManager != null && statsManager.baseData != null)
-                ? statsManager.baseData.vehicleName
-                : selectedData.name;
+            string vehicleName = selectedData.vehicleName;
             spawnedVehicle.name = vehicleName;
 
-            if (statsManager != null && moduleDatabase != null)
-            {
-                GridSaveSystem.LoadGrid(vehicleName, statsManager.gridSystem, moduleDatabase);
-            }
+            VehicleStatsManager statsManager = spawnedVehicle.GetComponent<VehicleStatsManager>();
+
+            var vehicleGridSystem = statsManager != null ? statsManager.gridSystem : null;
 
             var weaponTrigger = spawnedVehicle.GetComponent<VehicleGridWeaponTrigger>();
             if (weaponTrigger == null)
@@ -81,17 +77,23 @@ namespace Weapons
             if (vc != null)
                 vc.SetMovementLocked(true);
 
-            ManualTurretController[] allTurrets = spawnedVehicle.GetComponentsInChildren<ManualTurretController>(true);
-            foreach (var turret in allTurrets)
-            {
-                if (turret != null)
-                    turret.enabled = false;
-            }
-
             if (weaponTrigger != null)
                 weaponTrigger.usePlayerInput = false;
 
             Debug.Log("[BattlefieldManager] Vehicle spawned: " + vehicleName + " | Player is on foot. Walk to car and press E to enter.");
+
+            // Load grid modules async — spread across frames to avoid freeze
+            if (vehicleGridSystem != null && moduleDatabase != null)
+                StartCoroutine(GridSaveSystem.LoadGridAsync(vehicleName, vehicleGridSystem, moduleDatabase, (current, total) =>
+                {
+                    if (current >= total)
+                    {
+                        // Matikan turret lagi karena module baru di-install dengan turret aktif
+                        var turrets = spawnedVehicle.GetComponentsInChildren<Weapons.ManualTurretController>(true);
+                        foreach (var t in turrets)
+                            if (t != null) t.enabled = false;
+                    }
+                }));
         }
 
         private void SpawnPlayer()

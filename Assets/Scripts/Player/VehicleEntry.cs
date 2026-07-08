@@ -75,6 +75,9 @@ public class VehicleEntry : MonoBehaviour
 
         _player.gameObject.SetActive(false);
 
+        Cursor.lockState = CursorLockMode.Locked;
+        Cursor.visible = false;
+
         if (_vehicleController != null)
             _vehicleController.SetMovementLocked(false);
 
@@ -120,6 +123,9 @@ public class VehicleEntry : MonoBehaviour
         _player.transform.rotation = Quaternion.identity;
 
         _player.gameObject.SetActive(true);
+
+        Cursor.lockState = CursorLockMode.None;
+        Cursor.visible = true;
 
         if (_weaponTrigger != null)
             _weaponTrigger.ClearHUDs();

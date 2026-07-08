@@ -75,6 +75,8 @@ public class VehicleGridSystem : MonoBehaviour
     private readonly List<Vector2Int> _tempBaseCellsB = new List<Vector2Int>();
     private readonly List<Vector2Int> _tempClearanceCellsA = new List<Vector2Int>();
     private readonly List<Vector2Int> _tempClearanceCellsB = new List<Vector2Int>();
+    private readonly HashSet<Vector2Int> _tempBaseSetA = new HashSet<Vector2Int>();
+    private readonly HashSet<Vector2Int> _tempClearanceSetA = new HashSet<Vector2Int>();
 
     void Awake()
     {
@@ -126,11 +128,11 @@ public class VehicleGridSystem : MonoBehaviour
         }
     }
 
-    private bool HasIntersection(List<Vector2Int> list1, List<Vector2Int> list2)
+    private bool HasIntersection(HashSet<Vector2Int> set, List<Vector2Int> list)
     {
-        foreach (var a in list1)
+        foreach (var a in list)
         {
-            if (list2.Contains(a)) return true;
+            if (set.Contains(a)) return true;
         }
         return false;
     }
@@ -150,6 +152,12 @@ public class VehicleGridSystem : MonoBehaviour
                 return false;
         }
 
+        // Build HashSet for O(1) lookups
+        _tempBaseSetA.Clear();
+        foreach (var c in _tempBaseCellsA) _tempBaseSetA.Add(c);
+        _tempClearanceSetA.Clear();
+        foreach (var c in _tempClearanceCellsA) _tempClearanceSetA.Add(c);
+
         foreach (var mod in installedModules)
         {
             if (mod == ignoreModule) continue;
@@ -159,14 +167,14 @@ public class VehicleGridSystem : MonoBehaviour
             GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle, _tempBaseCellsB);
             GetClearanceCells(mod.gridPosition, mod.moduleTemplate, mod.rotationAngle, _tempClearanceCellsB);
 
-            if (HasIntersection(_tempBaseCellsA, _tempBaseCellsB)) return false;
+            if (HasIntersection(_tempBaseSetA, _tempBaseCellsB)) return false;
 
-            if (HasIntersection(_tempBaseCellsA, _tempClearanceCellsB))
+            if (HasIntersection(_tempBaseSetA, _tempClearanceCellsB))
             {
                 if (!templateToPlace.isSmall || !mod.moduleTemplate.enableAccessClearance) return false;
             }
 
-            if (HasIntersection(_tempClearanceCellsA, _tempBaseCellsB))
+            if (HasIntersection(_tempClearanceSetA, _tempBaseCellsB))
             {
                 if (!mod.moduleTemplate.isSmall || !templateToPlace.enableAccessClearance) return false;
             }

@@ -32,6 +32,25 @@ namespace Weapons
             }
         }
 
+        public void Warmup(GameObject prefab, int count)
+        {
+            if (prefab == null || count <= 0) return;
+
+            if (!poolDictionary.ContainsKey(prefab))
+                poolDictionary[prefab] = new Queue<GameObject>();
+
+            var queue = poolDictionary[prefab];
+            int existing = queue.Count;
+
+            for (int i = existing; i < count; i++)
+            {
+                GameObject obj = Instantiate(prefab, transform);
+                obj.SetActive(false);
+                instanceToPrefabMap[obj] = prefab;
+                queue.Enqueue(obj);
+            }
+        }
+
         /// <summary>
         /// Mengambil objek dari pool, atau membuat yang baru jika kosong.
         /// </summary>
@@ -55,6 +74,7 @@ namespace Weapons
             if (poolDictionary[prefab].Count > 0)
             {
                 objectToSpawn = poolDictionary[prefab].Dequeue();
+                objectToSpawn.transform.SetParent(null);
                 objectToSpawn.transform.position = position;
                 objectToSpawn.transform.rotation = rotation;
                 objectToSpawn.SetActive(true);
@@ -62,8 +82,8 @@ namespace Weapons
             else
             {
                 objectToSpawn = Instantiate(prefab, position, rotation);
-                objectToSpawn.transform.SetParent(transform); // Pastikan child dari Object Pool
-                instanceToPrefabMap[objectToSpawn] = prefab; // Ingat asalnya
+                objectToSpawn.transform.SetParent(transform);
+                instanceToPrefabMap[objectToSpawn] = prefab;
             }
 
             return objectToSpawn;
