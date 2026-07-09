@@ -56,11 +56,23 @@ public class PlacedModule
     }
 }
 
+[System.Serializable]
+public class ModulePresetEntry
+{
+    public ModuleTemplate template;
+    public string zoneName;
+    public Vector2Int gridPosition;
+    public int rotationAngle;
+}
+
 public class VehicleGridSystem : MonoBehaviour
 {
     [Header("Modular Grid Setup")]
     [Tooltip("Daftar semua zona grid di kendaraan ini (Atap, Kap, dll)")]
     public List<GridZone> gridZones = new List<GridZone>();
+
+    [Header("Default Module Presets (auto-install jika gak ada save)")]
+    public List<ModulePresetEntry> defaultModulePresets = new List<ModulePresetEntry>();
 
     [Header("Installed Modules")]
     public List<PlacedModule> installedModules = new List<PlacedModule>();
@@ -81,6 +93,82 @@ public class VehicleGridSystem : MonoBehaviour
     void Awake()
     {
         _statsManager = GetComponent<VehicleStatsManager>();
+    }
+
+    void Start()
+    {
+        // Priority 1: presets (kalau sudah ada, skip)
+        if (defaultModulePresets.Count > 0 && installedModules.Count == 0)
+        {
+            InstallDefaultPresets();
+        }
+
+        // Priority 2: baked prefab — scan hierarchy untuk modul anak
+        if (installedModules.Count == 0)
+        {
+            RebuildColliderMapFromHierarchy();
+        }
+    }
+
+    [ContextMenu("Install Default Presets")]
+    public void InstallDefaultPresets()
+    {
+        foreach (var entry in defaultModulePresets)
+        {
+            if (entry.template == null) continue;
+            InstallModule(entry.template, entry.zoneName, entry.gridPosition, entry.rotationAngle);
+        }
+        if (_statsManager != null)
+            _statsManager.MarkStatsDirty();
+    }
+
+    [ContextMenu("Rebuild Module Collider Map From Hierarchy (Baked Prefab)")]
+    public void RebuildColliderMapFromHierarchy()
+    {
+        bool anyFound = false;
+
+        foreach (var zone in gridZones)
+        {
+            if (zone == null || zone.origin == null) continue;
+
+            // Scan semua child di zone origin
+            for (int i = 0; i < zone.origin.childCount; i++)
+            {
+                Transform child = zone.origin.GetChild(i);
+                var modComp = child.GetComponent<VehicleModuleComponent>();
+                if (modComp == null) continue;
+
+                ModuleTemplate template = modComp.moduleTemplate != null ? modComp.moduleTemplate :
+                    (modComp.placedModuleData != null ? modComp.placedModuleData.moduleTemplate : null);
+                if (template == null) continue;
+
+                PlacedModule pm = new PlacedModule(template, zone.zoneName, modComp.bakedGridPosition, modComp.bakedRotationAngle);
+                pm.spawnedPrefab = child.gameObject;
+                pm.currentHealth = template.maxHealth;
+
+                // Register colliders
+                Collider[] cols = child.GetComponentsInChildren<Collider>(true);
+                foreach (var col in cols)
+                {
+                    moduleColliderMap[col] = pm;
+
+                    HitboxProxy proxy = col.gameObject.GetComponent<HitboxProxy>();
+                    if (proxy == null)
+                        proxy = col.gameObject.AddComponent<HitboxProxy>();
+                    proxy.moduleComponent = modComp;
+                    proxy.statsManager = _statsManager;
+                }
+
+                modComp.Initialize(pm, _statsManager);
+                installedModules.Add(pm);
+                anyFound = true;
+            }
+        }
+
+        if (anyFound && _statsManager != null)
+            _statsManager.MarkStatsDirty();
+
+        Debug.Log($"[VehicleGridSystem] Rebuild selesai: {installedModules.Count} modul didaftarkan dari hierarchy.");
     }
 
     public void GetOccupiedCells(Vector2Int position, int width, int height, int angle, List<Vector2Int> dest)

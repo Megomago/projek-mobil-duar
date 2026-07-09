@@ -17,6 +17,10 @@ public class VehicleModuleComponent : MonoBehaviour
     [Tooltip("Referensi ke manager kendaraan tempat modul ini dipasang.")]
     public VehicleStatsManager statsManager;
 
+    [Header("Baked Prefab - Grid Position (isi manual di prefab)")]
+    public Vector2Int bakedGridPosition;
+    public int bakedRotationAngle;
+
     [Header("Status (Read Only)")]
     public float currentHealth;
     public bool isDestroyed = false;

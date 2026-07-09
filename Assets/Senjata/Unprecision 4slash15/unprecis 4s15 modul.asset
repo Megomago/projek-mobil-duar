@@ -12,21 +12,21 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb63ac7e609242f499101012a8337637, type: 3}
   m_Name: unprecis 4s15 modul
   m_EditorClassIdentifier: 
-  moduleName: New Module
-  moduleType: 9
+  moduleName: Unprecision 4/15
+  moduleType: 0
   moduleIcon: {fileID: 0}
-  weaponData: {fileID: 0}
+  weaponData: {fileID: 11400000, guid: e5de1f37ba5e88449a4460b2f8ffe51a, type: 2}
   modulePrefab: {fileID: 0}
-  width: 1
-  height: 1
+  width: 2
+  height: 2
   isSmall: 0
-  enableClearance: 0
+  enableClearance: 1
   enableAccessClearance: 1
   clearanceRight: 0
   clearanceLeft: 0
-  clearanceFront: 0
+  clearanceFront: 5
   clearanceBack: 0
-  weight: 50
+  weight: 230
   maxHealth: 100
   armor: 10
   powerConsumption: 0

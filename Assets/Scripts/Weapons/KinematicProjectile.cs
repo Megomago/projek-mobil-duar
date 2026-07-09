@@ -44,13 +44,17 @@ namespace Weapons
         // Pembatas spawn impact VFX per frame (ANTI LAG SPIKE)
         private static float _lastImpactFrameTime;
         private static int _impactsThisFrame;
-        private const int MAX_IMPACTS_PER_FRAME = 10; // Batasi maks 3 efek ledakan per frame
+        private const int MAX_IMPACTS_PER_FRAME = 10;
+
+        [Header("Debug")]
+        [Tooltip("Toggle hit indicator cross visible di build/exe (F2 toggle)")]
+        public static bool ShowHitDebug = false;
 
         // Gravitasi bumi (-9.81), bisa diubah jika butuh balistik spesifik
         private readonly Vector3 _gravity = new Vector3(0f, -9.81f, 0f);
 
         // PEN di-scale oleh velocity ratio: peluru lambat = penetrasi rendah
-        private float EffectivePen => _pen * Mathf.Clamp01(_currentVelocity.magnitude / _initialVelocity);
+        private float EffectivePen => _pen;
 
         private static readonly RaycastHit[] _raycastHitsBuffer = new RaycastHit[16];
 
@@ -203,17 +207,25 @@ namespace Weapons
                 return;
             }
 
-            // Bukan kendaraan (terrain/tembok) — skip damage pipeline, cuma impact VFX
+            OptResult? result = null;
+            string dbgType = "unknown";
+
+            // Bukan kendaraan — cek SimpleTarget dulu sebelum skip
             if (proxy == null && statsMgr == null)
             {
+                var st = hit.collider.GetComponentInParent<SimpleTarget>();
+                if (st != null)
+                {
+                    dbgType = "target";
+                    result = st.TakeDamage(_atk, EffectivePen, _currentVelocity.magnitude);
+                    goto AFTER_DAMAGE;
+                }
+
                 if (hitImpactPrefab != null)
                     SpawnImpactAt(hit.point, hit.normal);
                 DestroyProjectile();
                 return;
             }
-
-            OptResult? result = null;
-            string dbgType = "unknown";
 
             // ── Priority-based damage detection ──
             // Semua referensi dari HitboxProxy (zero GC, zero hierarchy traversal):
@@ -319,22 +331,8 @@ namespace Weapons
             }
 
         AFTER_DAMAGE:
-            // ——— DEBUG VISUALIZATION: warna beda tiap tipe hit ———
-            #if UNITY_EDITOR
-            Color dbgColor;
-            switch (dbgType)
-            {
-                case "module": dbgColor = Color.green; break;
-                case "wheel":  dbgColor = Color.red; break;
-                case "crit":   dbgColor = Color.yellow; break;
-                case "body":   dbgColor = Color.blue; break;
-                case "target": dbgColor = Color.magenta; break;
-                default:       dbgColor = Color.white; break;
-            }
-            Debug.DrawLine(hit.point + Vector3.left * 0.2f, hit.point + Vector3.right * 0.2f, dbgColor, 3f);
-            Debug.DrawLine(hit.point + Vector3.up * 0.2f, hit.point + Vector3.down * 0.2f, dbgColor, 3f);
-            Debug.DrawLine(hit.point + Vector3.forward * 0.2f, hit.point + Vector3.back * 0.2f, dbgColor, 3f);
-            #endif
+            // ——— DEBUG HIT INDICATOR (Build Visible) ———
+            SpawnDebugHitCross(hit.point, dbgType);
 
             // Spawn efek ledakan/percikan api dengan pembatas maksimal per frame
             if (hitImpactPrefab != null)
@@ -419,6 +417,44 @@ namespace Weapons
                     if (mod.currentHealth <= 0f) mgr.UninstallModule(mod);
                 }
             }
+        }
+
+        private void SpawnDebugHitCross(Vector3 point, string hitType)
+        {
+            Color color = Color.white;
+            switch (hitType)
+            {
+                case "module": color = Color.green; break;
+                case "wheel":  color = Color.red; break;
+                case "crit":   color = Color.yellow; break;
+                case "body":   color = Color.blue; break;
+                case "target": color = Color.magenta; break;
+            }
+
+            // Debug.DrawLine — selalu jalan di Editor (tidak di-gate ShowHitDebug)
+            Debug.DrawLine(point + Vector3.left * 0.2f, point + Vector3.right * 0.2f, color, 3f);
+            Debug.DrawLine(point + Vector3.up * 0.2f, point + Vector3.down * 0.2f, color, 3f);
+            Debug.DrawLine(point + Vector3.forward * 0.2f, point + Vector3.back * 0.2f, color, 3f);
+
+            // Build-visible LineRenderer cross — hanya muncul kalau ShowHitDebug ON (F2 toggle)
+            if (!ShowHitDebug) return;
+
+            GameObject go = new GameObject("___HitDebug");
+            go.transform.position = point;
+            var lr = go.AddComponent<LineRenderer>();
+            lr.material = new Material(Shader.Find("Sprites/Default"));
+            lr.startColor = color;
+            lr.endColor = color;
+            lr.startWidth = 0.02f;
+            lr.endWidth = 0.02f;
+            lr.positionCount = 6;
+            lr.SetPositions(new Vector3[]
+            {
+                point + Vector3.left * 0.2f, point + Vector3.right * 0.2f,
+                point + Vector3.up * 0.2f, point + Vector3.down * 0.2f,
+                point + Vector3.forward * 0.2f, point + Vector3.back * 0.2f
+            });
+            Object.Destroy(go, 3f);
         }
 
         private void SpawnImpactAt(Vector3 point, Vector3 normal)

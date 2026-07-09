@@ -20,6 +20,9 @@ MonoBehaviour:
     type: 3}
   muzzleVelocity: 500
   fireRateRPM: 120
+  attackPower: 100
+  penetration: 150
+  ammoCostPerShot: 5
   maxAmmo: 12
   autoReload: 1
   reloadTime: 5.3
@@ -40,6 +43,10 @@ MonoBehaviour:
   shootSound: {fileID: 8300000, guid: 43c70cd559d03234188a0a79839aef85, type: 3}
   reloadSound: {fileID: 0}
   emptyClickSound: {fileID: 0}
+  minPitch: 0.85
+  maxPitch: 1
+  minVolume: 0.9
+  maxVolume: 1
   casingPrefab: {fileID: 6363592102389087832, guid: c97e29e337a683c4497a73f67d66f141,
     type: 3}
   casingEjectDelay: 0
@@ -58,3 +65,9 @@ MonoBehaviour:
   magazineDespawnTime: 3
   magazineDropForce: {x: 0, y: 0, z: 0}
   magazineDropTorque: 2
+  isExplosive: 0
+  explosiveRadius: 5
+  explosiveDamage: 200
+  explosiveForce: 500
+  explosionVFXPrefab: {fileID: 0}
+  explosionSFX: {fileID: 0}

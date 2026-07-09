@@ -10,8 +10,6 @@ public class VehicleHitboxInitializer : MonoBehaviour
         Collider[] colliders = GetComponentsInChildren<Collider>(true);
         foreach (var col in colliders)
         {
-            if (col.isTrigger) continue;
-
             GameObject go = col.gameObject;
             HitboxProxy proxy = go.GetComponent<HitboxProxy>();
             if (proxy == null)

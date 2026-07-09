@@ -1,4 +1,5 @@
 using UnityEngine;
+using Weapons;
 
 /// <summary>
 /// Tempelkan script ini ke Empty GameObject (dengan BoxCollider) yang mewakili
@@ -68,6 +69,13 @@ public class VehicleCriticalPart : MonoBehaviour
     [Header("Ledakan")]
     public bool volatileExplosive = false;
     public float explosionDamage = 200f;
+    public float explosionRadius = 5f;
+    public GameObject explosionVFXPrefab;
+    public AudioClip explosionSFX;
+
+    [Header("Destroyed Effect")]
+    [Tooltip("Prefab yang di-spawn pas part ini hancur (api/kobaran/asap)")]
+    public GameObject destroyedPrefab;
 
     private VehicleStatsManager _statsManager;
     private Light[] _cachedLights;
@@ -131,16 +139,51 @@ public class VehicleCriticalPart : MonoBehaviour
     {
         Debug.Log($"[CriticalPart] {partName} HANCUR!");
 
+        Vector3 pos = transform.position;
+
+        // Spawn destroyed prefab (api/kobaran)
+        if (destroyedPrefab != null)
+        {
+            if (ObjectPool.Instance != null)
+                ObjectPool.Instance.Spawn(destroyedPrefab, pos, Quaternion.identity);
+            else
+                Instantiate(destroyedPrefab, pos, Quaternion.identity);
+        }
+
+        // Efek ledakan kalo volatile
         if (volatileExplosive)
+        {
             Debug.Log($"[CriticalPart] {partName} MELEDAK!");
 
-        // Nonaktifkan collider & object → scan berikutnya tidak akan mendeteksinya
+            if (explosionVFXPrefab != null)
+            {
+                if (ObjectPool.Instance != null)
+                {
+                    GameObject vfx = ObjectPool.Instance.Spawn(explosionVFXPrefab, pos, Quaternion.identity);
+                    if (vfx != null)
+                    {
+                        float scale = explosionRadius * 0.15f;
+                        vfx.transform.localScale = Vector3.one * Mathf.Max(scale, 0.5f);
+                    }
+                }
+                else
+                {
+                    GameObject vfx = Instantiate(explosionVFXPrefab, pos, Quaternion.identity);
+                    float scale = explosionRadius * 0.15f;
+                    vfx.transform.localScale = Vector3.one * Mathf.Max(scale, 0.5f);
+                }
+            }
+
+            if (explosionSFX != null)
+                AudioSource.PlayClipAtPoint(explosionSFX, pos);
+        }
+
+        // Nonaktifkan collider & object → stats di-recalculate tanpa part ini
         Collider col = GetComponent<Collider>();
         if (col != null) col.enabled = false;
 
         gameObject.SetActive(false);
 
-        // Beritahu StatsManager recalculate
         if (_statsManager != null)
             _statsManager.CalculateAndApplyStats();
     }

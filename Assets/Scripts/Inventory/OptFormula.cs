@@ -66,7 +66,7 @@ public static class OptFormula
         
         // ATK dan PEN disunat sesuai tenaga yang abis buat nembus objek pertama
         float remainingAtk = atk * velRatio; 
-        float remainingPen = Mathf.Max(0f, pen - def);
+        float remainingPen = pen * velRatio;
 
         return new OptResult(finalDmg, true, exitVel, remainingPen, remainingAtk);
     }

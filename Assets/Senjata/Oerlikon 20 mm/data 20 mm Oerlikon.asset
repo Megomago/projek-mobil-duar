@@ -22,7 +22,8 @@ MonoBehaviour:
   fireRateRPM: 450
   attackPower: 80
   penetration: 210
-  maxAmmo: 60
+  ammoCostPerShot: 1
+  maxAmmo: 180
   autoReload: 1
   reloadTime: 8
   projectilePrefab: {fileID: 1438585710772045704, guid: a0e9a2e013d833545a1b8c86fda4d850,
@@ -64,3 +65,9 @@ MonoBehaviour:
   magazineDespawnTime: 3
   magazineDropForce: {x: 0, y: 0, z: 0}
   magazineDropTorque: 2
+  isExplosive: 0
+  explosiveRadius: 5
+  explosiveDamage: 200
+  explosiveForce: 500
+  explosionVFXPrefab: {fileID: 0}
+  explosionSFX: {fileID: 0}

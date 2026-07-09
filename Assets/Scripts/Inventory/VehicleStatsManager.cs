@@ -54,11 +54,14 @@ public class VehicleStatsManager : MonoBehaviour
     public VehicleHUD hud;
 
     // ── Grid Forwarding (delegated ke VehicleGridSystem) ──
+    private static readonly List<GridZone> _emptyGridZones = new List<GridZone>(0);
+    private static readonly List<PlacedModule> _emptyInstalledModules = new List<PlacedModule>(0);
+
     public List<GridZone> gridZones
     {
         get
         {
-            if (gridSystem == null) return null;
+            if (gridSystem == null) return _emptyGridZones;
             return gridSystem.gridZones;
         }
     }
@@ -67,16 +70,18 @@ public class VehicleStatsManager : MonoBehaviour
     {
         get
         {
-            if (gridSystem == null) return null;
+            if (gridSystem == null) return _emptyInstalledModules;
             return gridSystem.installedModules;
         }
     }
+
+    private static readonly Dictionary<Collider, PlacedModule> _emptyColliderMap = new Dictionary<Collider, PlacedModule>(0);
 
     public Dictionary<Collider, PlacedModule> moduleColliderMap
     {
         get
         {
-            if (gridSystem == null) return null;
+            if (gridSystem == null) return _emptyColliderMap;
             return gridSystem.moduleColliderMap;
         }
     }
