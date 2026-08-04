@@ -130,14 +130,18 @@ public class VehicleCriticalPart : MonoBehaviour
         currentHealth -= damage;
         currentHealth = Mathf.Max(0f, currentHealth);
 
+        #if UNITY_EDITOR
         Debug.Log($"[CriticalPart] {partName} terkena damage {damage}! HP: {currentHealth}/{maxHealth}");
+        #endif
 
         if (currentHealth <= 0f) OnDestroyed();
     }
 
     private void OnDestroyed()
     {
+        #if UNITY_EDITOR
         Debug.Log($"[CriticalPart] {partName} HANCUR!");
+        #endif
 
         Vector3 pos = transform.position;
 
@@ -153,7 +157,9 @@ public class VehicleCriticalPart : MonoBehaviour
         // Efek ledakan kalo volatile
         if (volatileExplosive)
         {
+            #if UNITY_EDITOR
             Debug.Log($"[CriticalPart] {partName} MELEDAK!");
+            #endif
 
             if (explosionVFXPrefab != null)
             {

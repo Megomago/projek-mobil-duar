@@ -168,7 +168,9 @@ public class VehicleGridSystem : MonoBehaviour
         if (anyFound && _statsManager != null)
             _statsManager.MarkStatsDirty();
 
+        #if UNITY_EDITOR
         Debug.Log($"[VehicleGridSystem] Rebuild selesai: {installedModules.Count} modul didaftarkan dari hierarchy.");
+        #endif
     }
 
     public void GetOccupiedCells(Vector2Int position, int width, int height, int angle, List<Vector2Int> dest)

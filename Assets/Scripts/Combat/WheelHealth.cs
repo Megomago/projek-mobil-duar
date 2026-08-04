@@ -52,6 +52,8 @@ public class WheelHealth : MonoBehaviour
             wheelCollider.enabled = false;
         }
 
+        #if UNITY_EDITOR
         Debug.Log($"[WHEEL] {gameObject.name} hancur! Mobil jadi pincang.");
+        #endif
     }
 }

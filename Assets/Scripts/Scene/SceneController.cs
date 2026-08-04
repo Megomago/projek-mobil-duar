@@ -19,14 +19,18 @@ public class SceneController : MonoBehaviour
     // Fungsi ini dipanggil dari Button 1 di scene Garasi
     public void GoToBattlefield()
     {
+        #if UNITY_EDITOR
         Debug.Log("Pindah ke scene: " + battlefieldSceneName);
+        #endif
         SceneManager.LoadScene(battlefieldSceneName);
     }
 
     // Fungsi ini dipanggil untuk kembali ke Garasi (bisa dipanggil via UI Button custom)
     public void GoToGarasi()
     {
+        #if UNITY_EDITOR
         Debug.Log("Kembali ke scene: " + garasiSceneName);
+        #endif
         
         // Buka kembali kursor agar bisa klik UI di Garasi
         Cursor.lockState = CursorLockMode.None;

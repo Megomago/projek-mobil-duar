@@ -81,14 +81,18 @@ namespace Weapons
                     _isSideMounted = true;
                     _activeMinPitch = minPitchSide; // Pake -3 derajat untuk samping
                     _activeMaxPitch = maxPitchSide;
+                    #if UNITY_EDITOR
                     Debug.Log($"{gameObject.name} terdeteksi di SAMPING mobil. Limit samping aktif: {_activeMinPitch} s/d {_activeMaxPitch}");
+                    #endif
                 }
                 else
                 {
                     _isSideMounted = false;
                     _activeMinPitch = minPitch; // Pake -15 derajat untuk atap (Depresi NATO!)
                     _activeMaxPitch = maxPitch;
+                    #if UNITY_EDITOR
                     Debug.Log($"{gameObject.name} terdeteksi di ATAP mobil. Limit atap aktif: {_activeMinPitch} s/d {_activeMaxPitch}");
+                    #endif
                 }
             }
         }
@@ -224,7 +228,9 @@ namespace Weapons
             if (Input.GetKeyDown(debugHitKey))
             {
                 KinematicProjectile.ShowHitDebug = !KinematicProjectile.ShowHitDebug;
+                #if UNITY_EDITOR
                 Debug.Log($"[DEBUG] Hit indicator {(KinematicProjectile.ShowHitDebug ? "ON" : "OFF")}");
+                #endif
             }
 
             if (Input.GetKeyDown(debugAimKey))
@@ -233,7 +239,9 @@ namespace Weapons
                 if (_debugLineGO != null) _debugLineGO.SetActive(_showAimDebug);
                 if (_debugHitPoint != null) _debugHitPoint.SetActive(_showAimDebug);
                 if (_debugAimLineGO != null) _debugAimLineGO.SetActive(_showAimDebug);
+                #if UNITY_EDITOR
                 Debug.Log($"[DEBUG] Aim visualizer {(_showAimDebug ? "ON" : "OFF")}");
+                #endif
             }
 
             if (!_showAimDebug || aimOrigin == null || playerCamera == null) return;

@@ -70,7 +70,9 @@ public class UIModuleItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
             return;
         }
 
+        #if UNITY_EDITOR
         Debug.Log($"[UIModuleItem] Mulai Drag: {_moduleTemplate.moduleName}");
+        #endif
         InventoryDragDropManager.Instance.StartDrag(_moduleTemplate, _currentStatsManager);
     }
 

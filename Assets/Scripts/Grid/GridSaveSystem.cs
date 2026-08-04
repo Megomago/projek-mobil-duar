@@ -55,7 +55,9 @@ public static class GridSaveSystem
         string json = JsonUtility.ToJson(layout);
         File.WriteAllText(SavePath(vehicleName), json);
 
+        #if UNITY_EDITOR
         Debug.Log($"[GridSaveSystem] Disimpan {layout.modules.Count} modul untuk '{vehicleName}'");
+        #endif
     }
 
     // --- LOAD (sync) ---
@@ -66,7 +68,9 @@ public static class GridSaveSystem
         string path = SavePath(vehicleName);
         if (!File.Exists(path))
         {
+            #if UNITY_EDITOR
             Debug.Log($"[GridSaveSystem] Tidak ada data tersimpan untuk '{vehicleName}'");
+            #endif
             return;
         }
 
@@ -90,7 +94,9 @@ public static class GridSaveSystem
             bool success = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
             if (success) loaded++;
         }
+        #if UNITY_EDITOR
         Debug.Log($"[GridSaveSystem] Dimuat {loaded}/{layout.modules.Count} modul untuk '{vehicleName}'");
+        #endif
     }
 
     // --- LOAD (async — spread across frames) ---
@@ -101,7 +107,9 @@ public static class GridSaveSystem
         string path = SavePath(vehicleName);
         if (!File.Exists(path))
         {
+            #if UNITY_EDITOR
             Debug.Log($"[GridSaveSystem] Tidak ada data tersimpan untuk '{vehicleName}'");
+            #endif
             yield break;
         }
 
@@ -134,7 +142,9 @@ public static class GridSaveSystem
             if (counter % 5 == 0)
                 yield return null;
         }
+        #if UNITY_EDITOR
         Debug.Log($"[GridSaveSystem] Dimuat {loaded}/{total} modul untuk '{vehicleName}'");
+        #endif
     }
 
     // --- DELETE ---
@@ -144,7 +154,9 @@ public static class GridSaveSystem
         if (File.Exists(path))
         {
             File.Delete(path);
+            #if UNITY_EDITOR
             Debug.Log($"[GridSaveSystem] Data grid untuk '{vehicleName}' dihapus.");
+            #endif
         }
     }
 

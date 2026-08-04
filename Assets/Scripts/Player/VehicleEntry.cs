@@ -103,7 +103,9 @@ public class VehicleEntry : MonoBehaviour
             if (tmp != null) tmp.text = "Press E to exit";
         }
 
+        #if UNITY_EDITOR
         Debug.Log("[VehicleEntry] Entered vehicle: " + gameObject.name);
+        #endif
     }
 
     public void ExitVehicle()
@@ -155,7 +157,9 @@ public class VehicleEntry : MonoBehaviour
         _playerInRange = false;
         _player = null;
 
+        #if UNITY_EDITOR
         Debug.Log("[VehicleEntry] Exited vehicle: " + gameObject.name);
+        #endif
     }
 
     private void EnableTurrets(bool on)

@@ -54,7 +54,9 @@ public class InventoryDragDropManager : MonoBehaviour
 
     public void StartDrag(ModuleTemplate template, VehicleStatsManager statsManager)
     {
+        #if UNITY_EDITOR
         Debug.Log("[InventoryDragDropManager] StartDrag dipanggil!");
+        #endif
         
         if (template == null) { Debug.LogError("Template null!"); return; }
         if (statsManager == null) { Debug.LogError("StatsManager null!"); return; }

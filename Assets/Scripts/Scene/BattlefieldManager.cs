@@ -80,7 +80,9 @@ namespace Weapons
             if (weaponTrigger != null)
                 weaponTrigger.usePlayerInput = false;
 
+            #if UNITY_EDITOR
             Debug.Log("[BattlefieldManager] Vehicle spawned: " + vehicleName + " | Player is on foot. Walk to car and press E to enter.");
+            #endif
 
             // Load grid modules async — spread across frames to avoid freeze
             if (vehicleGridSystem != null && moduleDatabase != null)

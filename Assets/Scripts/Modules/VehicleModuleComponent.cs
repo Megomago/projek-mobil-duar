@@ -74,7 +74,9 @@ public class VehicleModuleComponent : MonoBehaviour
         var template = EffectiveTemplate;
         bool shouldExplode = template != null && template.volatileExplosive;
 
+        #if UNITY_EDITOR
         Debug.Log($"Modul {(template != null ? template.moduleName : gameObject.name)} HANCUR!");
+        #endif
 
         if (shouldExplode)
         {
@@ -106,6 +108,8 @@ public class VehicleModuleComponent : MonoBehaviour
         if (template.explosionSFX != null)
             AudioSource.PlayClipAtPoint(template.explosionSFX, pos);
 
+        #if UNITY_EDITOR
         Debug.Log($"BOOM! {template.moduleName} MELEDAK dengan radius {template.explosionRadius}!");
+        #endif
     }
 }

@@ -43,7 +43,9 @@ public class SimpleTarget : MonoBehaviour
 
         var r2 = OptFormula.Calculate(atk, pen, defense, muzzleVel);
         currentHealth -= r2.damage;
+        #if UNITY_EDITOR
         Debug.Log($"[CUBE] {name} | ATK:{atk} PEN:{pen} DEF:{defense} → DMG:{r2.damage:F1} PIERCE:{r2.pierce} EXIT:{r2.exitVel:F0} | HP:{currentHealth:F1}/{maxHealth}");
+        #endif
         
         if (currentHealth <= 0f) Die();
         
@@ -53,7 +55,9 @@ public class SimpleTarget : MonoBehaviour
     void Die()
     {
         _isDead = true;
+        #if UNITY_EDITOR
         Debug.Log($"[CUBE] {name} DESTROYED!");
+        #endif
 
         if (destroyedPrefab != null)
             Instantiate(destroyedPrefab, transform.position, transform.rotation);
