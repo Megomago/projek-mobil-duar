@@ -763,37 +763,6 @@ Transform:
   m_Children: []
   m_Father: {fileID: 7266497692247356272}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 90}
---- !u!1 &4835784496681258882
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 3919853356388755118}
-  m_Layer: 0
-  m_Name: pivot senjata kanan
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &3919853356388755118
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 4835784496681258882}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: 0.221, y: 1.404, z: -0.45237732}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7266497692247356272}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &5233694179704958376
 GameObject:
   m_ObjectHideFlags: 0
@@ -981,37 +950,6 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.2809127, y: 0.74135214, z: 0.74135214}
   m_Center: {x: -0.007814087, y: 0, z: 0}
---- !u!1 &6862025454597350991
-GameObject:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  serializedVersion: 6
-  m_Component:
-  - component: {fileID: 1481093212916752384}
-  m_Layer: 0
-  m_Name: pivot senjata kiri
-  m_TagString: Untagged
-  m_Icon: {fileID: 0}
-  m_NavMeshLayer: 0
-  m_StaticEditorFlags: 0
-  m_IsActive: 1
---- !u!4 &1481093212916752384
-Transform:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 6862025454597350991}
-  serializedVersion: 2
-  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
-  m_LocalPosition: {x: -0.237, y: 1.404, z: -0.45237732}
-  m_LocalScale: {x: 1, y: 1, z: 1}
-  m_ConstrainProportionsScale: 0
-  m_Children: []
-  m_Father: {fileID: 7266497692247356272}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &6945443872256167471
 GameObject:
   m_ObjectHideFlags: 0
@@ -1322,6 +1260,7 @@ GameObject:
   - component: {fileID: 6321340214497921229}
   - component: {fileID: 8766319752834695132}
   - component: {fileID: 124188638354288178}
+  - component: {fileID: 311470256510549160}
   m_Layer: 2
   m_Name: Sedan AK
   m_TagString: Player
@@ -1345,8 +1284,6 @@ Transform:
   - {fileID: 5021873087073638526}
   - {fileID: 5950461441318906307}
   - {fileID: 1884764973182289493}
-  - {fileID: 1481093212916752384}
-  - {fileID: 3919853356388755118}
   - {fileID: 1928401121685851406}
   - {fileID: 7430528426528173444}
   - {fileID: 2916181200958217102}
@@ -1425,6 +1362,10 @@ MonoBehaviour:
       m_PostInfinity: 2
       m_RotationOrder: 4
     maxFuelConsumptionRate: 0.05
+  starterPowerRequired: 1500
+  starterMinBatteryWh: 50
+  engineBrakingTorque: 200
+  compressionBrakeTorque: 80
   drivetrainType: 1
   transmissionType: 1
   gearRatios:
@@ -1474,12 +1415,15 @@ MonoBehaviour:
   centerOfMassHeight: -0.3
   antiRollForce: 8000
   downforceMultiplier: 0
-  showDebugGUI: 1
+  airDragCd: 0.42
+  frontalArea: 2.6
   preventWheelSlipRPM: 1
+  movementLocked: 1
   currentRPM: 0
   currentTorqueNm: 0
   engineLoad: 0
   engineRunning: 1
+  lightsOn: 0
   currentFuelConsumptionRate: 0
   currentGearIndex: 1
   isReverse: 0
@@ -1492,6 +1436,7 @@ MonoBehaviour:
   speedKmh: 0
   speedMs: 0
   wheelSlipRatio: 0
+  shiftTorqueFactor: 0
 --- !u!114 &179251259502191177
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1505,6 +1450,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   engineAudioSource: {fileID: 8874008394217940311}
+  starterAudioSource: {fileID: 0}
   minPitch: 0.6
   maxPitch: 5
   idleVolume: 0.3
@@ -1618,36 +1564,21 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   baseData: {fileID: 11400000, guid: 3bbb624cd1d4f4f4fae546a5b15ae041, type: 2}
-  gridZones:
-  - zoneName: kiri
-    origin: {fileID: 7430528426528173444}
-    capacity: {x: 2, y: 4}
-    cellSize: 0.25
-  - zoneName: atap
-    origin: {fileID: 1928401121685851406}
-    capacity: {x: 4, y: 4}
-    cellSize: 0.25
-  - zoneName: kanan
-    origin: {fileID: 2916181200958217102}
-    capacity: {x: 2, y: 4}
-    cellSize: 0.25
-  installedModules: []
+  gridSystem: {fileID: 0}
   currentTotalMass: 0
   currentPowerConsumption: 0
   currentPowerGeneration: 0
+  totalLampPower: 0
+  activePowerConsumption: 0
   currentBatteryCapacity: 0
   currentFuelCapacity: 0
   currentMaxOutput: 0
   currentCapacitorCapacity: 0
   currentCapacitorChargeRate: 0
-  currentBodyArmor: 0
-  currentWheelArmor: 0
-  currentEngineArmor: 0
-  currentBatteryArmor: 0
-  currentEngineHealth: 0
-  currentWheelHealth: 0
-  currentBatteryHealth: 0
+  totalAmmoPoints: 0
+  currentChassisArmor: 0
   currentFuelAmount: 0
+  currentBatteryAmount: 0
   isPreviewMode: 0
   hud: {fileID: 0}
 --- !u!114 &8766319752834695132
@@ -1664,6 +1595,9 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   cellSprite: {fileID: 21300000, guid: 862c0374ba66af449a06a6dc899503b4, type: 3}
   normalColor: {r: 1, g: 1, b: 1, a: 1}
+  occupiedColor: {r: 1, g: 0, b: 0, a: 0.4}
+  previewColor: {r: 1, g: 1, b: 0, a: 0.4}
+  clearanceColor: {r: 1, g: 0.5, b: 0, a: 0.4}
   gridMaterial: {fileID: 0}
   sortingLayerName: Default
   sortingOrder: 0
@@ -1682,3 +1616,33 @@ MonoBehaviour:
   hudContainer: {fileID: 6957116981271434197, guid: 695ecd969820f064eb7b275d4f6d055a,
     type: 3}
   usePlayerInput: 1
+--- !u!114 &311470256510549160
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8859394471345475044}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b021da229c7e4b449a243c5334c520cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  gridZones:
+  - zoneName: atas
+    origin: {fileID: 1928401121685851406}
+    capacity: {x: 2, y: 2}
+    cellSize: 0.25
+    affectDrag: 1
+  - zoneName: kanan
+    origin: {fileID: 2916181200958217102}
+    capacity: {x: 3, y: 3}
+    cellSize: 0.25
+    affectDrag: 1
+  - zoneName: kiri
+    origin: {fileID: 7430528426528173444}
+    capacity: {x: 3, y: 3}
+    cellSize: 0.25
+    affectDrag: 1
+  defaultModulePresets: []
+  installedModules: []

@@ -1404,8 +1404,18 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 5585350410135678056, guid: 89aab1e57a42afb40934dfd645635a9b,
         type: 3}
+      propertyPath: destroyedPrefab
+      value: 
+      objectReference: {fileID: 100000, guid: a817de05addd7b64faa73b34c74013ce, type: 3}
+    - target: {fileID: 5585350410135678056, guid: 89aab1e57a42afb40934dfd645635a9b,
+        type: 3}
       propertyPath: volatileExplosive
       value: 0
+      objectReference: {fileID: 0}
+    - target: {fileID: 5585350410135678056, guid: 89aab1e57a42afb40934dfd645635a9b,
+        type: 3}
+      propertyPath: explosionVFXPrefab
+      value: 
       objectReference: {fileID: 0}
     - target: {fileID: 6752295632101422670, guid: 89aab1e57a42afb40934dfd645635a9b,
         type: 3}

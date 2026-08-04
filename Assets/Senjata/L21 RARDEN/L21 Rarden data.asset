@@ -20,7 +20,7 @@ MonoBehaviour:
     type: 3}
   muzzleVelocity: 1200
   fireRateRPM: 90
-  attackPower: 100
+  attackPower: 500
   penetration: 500
   ammoCostPerShot: 10
   maxAmmo: 3

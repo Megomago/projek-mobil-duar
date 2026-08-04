@@ -550,6 +550,10 @@ GameObject:
   - component: {fileID: 4535417724212661391}
   - component: {fileID: 6091862497159603590}
   - component: {fileID: 8443226206365366046}
+  - component: {fileID: 7349600057756266236}
+  - component: {fileID: 5404471486118050610}
+  - component: {fileID: 1832293309467094069}
+  - component: {fileID: 7434141217059634139}
   m_Layer: 2
   m_Name: Sedan
   m_TagString: Player
@@ -643,6 +647,11 @@ MonoBehaviour:
       m_PreInfinity: 2
       m_PostInfinity: 2
       m_RotationOrder: 4
+    maxFuelConsumptionRate: 0.025
+  starterPowerRequired: 1500
+  starterMinBatteryWh: 50
+  engineBrakingTorque: 200
+  compressionBrakeTorque: 80
   drivetrainType: 1
   transmissionType: 1
   gearRatios:
@@ -692,12 +701,16 @@ MonoBehaviour:
   centerOfMassHeight: -0.3
   antiRollForce: 8000
   downforceMultiplier: 0
-  showDebugGUI: 1
+  airDragCd: 0.42
+  frontalArea: 2.6
   preventWheelSlipRPM: 1
+  movementLocked: 1
   currentRPM: 0
   currentTorqueNm: 0
   engineLoad: 0
   engineRunning: 1
+  lightsOn: 0
+  currentFuelConsumptionRate: 0
   currentGearIndex: 1
   isReverse: 0
   clutchValue: 1
@@ -709,6 +722,7 @@ MonoBehaviour:
   speedKmh: 0
   speedMs: 0
   wheelSlipRatio: 0
+  shiftTorqueFactor: 0
 --- !u!114 &6091862497159603590
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -722,6 +736,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   engineAudioSource: {fileID: 8443226206365366046}
+  starterAudioSource: {fileID: 0}
   minPitch: 0.6
   maxPitch: 2.8
   idleVolume: 0.3
@@ -822,6 +837,85 @@ AudioSource:
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
+--- !u!114 &7349600057756266236
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2458549673474689059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: ca88c73e77ffc20479fec5317af66eba, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  baseData: {fileID: 0}
+  gridSystem: {fileID: 0}
+  currentTotalMass: 0
+  currentPowerConsumption: 0
+  currentPowerGeneration: 0
+  totalLampPower: 0
+  activePowerConsumption: 0
+  currentBatteryCapacity: 0
+  currentFuelCapacity: 0
+  currentMaxOutput: 0
+  currentCapacitorCapacity: 0
+  currentCapacitorChargeRate: 0
+  totalAmmoPoints: 0
+  currentChassisArmor: 0
+  currentFuelAmount: 0
+  currentBatteryAmount: 0
+  isPreviewMode: 0
+  hud: {fileID: 0}
+--- !u!114 &5404471486118050610
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2458549673474689059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3955582cb80d7974c8fd5133499dfa04, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  cellSprite: {fileID: 0}
+  normalColor: {r: 1, g: 1, b: 1, a: 0.3}
+  occupiedColor: {r: 1, g: 0, b: 0, a: 0.4}
+  previewColor: {r: 1, g: 1, b: 0, a: 0.4}
+  clearanceColor: {r: 1, g: 0.5, b: 0, a: 0.4}
+  gridMaterial: {fileID: 0}
+  sortingLayerName: Default
+  sortingOrder: 0
+--- !u!114 &1832293309467094069
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2458549673474689059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 351b3800a2ad11b4790a13cce1b80f76, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  hudContainer: {fileID: 0}
+  usePlayerInput: 1
+--- !u!114 &7434141217059634139
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2458549673474689059}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b021da229c7e4b449a243c5334c520cf, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  gridZones: []
+  defaultModulePresets: []
+  installedModules: []
 --- !u!1 &2667090671073176870
 GameObject:
   m_ObjectHideFlags: 0
