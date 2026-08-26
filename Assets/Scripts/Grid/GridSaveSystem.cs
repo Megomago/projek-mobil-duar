@@ -19,14 +19,21 @@ public static class GridSaveSystem
     {
         public string zoneName;
         public string moduleName;
+        [Tooltip("ID unik modul — prioritas load. Fallback ke moduleName untuk save lama.")]
+        public string moduleUid;
         public int gridX;
         public int gridY;
         public int rotationAngle;
+        [Tooltip("Sisa amunisi modul (v2+). Disimpan supaya ammo bertahan antar sesi.")]
+        public float ammoLeft;
     }
 
     [System.Serializable]
     public class SavedGridLayout
     {
+        // v1 = tanpa ammoLeft (save lama → modul dimuat penuh).
+        // v2 = ammoLeft disimpan & diterapkan saat load (0 = box benar-benar kosong).
+        public int version = 2;
         public List<SavedModule> modules = new List<SavedModule>();
     }
 
@@ -45,9 +52,11 @@ public static class GridSaveSystem
             {
                 zoneName = placed.zoneName,
                 moduleName = placed.moduleTemplate.moduleName,
+                moduleUid = placed.moduleTemplate.UID,
                 gridX = placed.gridPosition.x,
                 gridY = placed.gridPosition.y,
-                rotationAngle = placed.rotationAngle
+                rotationAngle = placed.rotationAngle,
+                ammoLeft = placed.currentAmmoPoint
             };
             layout.modules.Add(saved);
         }
@@ -83,7 +92,9 @@ public static class GridSaveSystem
         int loaded = 0;
         foreach (var saved in layout.modules)
         {
-            ModuleTemplate template = moduleDatabase.GetModuleByName(saved.moduleName);
+            ModuleTemplate template = moduleDatabase.GetModuleByUID(saved.moduleUid);
+            if (template == null)
+                template = moduleDatabase.GetModuleByName(saved.moduleName);
             if (template == null)
             {
                 Debug.LogWarning($"[GridSaveSystem] ModuleTemplate '{saved.moduleName}' tidak ditemukan di database! Dilewati.");
@@ -92,11 +103,28 @@ public static class GridSaveSystem
 
             Vector2Int pos = new Vector2Int(saved.gridX, saved.gridY);
             bool success = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
-            if (success) loaded++;
+            if (success)
+            {
+                loaded++;
+                ApplyAmmoToLastInstalled(gridSystem, saved, layout.version);
+            }
         }
         #if UNITY_EDITOR
         Debug.Log($"[GridSaveSystem] Dimuat {loaded}/{layout.modules.Count} modul untuk '{vehicleName}'");
         #endif
+    }
+
+    /// <summary>
+    /// Terapkan sisa amunisi dari save ke modul yang baru saja di-install.
+    /// Save versi 1 (lama) tidak punya data ammo → modul tetap penuh (default).
+    /// </summary>
+    private static void ApplyAmmoToLastInstalled(VehicleGridSystem gridSystem, SavedModule saved, int layoutVersion)
+    {
+        if (layoutVersion < 2) return;
+        if (gridSystem.installedModules.Count == 0) return;
+
+        PlacedModule placed = gridSystem.installedModules[gridSystem.installedModules.Count - 1];
+        placed.currentAmmoPoint = Mathf.Max(0f, saved.ammoLeft);
     }
 
     // --- LOAD (async — spread across frames) ---
@@ -110,12 +138,17 @@ public static class GridSaveSystem
             #if UNITY_EDITOR
             Debug.Log($"[GridSaveSystem] Tidak ada data tersimpan untuk '{vehicleName}'");
             #endif
+            onProgress?.Invoke(0, 0);
             yield break;
         }
 
         string json = File.ReadAllText(path);
         SavedGridLayout layout = JsonUtility.FromJson<SavedGridLayout>(json);
-        if (layout == null || layout.modules.Count == 0) yield break;
+        if (layout == null || layout.modules.Count == 0)
+        {
+            onProgress?.Invoke(0, 0);
+            yield break;
+        }
 
         gridSystem.ClearAllModules();
 
@@ -125,7 +158,11 @@ public static class GridSaveSystem
 
         foreach (var saved in layout.modules)
         {
-            ModuleTemplate template = moduleDatabase.GetModuleByName(saved.moduleName);
+            if (gridSystem == null) yield break;
+
+            ModuleTemplate template = moduleDatabase.GetModuleByUID(saved.moduleUid);
+            if (template == null)
+                template = moduleDatabase.GetModuleByName(saved.moduleName);
             if (template == null)
             {
                 Debug.LogWarning($"[GridSaveSystem] ModuleTemplate '{saved.moduleName}' tidak ditemukan di database! Dilewati.");
@@ -134,7 +171,11 @@ public static class GridSaveSystem
 
             Vector2Int pos = new Vector2Int(saved.gridX, saved.gridY);
             bool success = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
-            if (success) loaded++;
+            if (success)
+            {
+                loaded++;
+                ApplyAmmoToLastInstalled(gridSystem, saved, layout.version);
+            }
 
             counter++;
             onProgress?.Invoke(counter, total);
