@@ -367,6 +367,11 @@ public class VehicleGridSystem : MonoBehaviour
         if (_statsManager != null)
             _statsManager.MarkStatsDirty();
 
+        // Sinkronkan HUD senjata (kalau kendaraan sedang dikendarai)
+        var weaponTrigger = GetComponent<VehicleGridWeaponTrigger>();
+        if (weaponTrigger != null)
+            weaponTrigger.RebuildWeaponHUDs();
+
         return true;
     }
 
@@ -389,6 +394,11 @@ public class VehicleGridSystem : MonoBehaviour
             if (_statsManager != null)
                 _statsManager.MarkStatsDirty();
 
+            // HUD senjata yang di-uninstall ikut dibersihkan
+            var weaponTrigger = GetComponent<VehicleGridWeaponTrigger>();
+            if (weaponTrigger != null)
+                weaponTrigger.RebuildWeaponHUDs();
+
             GridSaveSystem.SaveGrid(gameObject.name, this);
         }
     }
@@ -397,13 +407,25 @@ public class VehicleGridSystem : MonoBehaviour
     {
         for (int i = installedModules.Count - 1; i >= 0; i--)
         {
-            if (installedModules[i].spawnedPrefab != null)
-                Destroy(installedModules[i].spawnedPrefab);
+            PlacedModule pm = installedModules[i];
+            if (pm.spawnedPrefab != null)
+            {
+                // Lepaskan collider dari map dulu — jangan tinggalkan key mati
+                Collider[] modColliders = pm.spawnedPrefab.GetComponentsInChildren<Collider>(true);
+                foreach (var col in modColliders)
+                    moduleColliderMap.Remove(col);
+
+                Destroy(pm.spawnedPrefab);
+            }
         }
         installedModules.Clear();
 
         if (_statsManager != null)
             _statsManager.MarkStatsDirty();
+
+        var weaponTrigger = GetComponent<VehicleGridWeaponTrigger>();
+        if (weaponTrigger != null)
+            weaponTrigger.RebuildWeaponHUDs();
     }
 
     private void SetLayerRecursively(GameObject obj, int newLayer)

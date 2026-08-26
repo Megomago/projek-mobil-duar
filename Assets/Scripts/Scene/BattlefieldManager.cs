@@ -30,13 +30,16 @@ namespace Weapons
                 return;
             }
 
+            // Sama seperti LoadoutManager: prioritas UID (anti-bug saat rename mobil),
+            // fallback nama untuk save lama, terakhir fallback ke mobil pertama.
+            string savedVehicleUid = PlayerPrefs.GetString("SelectedVehicleUID", "");
             string savedVehicle = PlayerPrefs.GetString("SelectedVehicle", "");
             VehicleData selectedData = null;
 
-            if (!string.IsNullOrEmpty(savedVehicle))
-            {
+            if (!string.IsNullOrEmpty(savedVehicleUid))
+                selectedData = vehicleDatabase.GetVehicleByUID(savedVehicleUid);
+            if (selectedData == null && !string.IsNullOrEmpty(savedVehicle))
                 selectedData = vehicleDatabase.GetVehicleByName(savedVehicle);
-            }
 
             if (selectedData == null)
             {
@@ -75,7 +78,13 @@ namespace Weapons
 
             VehicleController vc = spawnedVehicle.GetComponent<VehicleController>();
             if (vc != null)
-                vc.SetMovementLocked(true);
+            {
+                // Kunci input sekarang, TAPI jangan freeze rigidbody dulu —
+                // biarkan mobil jatuh & settle ke tanah, baru di-freeze.
+                // (Kalau langsung di-freeze, mobil melayang kalau spawn point di atas tanah.)
+                vc.SetMovementLocked(true, freezeRigidbody: false);
+                StartCoroutine(FreezeVehicleAfterSettle(spawnedVehicle));
+            }
 
             if (weaponTrigger != null)
                 weaponTrigger.usePlayerInput = false;
@@ -90,12 +99,40 @@ namespace Weapons
                 {
                     if (current >= total)
                     {
+                        // Grid selesai di-load → ammo dari save boleh di-persist lagi
+                        if (statsManager != null)
+                            statsManager.isGridFullyLoaded = true;
+
                         // Matikan turret lagi karena module baru di-install dengan turret aktif
                         var turrets = spawnedVehicle.GetComponentsInChildren<Weapons.ManualTurretController>(true);
                         foreach (var t in turrets)
                             if (t != null) t.enabled = false;
                     }
                 }));
+        }
+
+        private System.Collections.IEnumerator FreezeVehicleAfterSettle(GameObject vehicle)
+        {
+            if (vehicle == null) yield break;
+
+            Rigidbody rb = vehicle.GetComponent<Rigidbody>();
+            var vc = vehicle.GetComponent<VehicleController>();
+
+            // Tunggu mobil jatuh & settle (suspension) sampai rigidbody tidur, maks 4 detik.
+            float timeout = 4f;
+            float elapsed = 0f;
+            while (rb != null && elapsed < timeout && !rb.IsSleeping())
+            {
+                yield return new WaitForFixedUpdate();
+                elapsed += Time.fixedDeltaTime;
+            }
+
+            // Player sudah masuk mobil duluan → jangan di-freeze ulang (anti terkunci).
+            if (VehicleEntry.ActiveVehicle != null && VehicleEntry.ActiveVehicle.gameObject == vehicle)
+                yield break;
+
+            if (vc != null)
+                vc.SetMovementLocked(true);
         }
 
         private void SpawnPlayer()
