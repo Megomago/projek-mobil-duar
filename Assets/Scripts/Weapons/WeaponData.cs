@@ -33,7 +33,7 @@ namespace Weapons
         [Tooltip("Penetration power vs DEF")]
         public float penetration = 150f;
 
-        [Tooltip("Poin amunisi yang dikonsumsi per 1 tembakan. Contoh: 10 berarti nyedot 10 ammoPoint per peluru")]
+        [Tooltip("Poin amunisi pool yang dikonsumsi per 1 peluru saat RELOAD mengisi magazine (bukan saat menembak). Contoh: magazine 30 & cost 10 → 1x reload penuh nyedot 300 ammoPoint. 0 = reload gratis/infinite.")]
         public int ammoCostPerShot = 1;
 
         [Tooltip("Batas amunisi dalam satu magazine (0 = Infinite)")]

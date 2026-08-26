@@ -27,7 +27,7 @@ MonoBehaviour:
   reloadTime: 7
   projectilePrefab: {fileID: 8680127872553205067, guid: c39673d2bc131f143830ad11f6c161f9,
     type: 3}
-  pelletCount: 50
+  pelletCount: 12
   baseDispersion: 2
   chokeMultiplier: 1
   enableOverheat: 0
