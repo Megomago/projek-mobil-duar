@@ -19,15 +19,42 @@ public class VehicleGridWeaponTrigger : MonoBehaviour
     private void Awake()
     {
         _statsManager = GetComponent<VehicleStatsManager>();
+
+        // Fallback: cari container otomatis kalau belum di-assign (mis. kendaraan di-scene manual)
+        if (hudContainer == null)
+        {
+            GameObject containerObj = GameObject.Find("HUD_Container");
+            if (containerObj == null) containerObj = GameObject.Find("HUD container");
+            if (containerObj != null) hudContainer = containerObj.GetComponent<RectTransform>();
+        }
     }
 
     public void ClearHUDs()
     {
-        foreach (var hud in _spawnedHUDs)
+        for (int i = _spawnedHUDs.Count - 1; i >= 0; i--)
         {
-            if (hud != null) Destroy(hud);
+            GameObject hud = _spawnedHUDs[i];
+            if (hud == null) continue;
+            hud.SetActive(false); // Hilang dari layar seketika (Destroy dieksekusi end-of-frame)
+            Destroy(hud);
         }
         _spawnedHUDs.Clear();
+    }
+
+    /// <summary>
+    /// Sinkronkan ulang HUD senjata dengan modul terpasang (dipanggil dari VehicleGridSystem
+    /// saat senjata di-install/uninstall). No-op kalau kendaraan belum dikendarai player.
+    /// </summary>
+    public void RebuildWeaponHUDs()
+    {
+        if (!usePlayerInput) return;
+        InitializeWeapons();
+    }
+
+    private void OnDestroy()
+    {
+        // Kendaraan hancur/di-despawn → pastikan HUD senjatanya ikut bersih (anti numpuk)
+        ClearHUDs();
     }
 
     public void InitializeWeapons()
@@ -47,14 +74,33 @@ public class VehicleGridWeaponTrigger : MonoBehaviour
                 {
                     _activeWeapons.Add(weapon);
                     SpawnHUD(weapon);
+}
+        // Warmup pool sekali saat enter vehicle — hilang spike tembakan pertama
+        if (ObjectPool.Instance != null)
+        {
+            foreach (var w in _activeWeapons)
+            {
+                if (w.weaponData != null)
+                {
+                    ObjectPool.Instance.Warmup(w.weaponData.projectilePrefab, Mathf.Max(w.weaponData.pelletCount + 8, 16));
+                    ObjectPool.Instance.Warmup(w.weaponData.muzzleFlashPrefab, 2);
                 }
             }
+        }
+    }
         }
     }
 
     private void SpawnHUD(ModularWeapon weapon)
     {
-        if (weapon.weaponData == null || weapon.weaponData.hudPrefab == null) return;
+        if (weapon.weaponData == null) return;
+        if (weapon.weaponData.hudPrefab == null)
+        {
+            #if UNITY_EDITOR
+            Debug.LogWarning($"[VehicleGridWeaponTrigger] '{weapon.weaponData.weaponName}' tidak punya hudPrefab di WeaponData — HUD senjata tidak muncul!");
+            #endif
+            return;
+        }
         // Jangan spawn HUD jika container belum di-assign (misalnya di Lobby)
         if (hudContainer == null) return;
 
@@ -88,8 +134,10 @@ public class VehicleGridWeaponTrigger : MonoBehaviour
     {
         if (!usePlayerInput || _activeWeapons.Count == 0) return;
 
-        // Jangan proses input tembak jika sedang drag modul di Lobby
-        if (InventoryDragDropManager.Instance != null) return;
+        // Blokir input tembak HANYA saat benar-benar sedang drag modul di Lobby
+        // (bukan selama manager-nya saja ada — dulu bikin senjata mati senyap
+        // kalau scene battle punya objek InventoryDragDropManager).
+        if (InventoryDragDropManager.Instance != null && InventoryDragDropManager.Instance.IsDragging) return;
 
         bool isFiring = Input.GetMouseButton(0);
         bool isReloading = Input.GetKeyDown(KeyCode.R);

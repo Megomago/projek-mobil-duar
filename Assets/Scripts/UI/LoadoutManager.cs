@@ -27,6 +27,8 @@ namespace Weapons
         public TextMeshProUGUI vehicleNameText;
         [Tooltip("Referensi ke VehicleHUD untuk update stat saat ganti mobil")]
         public VehicleHUD vehicleHUD;
+        [Tooltip("Panel daftar modul (VehicleModuleListUI). Kalau kosong, dicari otomatis.")]
+        public VehicleModuleListUI moduleListUI;
 
         [Header("=== MODE PANELS ===")]
         public GameObject mainUIPanel;
@@ -50,15 +52,17 @@ namespace Weapons
                 return;
             }
 
-            // Cari mobil yang cocok dengan save terakhir
+            // Cari mobil yang cocok dengan save terakhir (prioritas UID, fallback nama untuk save lama)
+            string savedVehicleUid = PlayerPrefs.GetString("SelectedVehicleUID", "");
             string savedVehicle = PlayerPrefs.GetString("SelectedVehicle", "");
-            if (!string.IsNullOrEmpty(savedVehicle))
+            VehicleData found = null;
+            if (!string.IsNullOrEmpty(savedVehicleUid))
+                found = vehicleDatabase.GetVehicleByUID(savedVehicleUid);
+            if (found == null && !string.IsNullOrEmpty(savedVehicle))
+                found = vehicleDatabase.GetVehicleByName(savedVehicle);
+            if (found != null)
             {
-                VehicleData found = vehicleDatabase.GetVehicleByName(savedVehicle);
-                if (found != null)
-                {
-                    _currentVehicleIndex = vehicleDatabase.allVehicles.IndexOf(found);
-                }
+                _currentVehicleIndex = vehicleDatabase.allVehicles.IndexOf(found);
             }
 
             UpdateVehicleSelection();
@@ -101,8 +105,9 @@ namespace Weapons
 
             _currentStatsManager = _currentPreviewVehicle.GetComponent<VehicleStatsManager>();
 
-            // Simpan pilihan terakhir pakai nama dari VehicleData
+            // Simpan pilihan terakhir pakai nama + UID (UID anti-bug saat rename mobil)
             PlayerPrefs.SetString("SelectedVehicle", vehicleName);
+            PlayerPrefs.SetString("SelectedVehicleUID", currentData.UID);
             PlayerPrefs.Save();
             // ─────────────────────────────────────────
 
@@ -112,27 +117,43 @@ namespace Weapons
                 _currentStatsManager.hud = vehicleHUD;
                 if (vehicleHUD != null) vehicleHUD.SetVehicle(_currentStatsManager);
 
-                // Load grid async — spread across frames
-                if (moduleDatabase != null && _currentStatsManager.gridSystem != null)
+                // Load grid async — spread across frames.
+                // Capture statet manager secara lokal agar callback tidak menyasar
+                // ke kendaraan lain kalau user ganti mobil di tengah loading.
+                VehicleStatsManager targetStats = _currentStatsManager;
+                if (moduleDatabase != null && targetStats.gridSystem != null)
                 {
-                    var gridSys = _currentStatsManager.gridSystem;
+                    var gridSys = targetStats.gridSystem;
                     StartCoroutine(GridSaveSystem.LoadGridAsync(vehicleName, gridSys, moduleDatabase, (current, total) =>
                     {
                         if (current >= total)
                         {
-                            VehicleModuleListUI moduleList = FindObjectOfType<VehicleModuleListUI>();
-                            if (moduleList != null) moduleList.Initialize(_currentStatsManager);
+                            // Mobil bisa saja sudah di-destroy (user ganti mobil cepat
+                            // saat grid besar masih loading) — jangan sentuh objek mati.
+                            if (targetStats == null) return;
+                            targetStats.isGridFullyLoaded = true;
+                            GetModuleList()?.Initialize(targetStats);
                         }
                     }));
                 }
                 else
                 {
-                    VehicleModuleListUI moduleList = FindObjectOfType<VehicleModuleListUI>();
-                    if (moduleList != null) moduleList.Initialize(_currentStatsManager);
+                    targetStats.isGridFullyLoaded = true;
+                    GetModuleList()?.Initialize(targetStats);
                 }
             }
 
             if (_currentPreviewVehicle.TryGetComponent<VehicleController>(out var vc)) vc.enabled = false;
+
+            // Preview garasi TIDAK boleh bisa nembak — jangan bergantung pada
+            // InventoryDragDropManager untuk memblokir input (gate-nya sekarang
+            // hanya aktif saat drag). Matikan trigger + HUD senjata di sini.
+            var previewTrigger = _currentPreviewVehicle.GetComponent<VehicleGridWeaponTrigger>();
+            if (previewTrigger != null)
+            {
+                previewTrigger.usePlayerInput = false;
+                previewTrigger.ClearHUDs();
+            }
             AudioSource[] audioSources = _currentPreviewVehicle.GetComponentsInChildren<AudioSource>();
             foreach (var audio in audioSources) audio.enabled = false;
 
@@ -168,13 +189,63 @@ private System.Collections.IEnumerator DisableAfterSpawn()
     Rigidbody[] allRbs = _currentPreviewVehicle.GetComponentsInChildren<Rigidbody>(true);
     foreach (var rb in allRbs)
     {
+        // Anak-anak (modul dkk) langsung di-freeze
         if (rb != _currentPreviewVehicle.GetComponent<Rigidbody>())
         {
             rb.isKinematic = true;
             rb.constraints = RigidbodyConstraints.FreezeAll;
         }
     }
+
+    // Root kendaraan: tunggu jatuh & settle dulu (biar tidak melayang kalau
+    // posisi spawn preview di atas tanah), baru di-freeze supaya tidak
+    // terdorong player jalan.
+    Rigidbody rootRb = _currentPreviewVehicle.GetComponent<Rigidbody>();
+    if (rootRb != null)
+    {
+        float settleTimeout = 4f;
+        float elapsed = 0f;
+        while (elapsed < settleTimeout && !rootRb.IsSleeping())
+        {
+            yield return new WaitForFixedUpdate();
+            elapsed += Time.fixedDeltaTime;
+            if (rootRb == null) yield break;
+        }
+        if (rootRb != null)
+        {
+            rootRb.isKinematic = true;
+            rootRb.constraints = RigidbodyConstraints.FreezeAll;
+        }
+    }
 }
+
+    private VehicleModuleListUI GetModuleList()
+    {
+        if (moduleListUI != null) return moduleListUI;
+        return FindObjectOfType<VehicleModuleListUI>();
+    }
+
+    /// <summary>
+    /// Isi ulang amunisi kendaraan yang sedang dilihat di garasi (GRATIS untuk sekarang).
+    /// Bisa di-bind ke tombol UI "Isi Ulang Amunisi".
+    /// Nanti tinggal tambahkan biaya resource di sini tanpa mengubah alur lain (opsi refill bayar).
+    /// </summary>
+    [ContextMenu("Refill Ammo (Free)")]
+    public void RefillAmmo()
+    {
+        if (_currentStatsManager == null)
+        {
+            Debug.LogWarning("[LoadoutManager] Tidak ada kendaraan preview — refill dibatalkan.");
+            return;
+        }
+
+        _currentStatsManager.RefillAmmo();
+        GetModuleList()?.Initialize(_currentStatsManager);
+
+        #if UNITY_EDITOR
+        Debug.Log($"[LoadoutManager] Amunisi '{_currentStatsManager.gameObject.name}' diisi ulang (gratis).");
+        #endif
+    }
 
         // === UI MODE TOGGLE ===
         public void OpenInventoryMode()
@@ -194,27 +265,36 @@ private System.Collections.IEnumerator DisableAfterSpawn()
             }
         }
 
+        private List<UIModuleItem> _catalogItems = new List<UIModuleItem>();
+
         private void PopulateInventoryCatalog()
         {
             if (gridContainer == null || uiModuleItemPrefab == null || moduleDatabase == null) return;
 
-            // Bersihkan isi grid lama
-            foreach (Transform child in gridContainer)
+            // Bangun katalog SEKALI (jangan Instantiate ulang tiap buka inventory — skalabilitas
+            // saat modul sudah puluhan/banyak)
+            if (_catalogItems.Count == 0)
             {
-                Destroy(child.gameObject);
+                foreach (ModuleTemplate template in moduleDatabase.allModules)
+                {
+                    if (template == null) continue;
+
+                    GameObject itemObj = Instantiate(uiModuleItemPrefab, gridContainer);
+                    UIModuleItem uiItem = itemObj.GetComponent<UIModuleItem>();
+                    if (uiItem != null)
+                    {
+                        // WAJIB inisialisasi saat dibangun — CurrentTemplate hanya ter-set lewat Initialize()
+                        uiItem.Initialize(template, _currentStatsManager);
+                        _catalogItems.Add(uiItem);
+                    }
+                }
             }
 
-            // Buat tombol untuk tiap modul di database
-            foreach (ModuleTemplate template in moduleDatabase.allModules)
+            // Refresh referensi stats manager tiap buka — bisa berganti saat ganti mobil
+            foreach (var item in _catalogItems)
             {
-                if (template == null) continue;
-
-                GameObject itemObj = Instantiate(uiModuleItemPrefab, gridContainer);
-                UIModuleItem uiItem = itemObj.GetComponent<UIModuleItem>();
-                if (uiItem != null)
-                {
-                    uiItem.Initialize(template, _currentStatsManager);
-                }
+                if (item != null)
+                    item.Initialize(item.CurrentTemplate, _currentStatsManager);
             }
         }
 
