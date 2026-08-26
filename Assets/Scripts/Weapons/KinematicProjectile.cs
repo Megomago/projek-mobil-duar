@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 
 namespace Weapons
@@ -57,6 +58,7 @@ namespace Weapons
         private float EffectivePen => _pen;
 
         private static readonly RaycastHit[] _raycastHitsBuffer = new RaycastHit[16];
+        private static readonly List<PlacedModule> _chainVictims = new List<PlacedModule>();
 
         private void Awake()
         {
@@ -242,18 +244,21 @@ namespace Weapons
             var critPart = proxy != null ? proxy.criticalPart : null;
             var simpleTarget = proxy != null ? proxy.simpleTarget : null;
 
-            // Debug: kirim log nama target + hierarchy depth
+            // Debug: kirim log nama target + hierarchy depth (hanya kalau ShowHitDebug aktif)
             #if UNITY_EDITOR
-            Transform depthCheck = hit.collider.transform;
-            int depth = 0;
-            string chain = hit.collider.gameObject.name;
-            while (depthCheck.parent != null && depth < 20)
+            if (ShowHitDebug)
             {
-                depthCheck = depthCheck.parent;
-                chain += " > " + depthCheck.gameObject.name;
-                depth++;
+                Transform depthCheck = hit.collider.transform;
+                int depth = 0;
+                string chain = hit.collider.gameObject.name;
+                while (depthCheck.parent != null && depth < 20)
+                {
+                    depthCheck = depthCheck.parent;
+                    chain += " > " + depthCheck.gameObject.name;
+                    depth++;
+                }
+                Debug.Log($"[HIT] '{hit.collider.gameObject.name}' depth={depth} chain={chain} | modComp={(modComp != null ? modComp.gameObject.name : "null")} wheel={(wheelHealth != null)} crit={(critPart != null)} target={(simpleTarget != null)} statsMgr={(statsMgr != null ? statsMgr.gameObject.name : "null")}");
             }
-            Debug.Log($"[HIT] '{hit.collider.gameObject.name}' depth={depth} chain={chain} | modComp={(modComp != null ? modComp.gameObject.name : "null")} wheel={(wheelHealth != null)} crit={(critPart != null)} target={(simpleTarget != null)} statsMgr={(statsMgr != null ? statsMgr.gameObject.name : "null")}");
             #endif
 
             // 1. Module — dictionary lookup dulu, fallback GetComponentInParent
@@ -264,6 +269,15 @@ namespace Weapons
                 goto AFTER_DAMAGE;
             }
 
+            // Modul terpasang di grid → lewat ApplyModuleDamage saja (hitung + apply damage SEKALI)
+            if (modComp != null && statsMgr != null && modComp.placedModuleData != null)
+            {
+                dbgType = "module";
+                result = ApplyModuleDamage(modComp.placedModuleData, statsMgr);
+                goto AFTER_DAMAGE;
+            }
+
+            // Modul standalone (tidak terpasang di kendaraan) → damage langsung sekali
             if (modComp != null)
             {
                 float def = 10f;
@@ -273,16 +287,7 @@ namespace Weapons
                     def = modComp.moduleTemplate.armor;
                 result = OptFormula.Calculate(_atk, EffectivePen, def, _currentVelocity.magnitude);
                 modComp.TakeDamage(result.Value.damage);
-
-                if (statsMgr != null && modComp.placedModuleData != null)
-                {
-                    dbgType = "module";
-                    result = ApplyModuleDamage(modComp.placedModuleData, statsMgr);
-                }
-                else
-                {
-                    dbgType = "module";
-                }
+                dbgType = "module";
                 goto AFTER_DAMAGE;
             }
 
@@ -403,24 +408,46 @@ namespace Weapons
             Vector2Int srcPos = sourceMod.gridPosition;
             string srcZone = sourceMod.zoneName;
 
+            // Snapshot korban dulu — UninstallModule di tengah iterasi memodifikasi
+            // installedModules dan bisa melempar InvalidOperationException.
+            _chainVictims.Clear();
             foreach (var mod in mgr.installedModules)
             {
                 if (mod == sourceMod || mod.moduleTemplate == null || mod.zoneName != srcZone) continue;
                 int dx = Mathf.Abs(mod.gridPosition.x - srcPos.x);
                 int dy = Mathf.Abs(mod.gridPosition.y - srcPos.y);
                 if (dx <= radius && dy <= radius)
+                    _chainVictims.Add(mod);
+            }
+
+            foreach (var victim in _chainVictims)
+            {
+                if (victim == null || victim.moduleTemplate == null) continue;
+
+                // Damage lewat komponen agar PlacedModule & VehicleModuleComponent tetap sinkron
+                VehicleModuleComponent comp = victim.spawnedPrefab != null
+                    ? victim.spawnedPrefab.GetComponent<VehicleModuleComponent>()
+                    : null;
+
+                if (comp != null)
                 {
-                    mod.currentHealth -= dmg;
+                    comp.TakeDamage(dmg);
+                }
+                else
+                {
+                    victim.currentHealth -= dmg;
                     #if UNITY_EDITOR
-                    Debug.Log($"[CHAIN] {mod.moduleTemplate.moduleName} kena ledakan {dmg} → HP:{mod.currentHealth}");
+                    Debug.Log($"[CHAIN] {victim.moduleTemplate.moduleName} kena ledakan {dmg} → HP:{victim.currentHealth}");
                     #endif
-                    if (mod.currentHealth <= 0f) mgr.UninstallModule(mod);
+                    if (victim.currentHealth <= 0f) mgr.UninstallModule(victim);
                 }
             }
         }
 
         private void SpawnDebugHitCross(Vector3 point, string hitType)
         {
+            if (!ShowHitDebug) return;
+
             Color color = Color.white;
             switch (hitType)
             {
@@ -431,13 +458,9 @@ namespace Weapons
                 case "target": color = Color.magenta; break;
             }
 
-            // Debug.DrawLine — selalu jalan di Editor (tidak di-gate ShowHitDebug)
             Debug.DrawLine(point + Vector3.left * 0.2f, point + Vector3.right * 0.2f, color, 3f);
             Debug.DrawLine(point + Vector3.up * 0.2f, point + Vector3.down * 0.2f, color, 3f);
             Debug.DrawLine(point + Vector3.forward * 0.2f, point + Vector3.back * 0.2f, color, 3f);
-
-            // Build-visible LineRenderer cross — hanya muncul kalau ShowHitDebug ON (F2 toggle)
-            if (!ShowHitDebug) return;
 
             GameObject go = new GameObject("___HitDebug");
             go.transform.position = point;
