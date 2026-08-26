@@ -248,6 +248,16 @@ public class VehicleController : MonoBehaviour
     private const float SHIFT_COOLDOWN_TIME = 0.8f;
     [Tooltip("Faktor torsi yg mengalir ke roda saat transmisi sedang shifting (0 = putus total, 1 = ngalir terus). Default 0 biar realistis.")]
     public float shiftTorqueFactor = 0f;
+
+    // Launch control release buffer: biar RPM & torsi tetep tinggi sesaat pas lepas handbrake
+    private bool          _wasLaunchControlActive = false;
+    private float         _launchReleaseTimer = 0f;
+    private const float   LAUNCH_RELEASE_HOLD = 0.35f; // detik
+
+    // Recoil assist: override brake torque sesaat biar roda bisa slip dari impulso
+    private float         _recoilBrakeOverrideTimer = 0f;
+    private const float   RECOIL_BRAKE_OVERRIDE_DURATION = 0.1f;
+
     private const float RPM_TO_RADS         = Mathf.PI / 30f;
     private const float RADS_TO_RPM         = 30f / Mathf.PI;
 
@@ -556,10 +566,28 @@ public class VehicleController : MonoBehaviour
 
         float targetRPM = wheelBasedRPM;
         
-        if (isClutchDisengaged)
+        // LAUNCH CONTROL RELEASE: simpan state sebelumnya biar bisa handle transisi
+        bool isLaunchControlNow = handbrakeInput > 0.5f && speedKmh < 10f;
+        if (_wasLaunchControlActive && !isLaunchControlNow)
         {
-            // Kopling lepas: mesin bebas menderu sesuai gas
-            targetRPM = throttleRevTarget;
+            // Baru saja lepas handbrake dari launch control → hold RPM & torsi tinggi sebentar
+            _launchReleaseTimer = LAUNCH_RELEASE_HOLD;
+        }
+        _wasLaunchControlActive = isLaunchControlNow;
+
+        if (isClutchDisengaged || _launchReleaseTimer > 0f)
+        {
+            // Kopling lepas ATAU dalam masa release launch control: mesin bebas menderu
+            if (_launchReleaseTimer > 0f)
+            {
+                _launchReleaseTimer -= Time.fixedDeltaTime;
+                // Paksa RPM tetap di throttleRevTarget (free rev) selama timer jalan
+                targetRPM = throttleRevTarget;
+            }
+            else
+            {
+                targetRPM = throttleRevTarget;
+            }
         }
         else
         {
@@ -614,6 +642,17 @@ public class VehicleController : MonoBehaviour
         {
             totalDriveTorque = currentTorqueNm * gearRatio * finalDriveRatio * transmissionEfficiency;
 
+            // LAUNCH CONTROL staging: handbrake held + low speed + gas → cut torque so RPM can build
+            bool isLaunchControlStaging = handbrakeInput > 0.5f && speedKmh < 10f && throttleInput > 0.5f;
+            
+            // LAUNCH CONTROL release buffer: handbrake just released → KEEP full torque (don't cut)
+            // _launchReleaseTimer > 0 means we're in the brief window after handbrake release
+            if (isLaunchControlStaging && _launchReleaseTimer <= 0f)
+            {
+                totalDriveTorque *= 0.01f; // near-zero saat staging
+            }
+            // During _launchReleaseTimer > 0, we allow FULL torque (no cut)
+
             // ── REV LIMITER ──
             float gearR = Mathf.Abs(gearRatio);
             float realEngineRPM = Mathf.Abs(_wheelRPM) * gearR * finalDriveRatio;
@@ -667,6 +706,14 @@ public class VehicleController : MonoBehaviour
                 w.collider.motorTorque = torquePerWheel;
             else
                 w.collider.motorTorque = 0f;
+                
+            // HACK: WheelCollider di Unity kadang stuck/mengunci sendiri di kecepatan 0.
+            // Kita beri sedikit motorTorque mikroskopis HANYA selama ada gaya tembakan (recoil timer aktif) 
+            // agar roda terlepas dari friksi statis dan mobil bisa terdorong, tanpa bikin mobil jalan sendiri saat parkir.
+            if (_recoilBrakeOverrideTimer > 0f && w.collider.motorTorque == 0f)
+            {
+                w.collider.motorTorque = 1e-4f;
+            }
         }
     }
 
@@ -683,6 +730,11 @@ public class VehicleController : MonoBehaviour
 
     private void ApplyBraking()
     {
+        // Recoil brake override: timer aktif = skip handbrake & reduc brake torque biar roda bisa slip dari impuls
+        bool recoilOverride = _recoilBrakeOverrideTimer > 0f;
+        if (recoilOverride)
+            _recoilBrakeOverrideTimer -= Time.fixedDeltaTime;
+
         foreach (var w in wheels)
         {
             if (w.collider == null) continue;
@@ -691,14 +743,14 @@ public class VehicleController : MonoBehaviour
 
             float brakeTorqueApplied = 0f;
 
-            if (brakeInput > 0f)
+            if (brakeInput > 0f && !recoilOverride)
             {
                 float bias = isFront ? brakeBias : (1f - brakeBias);
                 brakeTorqueApplied = brakeTorque * brakeInput * bias;
             }
 
-            // Handbrake hanya ke roda belakang
-            if (handbrakeInput > 0f && !isFront)
+            // Handbrake hanya ke roda belakang — DISABLED saat recoil override
+            if (handbrakeInput > 0f && !isFront && !recoilOverride)
                 brakeTorqueApplied = Mathf.Max(brakeTorqueApplied, handbrakeTorque * handbrakeInput);
 
             w.collider.brakeTorque = brakeTorqueApplied;
@@ -779,11 +831,18 @@ public class VehicleController : MonoBehaviour
         if (_shiftCooldown > 0f) return;
         if (isReverse) return;
 
-        // Upshift: Cegah upshift jika handbrake sedang ditarik (agar bisa free-rev / burnout di gigi 1)
+        // Upshift: Cegah upshift jika handbrake ditarik
         if (currentRPM >= autoUpshiftRPM && currentGearIndex < gearRatios.Length - 1 && handbrakeInput < 0.5f)
         {
-            if (throttleInput > 0f) // cuma perlu ada throttle, tidak 0.3f
+            float nextGearR = Mathf.Abs(gearRatios[currentGearIndex + 1].ratio);
+            float projectedNextRPM = Mathf.Abs(_wheelRPM) * nextGearR * finalDriveRatio;
+            
+            // Cegah upshift palsu (false upshift) saat RPM nge-drop setelah Launch Control,
+            // atau jika upshift akan membuat RPM jatuh di bawah batas downshift (mencegah gear-hunting).
+            if (projectedNextRPM > autoDownshiftRPM && throttleInput > 0f)
+            {
                 ShiftUp();
+            }
         }
         // Aggressive Downshift (Rev-Matching / Engine Braking): saat ngerem keras > 1 detik
         else if (_brakeHoldTimer > 1.0f && currentGearIndex > 1)
@@ -945,13 +1004,56 @@ public class VehicleController : MonoBehaviour
         speedKmh = speedMs * 3.6f;
     }
 
-    public void SetMovementLocked(bool locked)
+    public void SetMovementLocked(bool locked, bool freezeRigidbody = true)
     {
         movementLocked = locked;
         ClearVehicleInput();
+
+        // AKAR BUG "mobil lanjut gerak sendiri / salto terus setelah player turun":
+        // WheelCollider TIDAK auto-reset — motorTorque/brakeTorque/steeringAngle dari
+        // frame terakhir mengemudi TETAP menempel di roda. Saat lock, FixedUpdate
+        // berhenti dijalankan → torsi yang tersisa itu terus menggerakkan mobil
+        // (nggas sendiri, muter sendiri). Zero-kan semua di sini.
+        // Catatan: ini tidak menghilangkan inersia — mobil tetap meluncur/nyusur
+        // alami dari kecepatan saat ditinggal, hanya berhenti MENYETIR sendiri.
+        ReleaseWheelControls();
+
+        // Kendaraan terparkir (player di luar) = KINEMATIC → tidak bisa didorong/
+        // digeser player jalan (nabrak body/collider naik-turun tidak menggeser mobil).
+        // Saat player masuk → dinamis lagi supaya bisa dikendarai & kena recoil/ledakan.
+        // freezeRigidbody=false dipakai saat spawn: biarkan mobil jatuh & settle dulu,
+        // baru di-freeze setelahnya (kalau langsung di-freeze, mobil melayang di udara).
+        if (_rb != null && freezeRigidbody)
+            _rb.isKinematic = locked;
+    }
+
+    /// <summary>
+    /// Zero-kan torsi & steering yang tersisa di WheelCollider. Dipanggil saat
+    /// kendaraan dikunci (player keluar / spawn / parkir) supaya mobil berhenti
+    /// menyetir sendiri. Inersia (kecepatan) tetap dipegang rigidbody — mobil
+    /// meluncur lalu berhenti alami oleh gesekan.
+    /// </summary>
+    private void ReleaseWheelControls()
+    {
+        foreach (var w in wheels)
+        {
+            if (w.collider == null) continue;
+            w.collider.motorTorque = 0f;
+            w.collider.brakeTorque = 0f;
+            w.collider.steerAngle = 0f;
+        }
     }
 
     #endregion
+
+    /// <summary>
+    /// Dipanggil oleh ModularWeapon saat menembak di kecepatan rendah.
+    /// Non-aktifkan brake torque sesaat biar roda bisa slip dari impulso recoil.
+    /// </summary>
+    public void TriggerRecoilBrakeOverride()
+    {
+        _recoilBrakeOverrideTimer = RECOIL_BRAKE_OVERRIDE_DURATION;
+    }
 
     #region --- GIZMOS ---
 

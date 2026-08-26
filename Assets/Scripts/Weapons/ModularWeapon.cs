@@ -118,6 +118,17 @@ namespace Weapons
         [Tooltip("Semua bagian senjata yang bergerak mundur saat menembak. Masing-masing punya arah & jarak sendiri.")]
         public RecoilPart[] recoilParts;
 
+        [Header("=== RECOIL ON VEHICLE ===")]
+        [Tooltip("Berapa bagian recoil yang diterapkan PERSIS di pusat massa (mendorong mobil MUNDUR). Sisanya (1 - ini) diterapkan di muzzle (efek pitch/nose-lift ringan). Kalau semua diterapkan di muzzle yang tinggi, momen pitch-nya besar + grip ban = mobil SALTO, bukan mundur. 0.8 = 80% dorong mundur, 20% pitch.")]
+        [Range(0f, 1f)]
+        public float recoilLinearFraction = 0.8f;
+
+        [Header("=== RECOIL SAAT MOBIL DIAM / HANDBRAKE ===")]
+        [Tooltip("Kecepatan minimum (m/s) dimana efek angat/pitch recoil mulai muncul. Di bawah ini recoil murni dorongan linear — karena ban (apalagi handbrake) menahan dorongan, pitch di laras cuma bikin moncong terangkat sendirian tanpa mobil gerak.")]
+        public float recoilPitchMinSpeed = 0.5f;
+        [Tooltip("Efek pitch recoil kembali 100% normal pada kecepatan ini (m/s). Di antara kedua nilai di-interpolasi halus biar tidak 'pop' saat akselerasi/deselerasi.")]
+        public float recoilPitchFullSpeed = 2f;
+
         [Header("=== ROTARY PARTS (BISA BANYAK) ===")]
         [Tooltip("Semua bagian senjata yang berputar TERUS-MENERUS (minigun barrel, dll). Masing-masing punya sumbu putar sendiri.")]
         public RotaryPart[] rotaryParts;
@@ -139,6 +150,7 @@ namespace Weapons
         #region --- PRIVATE REFERENCES ---
         private Rigidbody _vehicleRb;
         private VehicleStatsManager _ownerStatsManager;
+        private VehicleController _ownerVehicleController;
 
         // Event untuk memicu animasi dan UI
         public event Action OnReloadStart;
@@ -148,6 +160,8 @@ namespace Weapons
         // Pending recoil — di-accumulate di Fire(), diaplikasikan di FixedUpdate()
         private Vector3 _pendingRecoilImpulse;
         private Vector3 _pendingRecoilPosition;
+        private Vector3 _pendingRecoilPitchImpulse;
+        private Vector3 _pendingRecoilPitchPosition;
         #endregion
 
         #region --- STATIC SPREAD LUT (Shared SEMUA senjata — zero trig runtime) ---
@@ -212,6 +226,7 @@ namespace Weapons
             // Mencari Rigidbody kendaraan induk secara otomatis
             _vehicleRb = GetComponentInParent<Rigidbody>();
             _ownerStatsManager = GetComponentInParent<VehicleStatsManager>();
+            _ownerVehicleController = GetComponentInParent<VehicleController>();
 
             // Static LUT: sekali buat, semua senjata pake
             if (!_lutInitialized)
@@ -503,14 +518,48 @@ namespace Weapons
             ObjectPool.Instance.Despawn(casingRb.gameObject, 3f);
         }
 
-     private void ApplyVehicleRecoil()
+    private void ApplyVehicleRecoil()
     {
         if (_vehicleRb != null && muzzleTransform != null)
         {
             Vector3 recoilDir = -muzzleTransform.forward;
             float impulseMag = weaponData.recoilForce / _vehicleRb.mass;
-            _pendingRecoilImpulse += recoilDir * impulseMag;
-            _pendingRecoilPosition = muzzleTransform.position;
+
+            // Saat mobil diam / handbrake, ban menahan dorongan linear — kalau
+            // komponen pitch tetap dipasang di laras yang tinggi, satu-satunya
+            // efek fisika tersisa = moncong terangkat sendirian (recoil aneh).
+            // Pitch di-fade berdasarkan kecepatan; handbrake memaksa nol.
+            float pitchScale = Mathf.Clamp01(
+                (_vehicleRb.velocity.magnitude - recoilPitchMinSpeed) /
+                Mathf.Max(0.01f, recoilPitchFullSpeed - recoilPitchMinSpeed));
+
+            if (_ownerVehicleController != null && _ownerVehicleController.handbrakeInput > 0.5f)
+                pitchScale = 0f;
+
+            // ARCADE BOOST: saat speed hampir nol, tambah gaya impuls biar tembus
+            // gesekan statis roda (WheelCollider stiffness). Multiplier turun halus
+            // saat speed naik — di atas recoilPitchFullSpeed multiplier = 1 (normal).
+            float speed01 = Mathf.Clamp01(_vehicleRb.velocity.magnitude / Mathf.Max(0.01f, recoilPitchFullSpeed));
+            float arcadeBoost = Mathf.Lerp(3f, 1f, speed01); // 3x di diam, 1x di laju
+            impulseMag *= arcadeBoost;
+
+            // Override brake torque sesaat biar roda bisa slip dari impulso
+            if (_ownerVehicleController != null)
+                _ownerVehicleController.TriggerRecoilBrakeOverride();
+
+            // Total impuls TETAP sama (sudah diboost) — porsi pitch yang hilang dipindah ke
+            // dorongan linear, jadi feel recoil saat melaju tidak berubah.
+            float effectiveLinearFraction = recoilLinearFraction + (1f - recoilLinearFraction) * (1f - pitchScale);
+
+            _pendingRecoilImpulse += recoilDir * (impulseMag * effectiveLinearFraction);
+            _pendingRecoilPosition = _vehicleRb.worldCenterOfMass;
+
+            float pitchFraction = 1f - effectiveLinearFraction;
+            if (pitchFraction > 0f)
+            {
+                _pendingRecoilPitchImpulse += recoilDir * (impulseMag * pitchFraction);
+                _pendingRecoilPitchPosition = muzzleTransform.position;
+            }
         }
     }
 
@@ -520,6 +569,12 @@ namespace Weapons
         {
             _vehicleRb.AddForceAtPosition(_pendingRecoilImpulse, _pendingRecoilPosition, ForceMode.VelocityChange);
             _pendingRecoilImpulse = Vector3.zero;
+        }
+
+        if (_pendingRecoilPitchImpulse.sqrMagnitude > 0f && _vehicleRb != null)
+        {
+            _vehicleRb.AddForceAtPosition(_pendingRecoilPitchImpulse, _pendingRecoilPitchPosition, ForceMode.VelocityChange);
+            _pendingRecoilPitchImpulse = Vector3.zero;
         }
     }
 
