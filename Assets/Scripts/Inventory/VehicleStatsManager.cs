@@ -135,6 +135,11 @@ public class VehicleStatsManager : MonoBehaviour
         gridSystem = GetComponent<VehicleGridSystem>();
         if (gridSystem == null)
             Debug.LogError("[VehicleStatsManager] VehicleGridSystem tidak ditemukan! Tambahkan component VehicleGridSystem ke kendaraan ini.");
+            
+        if (rb != null)
+        {
+            _initialCenterOfMass = rb.centerOfMass;
+        }
     }
 
     void LateUpdate()
@@ -323,9 +328,9 @@ public class VehicleStatsManager : MonoBehaviour
         // Amunisi tersisa disimpan saat kendaraan hilang (keluar battle / pindah scene /
         // mobil meledak). Ammo box yang hancur otomatis tidak ikut tersimpan.
         //
-        // Preview garasi: SKIP ÔÇö amunisi sudah tersimpan saat install/uninstall/refill,
+        // Preview garasi: SKIP — amunisi sudah tersimpan saat install/uninstall/refill,
         // dan ammo tidak bisa berubah di garasi. Menghindari I/O file di frame transisi
-        // scene (lobby Ôåö garasi).
+        // scene (lobby ↔ garasi).
         if (isPreviewMode) return;
 
         PersistAmmo();
@@ -422,6 +427,9 @@ public class VehicleStatsManager : MonoBehaviour
         // Akumulasi drag dari modul
         float totalDragArea = baseData.baseFrontalArea;
 
+        // Siapkan variabel untuk menghitung weighted center of mass
+        Vector3 weightedCenterOfMass = _initialCenterOfMass * baseData.baseMass;
+
         // Hitung stats tambahan dari setiap modul di grid
         if (gridSystem != null)
         {
@@ -443,8 +451,30 @@ public class VehicleStatsManager : MonoBehaviour
                     currentCapacitorCapacity   += template.capacitorCapacity;
                     currentCapacitorChargeRate += template.chargeRate;
 
-                    GridZone moduleZone = gridSystem.gridZones.Find(z => z.zoneName == module.zoneName);
-                    if (moduleZone != null && moduleZone.affectDrag)
+                    Vector3 localPos = Vector3.zero;
+                    if (module.spawnedPrefab != null)
+                    {
+                        localPos = transform.InverseTransformPoint(module.spawnedPrefab.transform.position);
+                    }
+                    else
+                    {
+                        GridZone moduleZone = gridSystem.gridZones.Find(z => z.zoneName == module.zoneName);
+                        if (moduleZone != null && moduleZone.origin != null)
+                        {
+                            int effectiveWidth = (module.rotationAngle == 90 || module.rotationAngle == 270) ? template.height : template.width;
+                            int effectiveHeight = (module.rotationAngle == 90 || module.rotationAngle == 270) ? template.width : template.height;
+                            float zoneCellSize = (moduleZone.cellSize > 0f) ? moduleZone.cellSize : 0.25f;
+                            float offsetX = (module.gridPosition.x + effectiveWidth / 2f) * zoneCellSize;
+                            float offsetZ = (module.gridPosition.y + effectiveHeight / 2f) * zoneCellSize;
+                            Vector3 gridLocalPos = new Vector3(offsetX, 0f, offsetZ);
+                            Vector3 worldPos = moduleZone.origin.TransformPoint(gridLocalPos);
+                            localPos = transform.InverseTransformPoint(worldPos);
+                        }
+                    }
+                    weightedCenterOfMass += localPos * template.weight;
+
+                    GridZone moduleZoneForDrag = gridSystem.gridZones.Find(z => z.zoneName == module.zoneName);
+                    if (moduleZoneForDrag != null && moduleZoneForDrag.affectDrag)
                         totalDragArea += template.dragModifier;
                 }
             }
@@ -479,10 +509,14 @@ public class VehicleStatsManager : MonoBehaviour
             }
         }
 
-        // Terapkan berat total ke Rigidbody
+        // Terapkan berat total dan pusat massa ke Rigidbody
         if (rb != null)
         {
             rb.mass = currentTotalMass;
+            if (currentTotalMass > 0f)
+            {
+                rb.centerOfMass = weightedCenterOfMass / currentTotalMass;
+            }
         }
 
         // Terapkan aerodynamics ke VehicleController
