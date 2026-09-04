@@ -10,6 +10,9 @@ namespace Weapons
     {
         public static ObjectPool Instance { get; private set; }
 
+        [Tooltip("Jumlah objek yang di-instantiate langsung saat prefab pertama kali dipakai (cold start). Ini memindahkan spike alloc dari tiap-tembakan ke satu kali saja, dan pool hidup terus antar scene.")]
+        public int lazyWarmupCount = 8;
+
         private Dictionary<GameObject, Queue<GameObject>> poolDictionary = new Dictionary<GameObject, Queue<GameObject>>();
         private Dictionary<GameObject, GameObject> instanceToPrefabMap = new Dictionary<GameObject, GameObject>();
 
@@ -25,6 +28,9 @@ namespace Weapons
             if (Instance == null)
             {
                 Instance = this;
+                // Pool hidup antar scene — kalau mati, semua object di-destroy massal
+                // (GC spike saat transisi) dan battlefield berikutnya mulai dingin lagi.
+                DontDestroyOnLoad(gameObject);
             }
             else
             {
@@ -67,6 +73,9 @@ namespace Weapons
             if (!poolDictionary.ContainsKey(prefab))
             {
                 poolDictionary[prefab] = new Queue<GameObject>();
+                // Cold start: langsung warmup beberapa objek sekaligus (satu kali alloc),
+                // supaya tembakan berikutnya tidak Instantiate per-tembakan.
+                Warmup(prefab, lazyWarmupCount);
             }
 
             GameObject objectToSpawn;

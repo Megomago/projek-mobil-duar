@@ -52,6 +52,8 @@ public class VehicleUIManager : MonoBehaviour
     public float updateRate = 15f;
 
     private float _nextUpdateTime;
+    private string _lastGearText;
+    private VehicleCriticalPart[] _cachedCritParts;
 
     public void Initialize(VehicleController controller, VehicleStatsManager stats, string vehicleName)
     {
@@ -115,11 +117,19 @@ public class VehicleUIManager : MonoBehaviour
     private void OnGUI()
     {
         if (!showDebugOverlay) return;
+
+        // Debug overlay hanya tampil saat kendaraan ini SEDANG dikendarai player
+        // (VehicleUIManager nempel di prefab mobil → tanpa guard ini overlay muncul
+        // terus walau belum naik mobil / di preview garasi)
+        if (VehicleEntry.ActiveVehicle == null) return;
+        if (VehicleEntry.ActiveVehicle.GetComponent<VehicleUIManager>() != this) return;
+
         DrawDebugOverlay();
     }
 
     private void DrawDebugOverlay()
     {
+        if (vehicle == null) return;
         int x = Screen.width - 330, y = 10, w = 320, h = 20, pad = 2;
         GUIStyle lbl = new GUIStyle(GUI.skin.label) { fontSize = 12, normal = { textColor = Color.white } };
         GUI.Box(new Rect(x - 4, y - 8, w + 8, 780), "");
@@ -202,11 +212,19 @@ public class VehicleUIManager : MonoBehaviour
     private void UpdateTelemetry()
     {
         // ── DARI VEHICLE CONTROLLER (speed, gear, rpm, torsi) ──
+        // Semua pakai SetText(format, ...) = alloc-free (buffer internal TMP)
         if (speedText != null)
-            speedText.text = $"{Mathf.FloorToInt(vehicle.speedKmh)} <size=50%>km/h</size>";
+            speedText.SetText("{0} <size=50%>km/h</size>", Mathf.FloorToInt(vehicle.speedKmh));
 
         if (gearText != null)
-            gearText.text = vehicle.GetGearName();
+        {
+            string gear = vehicle.GetGearName();
+            if (gear != _lastGearText)
+            {
+                _lastGearText = gear;
+                gearText.text = gear;
+            }
+        }
 
         if (rpmBarFill != null && vehicle.engine.maxRPM > 0f)
         {
@@ -216,7 +234,7 @@ public class VehicleUIManager : MonoBehaviour
         }
 
         if (torqueText != null)
-            torqueText.text = $"{vehicle.currentTorqueNm:F0} <size=50%>Nm</size>";
+            torqueText.SetText("{0} <size=50%>Nm</size>", Mathf.FloorToInt(vehicle.currentTorqueNm));
 
         if (statsManager == null) return;
 
@@ -225,15 +243,15 @@ public class VehicleUIManager : MonoBehaviour
 
         // Fuel
         if (fuelAmountText != null)
-            fuelAmountText.text = statsManager.currentFuelAmount.ToString("0.0") + " L";
+            fuelAmountText.SetText("{0:0.0} L", statsManager.currentFuelAmount);
 
         if (fuelCapacityText != null)
-            fuelCapacityText.text = statsManager.currentFuelCapacity.ToString("0") + " L";
+            fuelCapacityText.SetText("{0:0} L", statsManager.currentFuelCapacity);
 
         if (fuelConsumptionText != null)
         {
             if (vc != null)
-                fuelConsumptionText.text = vc.currentFuelConsumptionRate.ToString("0.00") + " L/s";
+                fuelConsumptionText.SetText("{0:0.00} L/s", vc.currentFuelConsumptionRate);
             else
                 fuelConsumptionText.text = "0.00 L/s";
         }
@@ -243,51 +261,55 @@ public class VehicleUIManager : MonoBehaviour
 
         // Electrical
         if (batteryAmountText != null)
-            batteryAmountText.text = statsManager.currentBatteryAmount.ToString("0.0") + " Wh";
+            batteryAmountText.SetText("{0:0.0} Wh", statsManager.currentBatteryAmount);
 
         if (batteryCapacityText != null)
-            batteryCapacityText.text = statsManager.currentBatteryCapacity.ToString("0") + " Wh";
+            batteryCapacityText.SetText("{0:0} Wh", statsManager.currentBatteryCapacity);
 
         if (powerGenerationText != null)
         {
             float totalGen = statsManager.currentPowerGeneration;
             if (vehicle != null && vehicle.engineRunning)
                 totalGen += statsManager.enginePowerGeneration;
-            powerGenerationText.text = totalGen.ToString("0") + " W";
+            powerGenerationText.SetText("{0:0} W", totalGen);
         }
 
         if (powerConsumptionText != null)
-            powerConsumptionText.text = statsManager.activePowerConsumption.ToString("0") + " W";
+            powerConsumptionText.SetText("{0:0} W", statsManager.activePowerConsumption);
 
         if (maxPowerOutputText != null)
-            maxPowerOutputText.text = statsManager.currentMaxOutput.ToString("0") + " W";
+            maxPowerOutputText.SetText("{0:0} W", statsManager.currentMaxOutput);
 
         if (capacitorCapacityText != null)
-            capacitorCapacityText.text = statsManager.currentCapacitorCapacity.ToString("0") + " Wh";
+            capacitorCapacityText.SetText("{0:0} Wh", statsManager.currentCapacitorCapacity);
 
         if (capacitorChargeRateText != null)
-            capacitorChargeRateText.text = statsManager.currentCapacitorChargeRate.ToString("0") + " W";
+            capacitorChargeRateText.SetText("{0:0} W", statsManager.currentCapacitorChargeRate);
 
         // Armor & Health
         if (bodyArmorText != null)
-            bodyArmorText.text = statsManager.currentChassisArmor.ToString("0") + " DEF";
+            bodyArmorText.SetText("{0:0} DEF", statsManager.currentChassisArmor);
 
         if (wheelHPText != null || wheelArmorText != null || engineArmorText != null || batteryArmorText != null)
         {
-            foreach (var cp in statsManager.GetComponentsInChildren<VehicleCriticalPart>(false))
+            // Cache array — GetComponentsInChildren tiap frame = alloc
+            if (_cachedCritParts == null)
+                _cachedCritParts = statsManager.GetComponentsInChildren<VehicleCriticalPart>(false);
+
+            foreach (var cp in _cachedCritParts)
             {
                 if (cp.hideFromModuleList) continue;
                 switch (cp.partType)
                 {
                     case VehicleCriticalPart.CriticalPartType.Engine:
-                        if (engineArmorText != null) engineArmorText.text = cp.armor.ToString("0");
+                        if (engineArmorText != null) engineArmorText.SetText("{0:0}", cp.armor);
                         break;
                     case VehicleCriticalPart.CriticalPartType.Battery:
-                        if (batteryArmorText != null) batteryArmorText.text = cp.armor.ToString("0");
+                        if (batteryArmorText != null) batteryArmorText.SetText("{0:0}", cp.armor);
                         break;
                     default:
-                        if (wheelHPText != null) wheelHPText.text = cp.currentHealth.ToString("0");
-                        if (wheelArmorText != null) wheelArmorText.text = cp.armor.ToString("0");
+                        if (wheelHPText != null) wheelHPText.SetText("{0:0}", cp.currentHealth);
+                        if (wheelArmorText != null) wheelArmorText.SetText("{0:0}", cp.armor);
                         break;
                 }
             }
@@ -297,9 +319,9 @@ public class VehicleUIManager : MonoBehaviour
         if (totalWeightText != null)
         {
             if (statsManager.currentTotalMass >= 10000f)
-                totalWeightText.text = (statsManager.currentTotalMass / 1000f).ToString("0.0") + " t";
+                totalWeightText.SetText("{0:0.0} t", statsManager.currentTotalMass / 1000f);
             else
-                totalWeightText.text = statsManager.currentTotalMass.ToString("0") + " kg";
+                totalWeightText.SetText("{0:0} kg", statsManager.currentTotalMass);
         }
     }
 }

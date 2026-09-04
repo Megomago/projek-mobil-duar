@@ -12,6 +12,8 @@ public class UIModuleItem : MonoBehaviour, IBeginDragHandler, IDragHandler, IEnd
     private ModuleTemplate _moduleTemplate;
     private VehicleStatsManager _currentStatsManager;
 
+    public ModuleTemplate CurrentTemplate => _moduleTemplate;
+
     public void Initialize(ModuleTemplate template, VehicleStatsManager statsManager)
     {
         _moduleTemplate = template;

@@ -62,6 +62,9 @@ public class GridVisualizer : MonoBehaviour
     private VehicleStatsManager _statsManager;
     private List<GameObject> _cellObjects = new List<GameObject>();
     private Dictionary<GridKey, SpriteRenderer> _cellRenderers = new Dictionary<GridKey, SpriteRenderer>();
+
+    // Material grid overlay dibagi antar semua instance (dibuat sekali, tidak bocor per spawn)
+    private static Material _cachedOverlayMaterial;
     private bool _isGridVisible = false;
 
     private readonly List<Vector2Int> _clearanceCells = new List<Vector2Int>();
@@ -177,13 +180,22 @@ public class GridVisualizer : MonoBehaviour
 
                         if (gridMaterial != null)
                         {
-                            sr.material = gridMaterial;
+                            // sharedMaterial: JANGAN .material (itu nge-clone per cell = bocor + jebol batching).
+                            // Tint per-cell tetap jalan via sr.color (vertex color).
+                            sr.sharedMaterial = gridMaterial;
                         }
                         else
                         {
-                            // Gunakan shader Custom/GridOverlay yang bikin 100% nembus semua mesh
-                            Shader overlayShader = Shader.Find("Custom/GridOverlay");
-                            if (overlayShader != null) sr.material = new Material(overlayShader);
+                            // Gunakan shader Custom/GridOverlay yang bikin 100% nembus semua mesh.
+                            // Material di-CACHE static — jangan new Material tiap spawn (bocor GPU memory).
+                            if (_cachedOverlayMaterial == null)
+                            {
+                                Shader overlayShader = Shader.Find("Custom/GridOverlay");
+                                if (overlayShader != null)
+                                    _cachedOverlayMaterial = new Material(overlayShader);
+                            }
+                            if (_cachedOverlayMaterial != null)
+                                sr.sharedMaterial = _cachedOverlayMaterial;
                         }
 
                         if (cellSprite.bounds.size.x > 0 && cellSprite.bounds.size.y > 0)

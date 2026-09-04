@@ -112,7 +112,8 @@ namespace Weapons
             else
             {
                 int poolRounds = targetWeapon != null ? targetWeapon.GetRemainingPoolRounds() : 0;
-                ammoText.text = $"{currentAmmo}/{maxAmmo} ({poolRounds})";
+                // SetText(format, args...) = alloc-free (buffer internal TMP), tidak bikin string baru tiap update
+                ammoText.SetText("{0}/{1} ({2})", currentAmmo, maxAmmo, poolRounds);
                 ammoText.color = currentAmmo <= 0 ? Color.red : Color.white;
             }
 
@@ -160,7 +161,7 @@ namespace Weapons
         {
             if (reloadText == null) return;
             float remainingTime = targetWeapon.GetRemainingReloadTime();
-            reloadText.text = $"{remainingTime:F1}s";
+            reloadText.SetText("{0:F1}s", remainingTime); // alloc-free
         }
 
         private void UpdateOverheatUI()

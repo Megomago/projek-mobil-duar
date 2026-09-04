@@ -7,63 +7,65 @@ Shader "Custom/GridOverlay"
     }
     SubShader
     {
-        Tags 
-        { 
-            "Queue"="Overlay+100" 
-            "IgnoreProjector"="True" 
-            "RenderType"="Transparent" 
+        Tags
+        {
+            "Queue"="Overlay+100"
+            "IgnoreProjector"="True"
+            "RenderType"="Transparent"
             "PreviewType"="Plane"
             "CanUseSpriteAtlas"="True"
         }
-        
+
         Cull Off
-        Lighting Off
         ZWrite Off
-        ZTest Always // <--- Bikin tembus semua object
+        ZTest Always // X-ray: tembus semua mesh
         Blend SrcAlpha OneMinusSrcAlpha
 
         Pass
         {
-            CGPROGRAM
+            HLSLPROGRAM
             #pragma vertex vert
             #pragma fragment frag
-            #include "UnityCG.cginc"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
 
-            struct appdata_t
+            struct Attributes
             {
-                float4 vertex   : POSITION;
-                float4 color    : COLOR;
-                float2 texcoord : TEXCOORD0;
+                float4 positionOS : POSITION;
+                float4 color       : COLOR;
+                float2 uv          : TEXCOORD0;
             };
 
-            struct v2f
+            struct Varyings
             {
-                float4 vertex   : SV_POSITION;
-                fixed4 color    : COLOR;
-                float2 texcoord : TEXCOORD0;
+                float4 positionHCS : SV_POSITION;
+                float4 color       : COLOR;
+                float2 uv          : TEXCOORD0;
             };
 
-            fixed4 _Color;
+            TEXTURE2D(_MainTex);
+            SAMPLER(sampler_MainTex);
 
-            v2f vert(appdata_t IN)
+            CBUFFER_START(UnityPerMaterial)
+                float4 _MainTex_ST;
+                half4 _Color;
+            CBUFFER_END
+
+            Varyings vert (Attributes IN)
             {
-                v2f OUT;
-                OUT.vertex = UnityObjectToClipPos(IN.vertex);
-                OUT.texcoord = IN.texcoord;
+                Varyings OUT;
+                OUT.positionHCS = TransformObjectToHClip(IN.positionOS.xyz);
+                OUT.uv = TRANSFORM_TEX(IN.uv, _MainTex);
+                // UNLIT: warna final cuma dari texture x tint, cahaya/fog diabaikan total
                 OUT.color = IN.color * _Color;
                 return OUT;
             }
 
-            sampler2D _MainTex;
-
-            fixed4 frag(v2f IN) : SV_Target
+            half4 frag (Varyings IN) : SV_Target
             {
-                fixed4 c = tex2D(_MainTex, IN.texcoord) * IN.color;
-                // Premultiply alpha if needed, but standard blend doesn't need it
-                // c.rgb *= c.a; 
+                half4 c = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, IN.uv) * IN.color;
                 return c;
             }
-            ENDCG
+            ENDHLSL
         }
     }
 }
