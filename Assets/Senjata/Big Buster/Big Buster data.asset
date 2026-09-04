@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: Big Buster data
   m_EditorClassIdentifier: 
   weaponName: Big Buster 50
-  weaponIcon: {fileID: 0}
+  weaponIcon: {fileID: 21300000, guid: b579b1ac2e8ea114b876aec789c8441f, type: 3}
   weapon3DPrefab: {fileID: 7133440297363014158, guid: 9ec46e7abf023e145b05bf5d4f65e6cf,
     type: 3}
   hudPrefab: {fileID: 6880005277670001014, guid: 173b46495b470c74f97a41a24a558c6b,
@@ -22,12 +22,13 @@ MonoBehaviour:
   fireRateRPM: 600
   attackPower: 100
   penetration: 150
+  ammoCostPerShot: 1
   maxAmmo: 1
   autoReload: 1
   reloadTime: 7
   projectilePrefab: {fileID: 8680127872553205067, guid: c39673d2bc131f143830ad11f6c161f9,
     type: 3}
-  pelletCount: 12
+  pelletCount: 50
   baseDispersion: 2
   chokeMultiplier: 1
   enableOverheat: 0
@@ -42,6 +43,10 @@ MonoBehaviour:
   shootSound: {fileID: 8300000, guid: 8093aef2a2a76204981f4bc38cd3a3c1, type: 3}
   reloadSound: {fileID: 0}
   emptyClickSound: {fileID: 0}
+  minPitch: 0.85
+  maxPitch: 1
+  minVolume: 0.9
+  maxVolume: 1
   casingPrefab: {fileID: 6428558085314955693, guid: 81ffa24a43ebf9a42896898bba6d7b95,
     type: 3}
   casingEjectDelay: 0
@@ -59,3 +64,9 @@ MonoBehaviour:
   magazineDespawnTime: 3
   magazineDropForce: {x: 0, y: -1.5, z: 0}
   magazineDropTorque: 2
+  isExplosive: 0
+  explosiveRadius: 5
+  explosiveDamage: 200
+  explosiveForce: 500
+  explosionVFXPrefab: {fileID: 0}
+  explosionSFX: {fileID: 0}

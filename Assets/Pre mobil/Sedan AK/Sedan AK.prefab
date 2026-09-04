@@ -1613,8 +1613,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 351b3800a2ad11b4790a13cce1b80f76, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  hudContainer: {fileID: 6957116981271434197, guid: 695ecd969820f064eb7b275d4f6d055a,
-    type: 3}
+  hudContainer: {fileID: 0}
   usePlayerInput: 1
 --- !u!114 &311470256510549160
 MonoBehaviour:
