@@ -17,10 +17,21 @@ public enum ModuleType
 [CreateAssetMenu(fileName = "New Module Template", menuName = "Vehicle/Module Template")]
 public class ModuleTemplate : ScriptableObject
 {
+    [Header("Identity")]
+    [Tooltip("ID unik STABIL untuk save/load. Digenerate otomatis — jangan diubah manual.")]
+    [SerializeField] private string uid;
+    public string UID => uid;
+
     [Header("Basic Info")]
     public string moduleName = "New Module";
     public ModuleType moduleType = ModuleType.Other;
     public Sprite moduleIcon;
+
+    private void OnValidate()
+    {
+        if (string.IsNullOrEmpty(uid))
+            uid = System.Guid.NewGuid().ToString("N");
+    }
     
     [Header("Weapon Data (Hanya untuk Tipe Senjata)")]
     [Tooltip("Masukkan WeaponData jika modul ini adalah Senjata. Jika diisi, Nama, Icon, dan Prefab 3D akan otomatis mengambil dari WeaponData.")]
