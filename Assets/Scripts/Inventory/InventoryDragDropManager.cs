@@ -4,7 +4,29 @@ using System.Collections.Generic;
 
 public class InventoryDragDropManager : MonoBehaviour
 {
-    public static InventoryDragDropManager Instance;
+    private static InventoryDragDropManager _instance;
+
+    /// <summary>
+    /// Lazy singleton: kalau belum ada di scene (lupa pasang), dibuat otomatis saat Play.
+    /// Di EditMode tetap null biar script ExecuteAlways ga ngotorin scene.
+    /// </summary>
+    public static InventoryDragDropManager Instance
+    {
+        get
+        {
+            if (_instance == null)
+            {
+                _instance = FindObjectOfType<InventoryDragDropManager>();
+                if (_instance == null && Application.isPlaying)
+                {
+                    var go = new GameObject("InventoryDragDropManager (Auto)");
+                    _instance = go.AddComponent<InventoryDragDropManager>();
+                }
+            }
+            return _instance;
+        }
+        private set { _instance = value; }
+    }
 
     [Header("Settings")]
     [Tooltip("Material transparan warna hijau untuk menandakan posisi valid")]
@@ -42,14 +64,38 @@ public class InventoryDragDropManager : MonoBehaviour
     public int CurrentAngle => _currentAngle;
     public bool CanPlace => _canPlace;
 
+    [Header("Move Mode")]
+    [Tooltip("Event sekali-pakai saat drag-move selesai: (hasil install/restore, manager). Null = hilang (seharusnya tak terjadi).")]
+    public System.Action<PlacedModule, VehicleStatsManager> onMoveFinished;
+
+    // Backup modul yang sedang dipindah (di-uninstall dulu, direstore kalau batal/gagal)
+    private bool _isMoveMode = false;
+    private ModuleTemplate _moveTemplate;
+    private string _moveZone;
+    private Vector2Int _movePos;
+    private int _moveAngle;
+    private VehicleStatsManager _moveManager;
+
     private void Awake()
     {
-        if (Instance == null) Instance = this;
-        else Destroy(gameObject);
+        // Pakai backing field langsung — JANGAN via property Instance
+        // (getter-nya bisa auto-create / Find yang bikin logika terbalik di sini)
+        if (_instance == null)
+            _instance = this;
+        else if (_instance != this)
+        {
+            Destroy(gameObject);
+            return;
+        }
 
         // Cache Camera.main SEKALI di awal. JANGAN dipanggil di Update()!
         _mainCam = Camera.main;
         if (_mainCam == null) Debug.LogError("[InventoryDragDropManager] Main Camera tidak ditemukan! Kasih tag 'MainCamera' di Camera lu.");
+    }
+
+    private void OnDestroy()
+    {
+        if (_instance == this) _instance = null;
     }
 
     public void StartDrag(ModuleTemplate template, VehicleStatsManager statsManager)
@@ -89,12 +135,21 @@ public class InventoryDragDropManager : MonoBehaviour
         if (prefabToSpawn == null)
         {
             Debug.LogError($"[InventoryDragDropManager] Prefab 3D untuk {template.moduleName} kosong!");
+            // Reset state biar IsDragging ga nyangkut true selamanya (nge-block seleksi)
+            _isDragging = false;
+            _currentTemplate = null;
+            _targetStatsManager = null;
             return;
         }
 
         // Buat hologram/proxy
         _proxyObject = Instantiate(prefabToSpawn);
         _proxyObject.name = "DragProxy_" + template.moduleName;
+
+        // Proxy ikut layer X-ray biar kelihatan saat drag ke zona internal
+        int xrayLayer = LayerMask.NameToLayer("PlacedModule");
+        if (xrayLayer != -1)
+            SetLayerRecursively(_proxyObject, xrayLayer);
             
         // === OPTIMIZATION: Cache semua component SEKALI SAAT INSTANTIATE ===
         _cachedRenderers = _proxyObject.GetComponentsInChildren<Renderer>();
@@ -108,6 +163,55 @@ public class InventoryDragDropManager : MonoBehaviour
         ApplyMaterialToProxy(validMaterial);
     }
 
+    /// <summary>
+    /// Pindah modul yang sudah terpasang: lepas dulu, drag proxy seperti biasa.
+    /// Batal (klik kanan) / drop gagal = balik ke posisi semula. R = rotate saat drag.
+    /// </summary>
+    public void StartMove(PlacedModule module, VehicleStatsManager statsManager)
+    {
+        if (_isDragging) return;
+        if (module == null || module.moduleTemplate == null || statsManager == null) return;
+
+        // Backup posisi semula sebelum di-uninstall
+        _isMoveMode = true;
+        _moveTemplate = module.moduleTemplate;
+        _moveZone = module.zoneName;
+        _movePos = module.gridPosition;
+        _moveAngle = ((module.rotationAngle % 360) + 360) % 360;
+        _moveManager = statsManager;
+
+        statsManager.UninstallModule(module);
+
+        StartDrag(_moveTemplate, statsManager);
+        if (!_isDragging)
+        {
+            // StartDrag nolak (misal zona invalid) — kembalikan ke semula, jangan hilangkan modul
+            RestoreMoveBackup();
+            CancelDrag();
+            return;
+        }
+        // Lanjut dari rotasi semula, bukan 0
+        _currentAngle = _moveAngle;
+        _lastCheckAngle = -1; // paksa re-check area
+    }
+
+    private PlacedModule RestoreMoveBackup()
+    {
+        if (!_isMoveMode || _moveTemplate == null || _moveManager == null) return null;
+        PlacedModule restored = _moveManager.InstallModule(_moveTemplate, _moveZone, _movePos, _moveAngle);
+        if (restored != null)
+            GridSaveSystem.SaveGrid(_moveManager.gameObject.name, _moveManager.gridSystem);
+        return restored;
+    }
+
+    private void FinishMove(PlacedModule result, VehicleStatsManager mgr)
+    {
+        var cb = onMoveFinished;
+        onMoveFinished = null;
+        if (cb != null && mgr != null)
+            cb.Invoke(result, mgr);
+    }
+
     private void Update()
     {
         if (!_isDragging || _currentTemplate == null || _targetStatsManager == null) return;
@@ -115,7 +219,11 @@ public class InventoryDragDropManager : MonoBehaviour
         // Handle Batal (Klik Kanan)
         if (Input.GetMouseButtonDown(1))
         {
+            PlacedModule restored = RestoreMoveBackup();
+            VehicleStatsManager restoredMgr = _moveManager;
+            bool wasMove = _isMoveMode;
             CancelDrag();
+            if (wasMove) FinishMove(restored, restoredMgr);
             return;
         }
 
@@ -229,17 +337,35 @@ public class InventoryDragDropManager : MonoBehaviour
         // Handle Drop (Lepas Klik Kiri)
         if (Input.GetMouseButtonUp(0))
         {
+            PlacedModule result = null;
+            VehicleStatsManager resultMgr = _targetStatsManager;
+            bool wasMove = _isMoveMode;
+
             if (_canPlace && _lastValidGridPos.x != -1 && !string.IsNullOrEmpty(_lastValidZoneName))
             {
-                bool success = _targetStatsManager.InstallModule(_currentTemplate, _lastValidZoneName, _lastValidGridPos, _currentAngle);
+                PlacedModule installedMod = _targetStatsManager.InstallModule(_currentTemplate, _lastValidZoneName, _lastValidGridPos, _currentAngle);
 
-                if (success)
+                if (installedMod != null)
                 {
                     string vehicleName = _targetStatsManager.gameObject.name;
                     GridSaveSystem.SaveGrid(vehicleName, _targetStatsManager.gridSystem);
+                    result = installedMod;
+                }
+                else if (wasMove)
+                {
+                    // Install gagal (seharusnya tak terjadi) — kembalikan ke semula
+                    result = RestoreMoveBackup();
+                    resultMgr = _moveManager;
                 }
             }
+            else if (wasMove)
+            {
+                // Drop di posisi invalid saat move = balik ke semula, bukan hilang
+                result = RestoreMoveBackup();
+                resultMgr = _moveManager;
+            }
             CancelDrag();
+            if (wasMove) FinishMove(result, resultMgr);
         }
     }
 
@@ -248,6 +374,10 @@ public class InventoryDragDropManager : MonoBehaviour
         _isDragging = false;
         _currentTemplate = null;
         _targetStatsManager = null;
+        _isMoveMode = false;
+        _moveTemplate = null;
+        _moveManager = null;
+        _moveZone = null;
         
         // Bersihin cache biar kagak nge-memory leak nge-refer ke object yang udah hancur
         _cachedRenderers = null;
@@ -279,5 +409,13 @@ public class InventoryDragDropManager : MonoBehaviour
             }
             rend.materials = mats;
         }
+    }
+
+    private static void SetLayerRecursively(GameObject root, int layer)
+    {
+        if (root == null) return;
+        root.layer = layer;
+        foreach (Transform child in root.transform)
+            SetLayerRecursively(child.gameObject, layer);
     }
 }
