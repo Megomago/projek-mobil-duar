@@ -26,6 +26,18 @@ public class PlayerController : MonoBehaviour
         _controller = GetComponent<CharacterController>();
         if (_controller == null)
             _controller = gameObject.AddComponent<CharacterController>();
+
+        // CapsuleCollider statis (tanpa Rigidbody) di prefab manusia REDUNDAN karena
+        // CharacterController sudah mengurus collision. Collider statis yang ikut
+        // bergerak tiap frame bisa MENGGESER rigidbody kendaraan saat nabrak
+        // (bug: mobil kegeser di collider naik-turun). Matikan biar bersih.
+        Collider[] redundantColliders = GetComponents<Collider>();
+        foreach (var col in redundantColliders)
+        {
+            if (col is CharacterController) continue;
+            col.enabled = false;
+        }
+
         _cam = Camera.main;
     }
 
@@ -33,6 +45,16 @@ public class PlayerController : MonoBehaviour
     {
         if (VehicleCamera.Instance != null)
             VehicleCamera.Instance.SetTarget(null);
+
+        // Reset sisa gerakan dari sebelum masuk mobil — kalau player exit sambil
+        // karakter "membawa" velocity lama, dia langsung meluncur sendiri.
+        _moveVelocity = Vector3.zero;
+        _verticalVelocity = Vector3.zero;
+
+        // Sinkronkan arah kamera dengan rotasi spawn (ExitVehicle set rotation
+        // identity). Tanpa ini kamera/karakter "nyentak" ke arah _yaw lama.
+        _yaw = transform.eulerAngles.y;
+        _pitch = 0f;
 
         if (_cam == null) return;
         _cam.transform.position = transform.position + Vector3.up * cameraHeight;

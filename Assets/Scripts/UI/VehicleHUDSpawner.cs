@@ -9,6 +9,9 @@ public class VehicleHUDSpawner : MonoBehaviour
     [Tooltip("Wadah (Container) di Canvas utama tempat HUD akan muncul. Bisa gunakan Container yang sama dengan senjata.")]
     public RectTransform hudContainer;
 
+    [Tooltip("Panel daftar modul (VehicleModuleListUI). Kalau kosong, dicari otomatis.")]
+    public VehicleModuleListUI moduleListUI;
+
     private GameObject _spawnedHUD;
 
     private void Start()
@@ -17,6 +20,7 @@ public class VehicleHUDSpawner : MonoBehaviour
         if (hudContainer == null)
         {
             GameObject containerObj = GameObject.Find("HUD_Container");
+            if (containerObj == null) containerObj = GameObject.Find("HUD container");
             if (containerObj != null) hudContainer = containerObj.GetComponent<RectTransform>();
         }
     }
@@ -25,6 +29,7 @@ public class VehicleHUDSpawner : MonoBehaviour
     {
         if (_spawnedHUD != null)
         {
+            _spawnedHUD.SetActive(false); // Hilang seketika (Destroy dieksekusi end-of-frame) — anti numpuk
             Destroy(_spawnedHUD);
             _spawnedHUD = null;
         }
@@ -59,7 +64,7 @@ public class VehicleHUDSpawner : MonoBehaviour
 
         if (stats != null)
         {
-            VehicleModuleListUI moduleList = FindObjectOfType<VehicleModuleListUI>();
+            VehicleModuleListUI moduleList = moduleListUI != null ? moduleListUI : FindObjectOfType<VehicleModuleListUI>();
             if (moduleList != null)
                 moduleList.Initialize(stats);
         }

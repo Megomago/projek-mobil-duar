@@ -2,6 +2,12 @@ using UnityEngine;
 
 public class VehicleEntry : MonoBehaviour
 {
+    /// <summary>
+    /// Kendaraan yang sedang dikendarai player GLOBAL. Mencegah masuk 2 kendaraan
+    /// sekaligus (2 VehicleEntry overlap → 2 set HUD numpuk).
+    /// </summary>
+    public static VehicleEntry ActiveVehicle;
+
     [Header("=== EXIT POINT ===")]
     [Tooltip("Posisi player saat teleport keluar mobil")]
     public Transform exitPoint;
@@ -19,6 +25,7 @@ public class VehicleEntry : MonoBehaviour
 
     private VehicleController _vehicleController;
     private VehicleGridWeaponTrigger _weaponTrigger;
+    private Coroutine _exitSettleCoroutine;
 
     private void Awake()
     {
@@ -71,7 +78,23 @@ public class VehicleEntry : MonoBehaviour
     public void EnterVehicle()
     {
         if (_player == null) return;
+
+        // Guard global: kalau player masih di kendaraan lain, keluarkan dulu
+        if (ActiveVehicle != null && ActiveVehicle != this)
+        {
+            ActiveVehicle.ExitVehicle();
+        }
+
         _isOccupied = true;
+        ActiveVehicle = this;
+
+        // Player masuk kembali sebelum mobil settle → batalkan rencana freeze,
+        // biarkan mobil dinamis supaya bisa dikendarai.
+        if (_exitSettleCoroutine != null)
+        {
+            StopCoroutine(_exitSettleCoroutine);
+            _exitSettleCoroutine = null;
+        }
 
         _player.gameObject.SetActive(false);
 
@@ -111,7 +134,10 @@ public class VehicleEntry : MonoBehaviour
     public void ExitVehicle()
     {
         if (!_isOccupied) return;
+        if (ActiveVehicle != null && ActiveVehicle != this) return;
+
         _isOccupied = false;
+        ActiveVehicle = null;
 
         if (_player == null)
         {
@@ -137,7 +163,22 @@ public class VehicleEntry : MonoBehaviour
             hudSpawner.ClearHUD();
 
         if (_vehicleController != null)
-            _vehicleController.SetMovementLocked(true);
+        {
+            // Kunci INPUT langsung: kalau ditunda, WASD jalan kaki player ikut
+            // menyetir mobil (GatherInput masih jalan) dan wheel torque tersisa
+            // bikin mobil nggas sendiri. freezeRigidbody:false → kinematic ditunda,
+            // biar mobil tetap bisa jatuh/settle dulu (bukan melayang beku).
+            _vehicleController.SetMovementLocked(true, freezeRigidbody: false);
+
+            // Inersia TETAP (mobil tetap meluncur dari kecepatan saat player turun —
+            // berhenti alami oleh gesekan). Yang dibuang adalah torsi setir sendiri
+            // (ReleaseWheelControls di SetMovementLocked), jadi mobil tidak nggas/
+            // muter sendiri setelah ditinggal.
+
+            // Freeze kinematic setelah mobil benar-benar berhenti menyentuh tanah.
+            if (_exitSettleCoroutine != null) StopCoroutine(_exitSettleCoroutine);
+            _exitSettleCoroutine = StartCoroutine(SettleThenLock());
+        }
 
         EnableTurrets(false);
 
@@ -160,6 +201,53 @@ public class VehicleEntry : MonoBehaviour
         #if UNITY_EDITOR
         Debug.Log("[VehicleEntry] Exited vehicle: " + gameObject.name);
         #endif
+    }
+
+    private void OnDestroy()
+    {
+        // Kendaraan hancur/despawn saat player masih di dalam → lepaskan player biar tidak terkunci
+        if (ActiveVehicle == this)
+        {
+            ActiveVehicle = null;
+            if (_player != null)
+            {
+                _player.gameObject.SetActive(true);
+                _player.transform.position = exitPoint != null ? exitPoint.position : transform.position + transform.right * 2f;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Tunggu rigidbody berhenti (IsSleeping) setelah mobil meluncur sampai berhenti
+    /// alami, lalu freeze kinematic (parkir). Kalau player masuk lagi, coroutine
+    /// dibatalkan di EnterVehicle. Timeout → biarkan dinamis (jangan freeze di udara).
+    /// </summary>
+    private System.Collections.IEnumerator SettleThenLock()
+    {
+        float timeout = 4f;
+        float t = 0f;
+        Rigidbody rb = _vehicleController != null ? _vehicleController.GetComponent<Rigidbody>() : null;
+
+        while (t < timeout)
+        {
+            if (_isOccupied) yield break; // player sudah naik lagi — jangan lock
+            if (rb == null) yield break;
+
+            if (rb.IsSleeping())
+            {
+                if (_vehicleController != null)
+                    _vehicleController.SetMovementLocked(true);
+                _exitSettleCoroutine = null;
+                yield break;
+            }
+
+            t += Time.deltaTime;
+            yield return null;
+        }
+
+        // Timeout: mobil belum settle (misal limbung di bebatuan) → biarkan dinamis,
+        // nanti berhenti sendiri oleh gravitasi/fisika.
+        _exitSettleCoroutine = null;
     }
 
     private void EnableTurrets(bool on)
