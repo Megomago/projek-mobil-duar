@@ -46,7 +46,10 @@ public class VehicleModuleListUI : MonoBehaviour
         {
             if (!part.gameObject.activeInHierarchy) continue;
             if (part.hideFromModuleList) continue;
-            AddItem(string.IsNullOrEmpty(part.partName) ? part.partType.ToString() : part.partName, baseModuleColor);
+            string label = string.IsNullOrEmpty(part.partName) ? part.partType.ToString() : part.partName;
+            if (part.ammoPoint > 0f)
+                label += $" ({part.currentAmmoPoint:0}/{part.ammoPoint:0})";
+            AddItem(label, baseModuleColor);
         }
 
         // ── INSTALLED MODULES ──
@@ -54,7 +57,10 @@ public class VehicleModuleListUI : MonoBehaviour
         {
             if (module?.moduleTemplate == null) continue;
             if (module.moduleTemplate.hideFromModuleList) continue;
-            AddItem(module.moduleTemplate.moduleName, installedModuleColor);
+            string label = module.moduleTemplate.moduleName;
+            if (module.moduleTemplate.ammoPoint > 0f)
+                label += $" ({module.currentAmmoPoint:0}/{module.moduleTemplate.ammoPoint:0})";
+            AddItem(label, installedModuleColor);
         }
     }
 
@@ -74,8 +80,13 @@ public class VehicleModuleListUI : MonoBehaviour
 
     private void ClearItems()
     {
-        foreach (var obj in _items)
+        for (int i = _items.Count - 1; i >= 0; i--)
+        {
+            GameObject obj = _items[i];
+            if (obj == null) continue;
+            obj.SetActive(false); // Hilang seketika (Destroy dieksekusi end-of-frame) — anti numpuk
             Destroy(obj);
+        }
         _items.Clear();
     }
 }

@@ -272,9 +272,9 @@ public class VehicleGridSystem : MonoBehaviour
         return true;
     }
 
-    public bool InstallModule(ModuleTemplate template, string targetZoneName, Vector2Int position, int angle)
+    public PlacedModule InstallModule(ModuleTemplate template, string targetZoneName, Vector2Int position, int angle)
     {
-        if (template == null) return false;
+        if (template == null) return null;
 
         GridZone targetZone = null;
         foreach (var z in gridZones)
@@ -286,13 +286,13 @@ public class VehicleGridSystem : MonoBehaviour
         if (targetZone == null || targetZone.origin == null)
         {
             Debug.LogError("[VehicleGridSystem] Zona grid tidak ditemukan atau origin-nya null!");
-            return false;
+            return null;
         }
 
         if (!IsAreaFree(targetZone, position, template, angle))
         {
             Debug.LogWarning($"[VehicleGridSystem] Gagal memasang {template.moduleName} di zona {targetZoneName} posisi {position} karena area penuh atau di luar batas.");
-            return false;
+            return null;
         }
 
         PlacedModule newModule = new PlacedModule(template, targetZoneName, position, angle);
@@ -320,7 +320,7 @@ public class VehicleGridSystem : MonoBehaviour
             GameObject spawned = Instantiate(prefabToSpawn, worldPos, rotation, targetZone.origin);
             newModule.spawnedPrefab = spawned;
 
-            int moduleLayer = LayerMask.NameToLayer("placedmodule");
+            int moduleLayer = LayerMask.NameToLayer("PlacedModule");
             if (moduleLayer != -1)
                 SetLayerRecursively(spawned, moduleLayer);
 
@@ -372,7 +372,7 @@ public class VehicleGridSystem : MonoBehaviour
         if (weaponTrigger != null)
             weaponTrigger.RebuildWeaponHUDs();
 
-        return true;
+        return newModule;
     }
 
     public void UninstallModule(PlacedModule module)

@@ -44,11 +44,17 @@ public class VehicleStatsManager : MonoBehaviour
     [Tooltip("Centang ini kalau vehicle lagi di mode preview/garage")]
     public bool isPreviewMode = false;
 
+    [Header("Grid Save State")]
+    [Tooltip("Diset true setelah LoadGridAsync selesai. Menjaga ammo tidak ter-save saat grid masih loading (anti save parsial).")]
+    [HideInInspector]
+    public bool isGridFullyLoaded = false;
+
     private Rigidbody rb;
     private VehicleController _vc;
     public Rigidbody VehicleRigidbody => rb;
 
     private bool _statsDirty = false;
+    private Vector3 _initialCenterOfMass;
 
     [Header("UI Reference")]
     public VehicleHUD hud;
@@ -104,9 +110,9 @@ public class VehicleStatsManager : MonoBehaviour
         return gridSystem.IsAreaFree(zone, position, templateToPlace, angle, ignoreModule);
     }
 
-    public bool InstallModule(ModuleTemplate template, string targetZoneName, Vector2Int position, int angle)
+    public PlacedModule InstallModule(ModuleTemplate template, string targetZoneName, Vector2Int position, int angle)
     {
-        if (gridSystem == null) return false;
+        if (gridSystem == null) return null;
         return gridSystem.InstallModule(template, targetZoneName, position, angle);
     }
 
@@ -273,6 +279,56 @@ public class VehicleStatsManager : MonoBehaviour
 
         totalAmmoPoints -= points;
         return true;
+    }
+
+    /// <summary>
+    /// Isi ulang amunisi SEMUA ammo box (grid) + critical part ke kapasitas penuh (GRATIS).
+    /// Nanti bisa ditambah biaya resource tanpa mengubah struktur ini.
+    /// </summary>
+    public void RefillAmmo()
+    {
+        if (gridSystem != null)
+        {
+            foreach (var mod in gridSystem.installedModules)
+            {
+                if (mod.moduleTemplate != null && mod.moduleTemplate.ammoPoint > 0f)
+                    mod.currentAmmoPoint = mod.moduleTemplate.ammoPoint;
+            }
+        }
+
+        VehicleCriticalPart[] allCrit = GetComponentsInChildren<VehicleCriticalPart>(true);
+        foreach (var cp in allCrit)
+        {
+            if (cp.ammoPoint > 0f)
+                cp.currentAmmoPoint = cp.ammoPoint;
+        }
+
+        RebuildAmmoCache();
+        MarkStatsDirty();
+        PersistAmmo();
+    }
+
+    /// <summary>
+    /// Simpan sisa amunisi ke file grid. Di-skip kalau grid belum selesai di-load
+    /// (mencegah save parsial menimpa data utuh saat kendaraan hilang di tengah loading).
+    /// </summary>
+    public void PersistAmmo()
+    {
+        if (gridSystem == null || !isGridFullyLoaded) return;
+        GridSaveSystem.SaveGrid(gameObject.name, gridSystem);
+    }
+
+    private void OnDestroy()
+    {
+        // Amunisi tersisa disimpan saat kendaraan hilang (keluar battle / pindah scene /
+        // mobil meledak). Ammo box yang hancur otomatis tidak ikut tersimpan.
+        //
+        // Preview garasi: SKIP ÔÇö amunisi sudah tersimpan saat install/uninstall/refill,
+        // dan ammo tidak bisa berubah di garasi. Menghindari I/O file di frame transisi
+        // scene (lobby Ôåö garasi).
+        if (isPreviewMode) return;
+
+        PersistAmmo();
     }
 
     private void RebuildAmmoCache()

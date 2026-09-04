@@ -38,6 +38,10 @@ public class VehicleHUD : MonoBehaviour
     [Header("Berat")]
     public TextMeshProUGUI totalWeightText;
 
+    [Header("Amunisi")]
+    [Tooltip("Sisa amunisi kendaraan (semua ammo box + critical part). Kosongkan referensi kalau tidak dipakai.")]
+    public TextMeshProUGUI ammoPoolText;
+
     // Referensi aktif ke VehicleStatsManager yang sedang ditampilkan
     private VehicleStatsManager _currentStats;
 
@@ -129,6 +133,10 @@ public class VehicleHUD : MonoBehaviour
         if (maxPowerOutputText     != null) maxPowerOutputText.text     = statsManager.currentMaxOutput.ToString("0") + " W";
         if (capacitorCapacityText  != null) capacitorCapacityText.text  = statsManager.currentCapacitorCapacity.ToString("0") + " Wh";
         if (capacitorChargeRateText!= null) capacitorChargeRateText.text= statsManager.currentCapacitorChargeRate.ToString("0") + " W";
+
+        // ── Amunisi ───────────────────────────────────────────────────
+        if (ammoPoolText != null)
+            ammoPoolText.text = statsManager.totalAmmoPoints.ToString("0") + " pts";
 
         // ── Berat ─────────────────────────────────────────────────────
         if (totalWeightText != null)

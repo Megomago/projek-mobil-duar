@@ -102,11 +102,11 @@ public static class GridSaveSystem
             }
 
             Vector2Int pos = new Vector2Int(saved.gridX, saved.gridY);
-            bool success = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
-            if (success)
+            PlacedModule newModule = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
+            if (newModule != null)
             {
                 loaded++;
-                ApplyAmmoToLastInstalled(gridSystem, saved, layout.version);
+                ApplyAmmoToModule(newModule, saved, layout.version);
             }
         }
         #if UNITY_EDITOR
@@ -118,12 +118,11 @@ public static class GridSaveSystem
     /// Terapkan sisa amunisi dari save ke modul yang baru saja di-install.
     /// Save versi 1 (lama) tidak punya data ammo → modul tetap penuh (default).
     /// </summary>
-    private static void ApplyAmmoToLastInstalled(VehicleGridSystem gridSystem, SavedModule saved, int layoutVersion)
+    private static void ApplyAmmoToModule(PlacedModule placed, SavedModule saved, int layoutVersion)
     {
         if (layoutVersion < 2) return;
-        if (gridSystem.installedModules.Count == 0) return;
+        if (placed == null) return;
 
-        PlacedModule placed = gridSystem.installedModules[gridSystem.installedModules.Count - 1];
         placed.currentAmmoPoint = Mathf.Max(0f, saved.ammoLeft);
     }
 
@@ -170,11 +169,11 @@ public static class GridSaveSystem
             }
 
             Vector2Int pos = new Vector2Int(saved.gridX, saved.gridY);
-            bool success = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
-            if (success)
+            PlacedModule newModule = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
+            if (newModule != null)
             {
                 loaded++;
-                ApplyAmmoToLastInstalled(gridSystem, saved, layout.version);
+                ApplyAmmoToModule(newModule, saved, layout.version);
             }
 
             counter++;
