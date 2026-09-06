@@ -414,12 +414,6 @@ public class VehicleStatsManager : MonoBehaviour
                 currentPowerGeneration += part.powerGeneration;
         }
 
-        // Jika ada kapasitas batre baru, isi proportional (batre baru datang dengan isi)
-        if (currentBatteryCapacity > oldBatteryCapacity)
-            currentBatteryAmount += currentBatteryCapacity - oldBatteryCapacity;
-        if (currentFuelCapacity > oldFuelCapacity)
-            currentFuelAmount += currentFuelCapacity - oldFuelCapacity;
-
         // Cache critical parts untuk Update() — zero hierarchy traversal per frame
         _cachedCriticalParts.Clear();
         _cachedCriticalParts.AddRange(criticalParts);
@@ -474,11 +468,18 @@ public class VehicleStatsManager : MonoBehaviour
                     weightedCenterOfMass += localPos * template.weight;
 
                     GridZone moduleZoneForDrag = gridSystem.gridZones.Find(z => z.zoneName == module.zoneName);
-                    if (moduleZoneForDrag != null && moduleZoneForDrag.affectDrag)
+                    // Zona internal otomatis bebas drag (gabung dengan isInternalGrid)
+                    if (moduleZoneForDrag != null && moduleZoneForDrag.affectDrag && !moduleZoneForDrag.isInternalGrid)
                         totalDragArea += template.dragModifier;
                 }
             }
         }
+
+        // Jika ada kapasitas batre/fuel baru (termasuk dari modul grid), isi proportional (modul baru datang dengan isi)
+        if (currentBatteryCapacity > oldBatteryCapacity)
+            currentBatteryAmount += currentBatteryCapacity - oldBatteryCapacity;
+        if (currentFuelCapacity > oldFuelCapacity)
+            currentFuelAmount += currentFuelCapacity - oldFuelCapacity;
 
         // Hitung total ammo pool & rebuild cache
         totalAmmoPoints = 0f;
