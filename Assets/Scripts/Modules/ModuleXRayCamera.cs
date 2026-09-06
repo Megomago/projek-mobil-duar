@@ -80,6 +80,7 @@ public class ModuleXRayCamera : MonoBehaviour
         if (_baseData == null) return; // bukan URP — mundur teratur
 
         _overlayGo = new GameObject("ModuleXRay Overlay (Auto)");
+        _overlayGo.hideFlags = HideFlags.DontSave; // runtime-only, jangan ikut save scene
         _overlayGo.transform.SetParent(transform, false);
 
         _overlayCam = _overlayGo.AddComponent<Camera>();

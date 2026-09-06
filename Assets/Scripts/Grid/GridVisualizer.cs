@@ -168,6 +168,10 @@ public class GridVisualizer : MonoBehaviour
                         Vector3 localPos = new Vector3(offsetX, 0f, offsetZ);
 
                         GameObject cellObj = new GameObject($"GridCell_{zone.zoneName}_{x}_{y}");
+                        // DontSave: sel runtime TIDAK BOLEH ikut ke-save ke scene/prefab.
+                        // Kalau user drag mobil ke Project (bikin prefab) atau save scene,
+                        // sel-sel ini ikut kebawa = prefab bengkak + visual dobel.
+                        cellObj.hideFlags = HideFlags.DontSave;
                         cellObj.transform.SetParent(zone.origin);
                         cellObj.transform.localPosition = localPos;
                         cellObj.transform.localRotation = Quaternion.Euler(90f, 0f, 0f);
