@@ -19,6 +19,9 @@ public class GridZone
 
     [Tooltip("Centang jika zona ini terkena angin (luar sasis)")]
     public bool affectDrag = true;
+
+    [Tooltip("Zona INTERNAL (dalam bodi). Cuma modul yang centang Can Internal boleh masuk. Otomatis bebas drag.")]
+    public bool isInternalGrid = false;
 }
 
 [System.Serializable]
@@ -93,6 +96,44 @@ public class VehicleGridSystem : MonoBehaviour
     void Awake()
     {
         _statsManager = GetComponent<VehicleStatsManager>();
+        ValidateZones();
+    }
+
+    private void OnValidate()
+    {
+        ValidateZones();
+    }
+
+    /// <summary>
+    /// Validasi zona: nama duplikat = FATAL (install nyasar ke zona pertama + warna grid ketuker).
+    /// Dipanggil di editor (langsung protes pas rename) + saat Play.
+    /// </summary>
+    public void ValidateZones()
+    {
+        if (gridZones == null) return;
+        var seen = new System.Collections.Generic.HashSet<string>();
+        for (int i = 0; i < gridZones.Count; i++)
+        {
+            var z = gridZones[i];
+            if (z == null)
+            {
+                Debug.LogError($"[VehicleGridSystem] {name}: GridZone index {i} null! Hapus entry kosongnya.");
+                continue;
+            }
+            if (string.IsNullOrEmpty(z.zoneName))
+            {
+                Debug.LogError($"[VehicleGridSystem] {name}: GridZone index {i} namanya kosong! Isi nama unik.");
+                continue;
+            }
+            if (!seen.Add(z.zoneName))
+            {
+                Debug.LogError($"[VehicleGridSystem] {name}: NAMA ZONA KEMBAR '{z.zoneName}'! Tiap zona wajib unik — kalau kembar, modul nyasar ke zona pertama + grid merah ketuker zona. Rename salah satunya.");
+            }
+            if (z.origin == null)
+                Debug.LogError($"[VehicleGridSystem] {name}: Zona '{z.zoneName}' origin-nya null! Modul zona ini bakal gagal install.");
+            if (z.capacity.x <= 0 || z.capacity.y <= 0)
+                Debug.LogError($"[VehicleGridSystem] {name}: Zona '{z.zoneName}' capacity {z.capacity} invalid! Minimal 1x1.");
+        }
     }
 
     void Start()
@@ -227,9 +268,14 @@ public class VehicleGridSystem : MonoBehaviour
         return false;
     }
 
-    public bool IsAreaFree(GridZone zone, Vector2Int position, ModuleTemplate templateToPlace, int angle, PlacedModule ignoreModule = null)
+    public bool IsAreaFree(GridZone zone, Vector2Int position, ModuleTemplate templateToPlace, int angle, PlacedModule ignoreModule = null, bool bypassInternal = false)
     {
         if (zone == null || templateToPlace == null) return false;
+
+        // Zona internal: cuma modul Can Internal yang boleh MASUK BARU.
+        // Load save lama di-grandfather (bypass) supaya modul yang sudah terpasang
+        // tidak lenyap + kapasitas tidak anjlok cuma gara-gara aturan baru.
+        if (!bypassInternal && zone.isInternalGrid && !templateToPlace.canInternal) return false;
 
         GetOccupiedCells(position, templateToPlace.width, templateToPlace.height, angle, _tempBaseCellsA);
         GetClearanceCells(position, templateToPlace, angle, _tempClearanceCellsA);
@@ -272,7 +318,7 @@ public class VehicleGridSystem : MonoBehaviour
         return true;
     }
 
-    public PlacedModule InstallModule(ModuleTemplate template, string targetZoneName, Vector2Int position, int angle)
+    public PlacedModule InstallModule(ModuleTemplate template, string targetZoneName, Vector2Int position, int angle, bool bypassInternal = false)
     {
         if (template == null) return null;
 
@@ -289,7 +335,7 @@ public class VehicleGridSystem : MonoBehaviour
             return null;
         }
 
-        if (!IsAreaFree(targetZone, position, template, angle))
+        if (!IsAreaFree(targetZone, position, template, angle, null, bypassInternal))
         {
             Debug.LogWarning($"[VehicleGridSystem] Gagal memasang {template.moduleName} di zona {targetZoneName} posisi {position} karena area penuh atau di luar batas.");
             return null;

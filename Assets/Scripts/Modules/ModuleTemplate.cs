@@ -46,6 +46,8 @@ public class ModuleTemplate : ScriptableObject
     public int width = 1;
     [Tooltip("Panjang modul dalam grid (Y)")]
     public int height = 1;
+    [Tooltip("Centang kalau modul ini boleh masuk grid INTERNAL (dalam bodi). Zona internal nolak modul tanpa centang ini.")]
+    public bool canInternal = false;
 
     [Header("Clearance Settings")]
     [Tooltip("Apakah modul ini berukuran kecil/pipih sehingga bisa ditaruh di bawah laras senjata (clearance zone)?")]
