@@ -102,7 +102,8 @@ public static class GridSaveSystem
             }
 
             Vector2Int pos = new Vector2Int(saved.gridX, saved.gridY);
-            PlacedModule newModule = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
+            // Load = grandfather: aturan internal tidak boleh menggugurkan modul lama
+            PlacedModule newModule = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle, true);
             if (newModule != null)
             {
                 loaded++;
@@ -169,7 +170,8 @@ public static class GridSaveSystem
             }
 
             Vector2Int pos = new Vector2Int(saved.gridX, saved.gridY);
-            PlacedModule newModule = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle);
+            // Load = grandfather: aturan internal tidak boleh menggugurkan modul lama
+            PlacedModule newModule = gridSystem.InstallModule(template, saved.zoneName, pos, saved.rotationAngle, true);
             if (newModule != null)
             {
                 loaded++;

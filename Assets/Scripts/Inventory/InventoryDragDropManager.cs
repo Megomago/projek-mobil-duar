@@ -198,7 +198,8 @@ public class InventoryDragDropManager : MonoBehaviour
     private PlacedModule RestoreMoveBackup()
     {
         if (!_isMoveMode || _moveTemplate == null || _moveManager == null) return null;
-        PlacedModule restored = _moveManager.InstallModule(_moveTemplate, _moveZone, _movePos, _moveAngle);
+        // Restore = kembali ke posisi SEMULA, bukan masuk baru → bypass gate internal
+        PlacedModule restored = _moveManager.InstallModule(_moveTemplate, _moveZone, _movePos, _moveAngle, true);
         if (restored != null)
             GridSaveSystem.SaveGrid(_moveManager.gameObject.name, _moveManager.gridSystem);
         return restored;

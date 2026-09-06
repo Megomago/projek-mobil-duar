@@ -206,7 +206,12 @@ public class GridVisualizer : MonoBehaviour
                         }
 
                         _cellObjects.Add(cellObj);
-                        _cellRenderers[new GridKey(zone.zoneName, x, y)] = sr;
+                        var key = new GridKey(zone.zoneName, x, y);
+                        if (_cellRenderers.ContainsKey(key))
+                        {
+                            Debug.LogError($"[GridVisualizer] KEY KEMBAR {zone.zoneName}({x},{y})! Dua zona pakai nama SAMA — rename zona biar unik, kalau tidak warna grid ketuker zona.");
+                        }
+                        _cellRenderers[key] = sr;
                     }
                 }
             }

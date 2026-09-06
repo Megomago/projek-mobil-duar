@@ -110,10 +110,10 @@ public class VehicleStatsManager : MonoBehaviour
         return gridSystem.IsAreaFree(zone, position, templateToPlace, angle, ignoreModule);
     }
 
-    public PlacedModule InstallModule(ModuleTemplate template, string targetZoneName, Vector2Int position, int angle)
+    public PlacedModule InstallModule(ModuleTemplate template, string targetZoneName, Vector2Int position, int angle, bool bypassInternal = false)
     {
         if (gridSystem == null) return null;
-        return gridSystem.InstallModule(template, targetZoneName, position, angle);
+        return gridSystem.InstallModule(template, targetZoneName, position, angle, bypassInternal);
     }
 
     public void UninstallModule(PlacedModule module)
