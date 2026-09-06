@@ -64,6 +64,10 @@ public class InventoryDragDropManager : MonoBehaviour
     public int CurrentAngle => _currentAngle;
     public bool CanPlace => _canPlace;
 
+    // Alasan penolakan terakhir saat hologram merah. Kosong = bisa dipasang.
+    public string RejectReason => _rejectReason;
+    private string _rejectReason = "";
+
     [Header("Move Mode")]
     [Tooltip("Event sekali-pakai saat drag-move selesai: (hasil install/restore, manager). Null = hilang (seharusnya tak terjadi).")]
     public System.Action<PlacedModule, VehicleStatsManager> onMoveFinished;
@@ -309,6 +313,14 @@ public class InventoryDragDropManager : MonoBehaviour
             _lastValidGridPos = new Vector2Int(gridX, gridY);
             _lastValidZoneName = bestZone.zoneName;
 
+            // Alasan penolakan (biar hologram merah ada tulisannya, ga nebak-nebak)
+            if (bestZone.isInternalGrid && !_currentTemplate.canInternal)
+                _rejectReason = "Zona internal: modul tak berizin (Can Internal mati)";
+            else if (!_canPlace)
+                _rejectReason = "Area penuh / ketabrak modul lain";
+            else
+                _rejectReason = "";
+
             if (_proxyObject != null)
             {
                 float offsetX = (gridX + effectiveWidth / 2f) * cellSize;
@@ -327,6 +339,7 @@ public class InventoryDragDropManager : MonoBehaviour
         {
             _canPlace = false;
             _lastValidZoneName = null;
+            _rejectReason = "Di luar zona grid";
             if (_proxyObject != null)
             {
                 // Unparent proxy so it doesn't stick to an old zone
@@ -375,6 +388,7 @@ public class InventoryDragDropManager : MonoBehaviour
         _isDragging = false;
         _currentTemplate = null;
         _targetStatsManager = null;
+        _rejectReason = "";
         _isMoveMode = false;
         _moveTemplate = null;
         _moveManager = null;
