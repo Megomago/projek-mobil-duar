@@ -187,6 +187,9 @@ public class VehicleGridSystem : MonoBehaviour
                 pm.spawnedPrefab = child.gameObject;
                 pm.currentHealth = template.maxHealth;
 
+                // Baked prefab juga dikunci fisikanya (sama kayak hasil InstallModule)
+                SanitizeInstalledModule(child.gameObject);
+
                 // Register colliders
                 Collider[] cols = child.GetComponentsInChildren<Collider>(true);
                 foreach (var col in cols)
@@ -370,6 +373,13 @@ public class VehicleGridSystem : MonoBehaviour
             if (moduleLayer != -1)
                 SetLayerRecursively(spawned, moduleLayer);
 
+            // Modul = las grid: kunci fisika SELALU (bukan cuma preview).
+            // Rigidbody nyasar (mag/klip prefab) yang hidup di battlefield = bodi
+            // dinamis di dalam mobil = solver ketendang = mobil terbang.
+            // Collider jadi trigger = volume hit-detection saja: raycast/overlap
+            // damage tetap kena, tapi nol gaya kontak + WheelCollider abaikan.
+            SanitizeInstalledModule(spawned);
+
             VehicleModuleComponent moduleComp = spawned.GetComponent<VehicleModuleComponent>();
 
             Collider[] modColliders = spawned.GetComponentsInChildren<Collider>(true);
@@ -395,16 +405,6 @@ public class VehicleGridSystem : MonoBehaviour
                 Animator[] newAnimators = spawned.GetComponentsInChildren<Animator>(true);
                 foreach (var anim in newAnimators)
                     anim.enabled = false;
-
-                Rigidbody[] newRbs = spawned.GetComponentsInChildren<Rigidbody>(true);
-                foreach (var rb in newRbs)
-                {
-                    if (rb != spawned.GetComponentInParent<Rigidbody>())
-                    {
-                        rb.isKinematic = true;
-                        rb.constraints = RigidbodyConstraints.FreezeAll;
-                    }
-                }
             }
         }
 
@@ -481,6 +481,27 @@ public class VehicleGridSystem : MonoBehaviour
         foreach (Transform child in obj.transform)
         {
             SetLayerRecursively(child.gameObject, newLayer);
+        }
+    }
+
+    /// <summary>
+    /// Kunci fisika modul terpasang: modul itu las grid, bukan bodi dinamis.
+    /// - Rigidbody nyasar (mag/klip di prefab senjata) → kinematic + FreezeAll.
+    /// - Collider (kecuali WheelCollider) → trigger: raycast/overlap damage tetap
+    ///   kena, tapi nol gaya kontak (anti mobil terbang) + WheelCollider abaikan.
+    /// </summary>
+    private static void SanitizeInstalledModule(GameObject root)
+    {
+        if (root == null) return;
+        foreach (var rb in root.GetComponentsInChildren<Rigidbody>(true))
+        {
+            rb.isKinematic = true;
+            rb.constraints = RigidbodyConstraints.FreezeAll;
+        }
+        foreach (var col in root.GetComponentsInChildren<Collider>(true))
+        {
+            if (col is WheelCollider) continue;
+            col.isTrigger = true;
         }
     }
 }
