@@ -1422,7 +1422,7 @@ MonoBehaviour:
   currentRPM: 0
   currentTorqueNm: 0
   engineLoad: 0
-  engineRunning: 1
+  engineRunning: 0
   lightsOn: 0
   currentFuelConsumptionRate: 0
   currentGearIndex: 1

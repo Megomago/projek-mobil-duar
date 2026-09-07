@@ -1346,14 +1346,14 @@ MonoBehaviour:
   frontalArea: 2.6
   preventWheelSlipRPM: 1
   movementLocked: 1
-  currentRPM: 650.00006
+  currentRPM: 0
   currentTorqueNm: 0
   engineLoad: 0
-  engineRunning: 1
+  engineRunning: 0
   lightsOn: 0
   currentFuelConsumptionRate: 0
-  currentGearIndex: 0
-  isReverse: 1
+  currentGearIndex: 1
+  isReverse: 0
   clutchValue: 1
   throttleInput: 0
   brakeInput: 0

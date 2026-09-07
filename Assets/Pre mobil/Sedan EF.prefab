@@ -1101,7 +1101,7 @@ MonoBehaviour:
   currentRPM: 0
   currentTorqueNm: 0
   engineLoad: 0
-  engineRunning: 1
+  engineRunning: 0
   currentGearIndex: 1
   isReverse: 0
   clutchValue: 1

@@ -31,21 +31,47 @@ public class EngineAudio : MonoBehaviour
     private void Awake()
     {
         _vc = GetComponent<VehicleController>();
+        // PENTING: selalu mulai silent. Jangan pernah auto-Play di Awake berdasarkan
+        // _vc.engineRunning — nilai itu belum valid di sini karena execution order
+        // Awake antar komponen tidak dijamin (prefab juga bisa ke-save dengan
+        // engineRunning=1). Kalau sempat Play sekilas, kedengaran bocor pas spawn.
+        // Engine yang benar-benar nyala akan di-Play oleh Update() di frame berikutnya.
         if (engineAudioSource != null)
         {
             engineAudioSource.loop = true;
             engineAudioSource.playOnAwake = false;
-            
-            if (_vc.engineRunning)
-            {
-                engineAudioSource.Play();
-            }
-            else
-            {
-                engineAudioSource.volume = 0f;
-                engineAudioSource.Stop();
-            }
+            engineAudioSource.dopplerLevel = 0f;
+            engineAudioSource.rolloffMode = AudioRolloffMode.Linear;
+            engineAudioSource.maxDistance = 120f;
+            engineAudioSource.volume = 0f;
+            engineAudioSource.pitch = minPitch * 0.3f;
+            engineAudioSource.Stop();
         }
+
+        if (starterAudioSource != null)
+        {
+            starterAudioSource.playOnAwake = false;
+            starterAudioSource.dopplerLevel = 0f;
+            starterAudioSource.rolloffMode = AudioRolloffMode.Linear;
+            starterAudioSource.maxDistance = 60f;
+            starterAudioSource.Stop();
+        }
+
+        _prevEngineRunning = false;
+    }
+
+    private void Start()
+    {
+        // Guard kedua: saat Start semua Awake sudah jalan sehingga
+        // _vc.engineRunning sudah definitif. Pastikan tetap silent kalau mesin mati.
+        if (_vc != null && !_vc.engineRunning && engineAudioSource != null)
+        {
+            engineAudioSource.volume = 0f;
+            if (engineAudioSource.isPlaying)
+                engineAudioSource.Stop();
+        }
+        if (_vc != null)
+            _prevEngineRunning = _vc.engineRunning;
     }
 
     private void Update()
