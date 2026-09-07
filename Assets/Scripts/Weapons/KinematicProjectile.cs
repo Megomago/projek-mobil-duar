@@ -183,7 +183,7 @@ namespace Weapons
             // Explosive ammo: bypass kinetic damage pipeline, langsung detonate
             if (_isExplosive)
             {
-                ExplosionManager.Detonate(hit.point, _explosiveRadius, _explosiveDamage, _explosiveForce, statsMgr, hitMask, _ownerStatsManager);
+                ExplosionManager.Detonate(hit.point, _explosiveRadius, _explosiveDamage, _explosiveForce, statsMgr, hitMask, _ownerStatsManager, _pen);
 
                 if (_explosionVFXPrefab != null && ObjectPool.Instance != null)
                 {
@@ -196,7 +196,7 @@ namespace Weapons
                 }
 
                 if (_explosionSFX != null)
-                    AudioSource.PlayClipAtPoint(_explosionSFX, hit.point);
+                    AudioPool.PlayClipAtPoint(_explosionSFX, hit.point, 1f, Random.Range(0.92f, 1.08f), 1f, 150f);
 
                 #if UNITY_EDITOR
                 Debug.DrawLine(hit.point + Vector3.left * 0.3f, hit.point + Vector3.right * 0.3f, Color.red, 3f);

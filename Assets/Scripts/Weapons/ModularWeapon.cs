@@ -231,6 +231,14 @@ namespace Weapons
             // Static LUT: sekali buat, semua senjata pake
             if (!_lutInitialized)
                 InitializeSpreadLUT();
+
+            if (weaponAudioSource != null)
+            {
+                weaponAudioSource.playOnAwake = false;
+                weaponAudioSource.dopplerLevel = 0f;
+                weaponAudioSource.rolloffMode = AudioRolloffMode.Linear;
+                weaponAudioSource.maxDistance = 150f;
+            }
         }
 
         private void Start()
@@ -794,20 +802,29 @@ namespace Weapons
 
         private void PlaySound(AudioClip clip, bool randomize = false)
         {
-            if (weaponAudioSource != null && clip != null)
+            if (clip == null) return;
+
+            if (weaponAudioSource != null)
             {
-                if (randomize)
+                float vol = 1f;
+                if (randomize && weaponData != null)
                 {
                     weaponAudioSource.pitch = Random.Range(weaponData.minPitch, weaponData.maxPitch);
-                    weaponAudioSource.volume = Random.Range(weaponData.minVolume, weaponData.maxVolume);
+                    vol = Random.Range(weaponData.minVolume, weaponData.maxVolume);
                 }
                 else
                 {
                     weaponAudioSource.pitch = 1f;
-                    weaponAudioSource.volume = 1f;
                 }
                 
-                weaponAudioSource.PlayOneShot(clip);
+                weaponAudioSource.PlayOneShot(clip, vol);
+            }
+            else
+            {
+                Vector3 pos = muzzleTransform != null ? muzzleTransform.position : transform.position;
+                float p = (randomize && weaponData != null) ? Random.Range(weaponData.minPitch, weaponData.maxPitch) : 1f;
+                float v = (randomize && weaponData != null) ? Random.Range(weaponData.minVolume, weaponData.maxVolume) : 1f;
+                AudioPool.PlayClipAtPoint(clip, pos, v, p, 1f, 150f);
             }
         }
 
