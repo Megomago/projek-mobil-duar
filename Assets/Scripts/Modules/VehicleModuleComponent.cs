@@ -106,7 +106,7 @@ public class VehicleModuleComponent : MonoBehaviour
         }
 
         if (template.explosionSFX != null)
-            AudioSource.PlayClipAtPoint(template.explosionSFX, pos);
+            AudioPool.PlayClipAtPoint(template.explosionSFX, pos, 1f, Random.Range(0.92f, 1.08f), 1f, 150f);
 
         #if UNITY_EDITOR
         Debug.Log($"BOOM! {template.moduleName} MELEDAK dengan radius {template.explosionRadius}!");
