@@ -30,6 +30,15 @@ public class WheelEffects : MonoBehaviour
     private void Awake()
     {
         _vc = GetComponent<VehicleController>();
+        if (tireSquealSource != null)
+        {
+            tireSquealSource.loop = true;
+            tireSquealSource.playOnAwake = false;
+            tireSquealSource.volume = 0f;
+            tireSquealSource.dopplerLevel = 0f;
+            tireSquealSource.rolloffMode = AudioRolloffMode.Linear;
+            tireSquealSource.maxDistance = 80f;
+        }
     }
 
     private void Update()
@@ -90,9 +99,17 @@ public class WheelEffects : MonoBehaviour
         if (tireSquealSource != null)
         {
             float slipNorm = Mathf.Clamp01(maxSlip / 2f);
-            tireSquealSource.volume = Mathf.Lerp(squealMinVolume, squealMaxVolume, slipNorm);
-            if (slipNorm > 0.1f && !tireSquealSource.isPlaying) tireSquealSource.Play();
-            if (slipNorm <= 0.1f && tireSquealSource.isPlaying) tireSquealSource.Stop();
+            float targetVol = slipNorm > 0.08f ? Mathf.Lerp(squealMinVolume, squealMaxVolume, slipNorm) : 0f;
+            tireSquealSource.volume = Mathf.Lerp(tireSquealSource.volume, targetVol, Time.deltaTime * 10f);
+
+            if (tireSquealSource.volume > 0.005f)
+            {
+                if (!tireSquealSource.isPlaying) tireSquealSource.Play();
+            }
+            else if (tireSquealSource.isPlaying)
+            {
+                tireSquealSource.Stop();
+            }
         }
     }
 }
