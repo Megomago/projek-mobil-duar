@@ -38,7 +38,7 @@ MonoBehaviour:
   heatDispersionMultiplier: 4
   overheatDispersionThreshold: 0.8
   recoilForce: 15000
-  cameraShakeMultiplier: 0.0005
+  cameraShakeMultiplier: 0.00004
   cameraShakeDuration: 0.2
   shootSound: {fileID: 8300000, guid: 8093aef2a2a76204981f4bc38cd3a3c1, type: 3}
   reloadSound: {fileID: 0}
