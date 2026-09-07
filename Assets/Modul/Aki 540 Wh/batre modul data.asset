@@ -12,6 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb63ac7e609242f499101012a8337637, type: 3}
   m_Name: batre modul data
   m_EditorClassIdentifier: 
+  uid: 554287b8edd340a392a21837cb060ecc
   moduleName: Aki Astra GS Premium 540 Wh
   moduleType: 1
   moduleIcon: {fileID: 0}
@@ -20,6 +21,7 @@ MonoBehaviour:
     type: 3}
   width: 1
   height: 1
+  canInternal: 1
   isSmall: 1
   enableClearance: 0
   enableAccessClearance: 1
