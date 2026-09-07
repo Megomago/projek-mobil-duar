@@ -181,7 +181,7 @@ public class VehicleCriticalPart : MonoBehaviour
             }
 
             if (explosionSFX != null)
-                AudioSource.PlayClipAtPoint(explosionSFX, pos);
+                AudioPool.PlayClipAtPoint(explosionSFX, pos, 1f, Random.Range(0.92f, 1.08f), 1f, 150f);
         }
 
         // Nonaktifkan collider & object → stats di-recalculate tanpa part ini
