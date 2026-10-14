@@ -511,7 +511,7 @@ Transform:
   m_LocalPosition: {x: -0.49000004, y: 1.8439999, z: -1.753}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
+  m_Children: []
   m_Father: {fileID: 5941092681032020249}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &3127609265567871416
@@ -590,7 +590,7 @@ MonoBehaviour:
   powerGeneration: 0
   extraBatteryCapacity: 0
   extraFuelCapacity: 40
-  ammoPoint: 0
+  ammoPoint: 200
   currentAmmoPoint: 0
   extraMaxOutput: 0
   capacitorCapacity: 0
@@ -631,7 +631,7 @@ Transform:
   m_LocalPosition: {x: -0.49000004, y: 0.654, z: -1.653}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
-  m_Children:
+  m_Children: []
   m_Father: {fileID: 5941092681032020249}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &4268294722677824163
