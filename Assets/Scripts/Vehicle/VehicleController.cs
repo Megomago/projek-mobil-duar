@@ -210,6 +210,10 @@ public class VehicleController : MonoBehaviour
     [Tooltip("Kunci input dan gerak kendaraan saat tidak dikendalikan player")]
     public bool movementLocked = true;
 
+    [Header("=== VFX ===")]
+    [Tooltip("Otomatis pasang WheelEffects (debu pasir + slip smoke) kalau belum ada")]
+    public bool autoAttachWheelEffects = true;
+
     #endregion
 
     #region --- RUNTIME STATE ---
@@ -274,6 +278,14 @@ public class VehicleController : MonoBehaviour
         InitRigidbody();
         InitWheels();
         InitDefaultCurves();
+
+        if (autoAttachWheelEffects)
+        {
+            if (GetComponent<WheelEffects>() == null)
+                gameObject.AddComponent<WheelEffects>();
+            if (GetComponent<TireTracks>() == null)
+                gameObject.AddComponent<TireTracks>();
+        }
     }
 
     private void Update()
