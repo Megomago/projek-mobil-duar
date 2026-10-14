@@ -195,8 +195,19 @@ public class GridVisualizer : MonoBehaviour
                             if (_cachedOverlayMaterial == null)
                             {
                                 Shader overlayShader = Shader.Find("Custom/GridOverlay");
-                                if (overlayShader != null)
+                                if (overlayShader == null)
+                                {
+                                    // Tanpa shader ini grid jatuh ke Sprites/Default (ZTest LEqual, ZWrite On)
+                                    // dan jadi ketutup mesh mobil. Jangan diam-diam gagal.
+                                    Debug.LogError(
+                                        "[GridVisualizer] Shader 'Custom/GridOverlay' tidak ditemukan. " +
+                                        "Grid AKAN ketutup mesh mobil. Pastikan shader terdaftar di " +
+                                        "Project Settings > Graphics > Always Included Shaders.");
+                                }
+                                else
+                                {
                                     _cachedOverlayMaterial = new Material(overlayShader);
+                                }
                             }
                             if (_cachedOverlayMaterial != null)
                                 sr.sharedMaterial = _cachedOverlayMaterial;

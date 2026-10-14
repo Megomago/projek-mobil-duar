@@ -155,8 +155,21 @@ public class ModuleSelectionManager : MonoBehaviour
             Debug.LogWarning("[ModuleSelectionManager] Custom/XRayLine tidak ketemu, pakai GridOverlay.");
             s = Shader.Find("Custom/GridOverlay");
         }
-        if (s == null) s = Shader.Find("Universal Render Pipeline/Unlit");
-        if (s == null) s = Shader.Find("Sprites/Default");
+        if (s == null)
+        {
+            // JANGAN fallback ke URP/Unlit atau Sprites/Default: keduanya ZTest LEqual + ZWrite On,
+            // jadi bracket jadi bar opaque yang kepotong mesh mobil. Lebih baik bracket mati
+            // daripada tampil salah.
+            Debug.LogError(
+                "[ModuleSelectionManager] Shader 'Custom/XRayLine' DAN 'Custom/GridOverlay' tidak ditemukan. " +
+                "Bracket X-ray dinonaktifkan karena tidak bisa di-render tembus mesh. " +
+                "Pastikan keduanya terdaftar di Project Settings > Graphics > Always Included Shaders.");
+            Destroy(_bracketRoot);
+            _bracketRoot = null;
+            _bracketEdges = null;
+            _bracketMaterial = null;
+            return;
+        }
         _bracketMaterial = new Material(s);
         _bracketMaterial.color = Color.white; // tint via LR start/end color, bukan material
 
