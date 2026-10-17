@@ -1,0 +1,48 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eb63ac7e609242f499101012a8337637, type: 3}
+  m_Name: Basilika 14H modul
+  m_EditorClassIdentifier: 
+  uid: 50f6a93f834d450eab79081b220b614e
+  moduleName: Basilika 14H Mk.2
+  moduleType: 0
+  moduleIcon: {fileID: 0}
+  weaponData: {fileID: 11400000, guid: 6e8bb1eadd9e0c34ea54b496d76c29ff, type: 2}
+  modulePrefab: {fileID: 0}
+  width: 4
+  height: 5
+  canInternal: 0
+  isSmall: 0
+  enableClearance: 1
+  enableAccessClearance: 1
+  clearanceRight: 0
+  clearanceLeft: 0
+  clearanceFront: 5
+  clearanceBack: 0
+  weight: 350
+  maxHealth: 100
+  armor: 10
+  powerConsumption: 0
+  powerGeneration: 0
+  extraBatteryCapacity: 0
+  extraFuelCapacity: 0
+  extraMaxOutput: 0
+  capacitorCapacity: 0
+  chargeRate: 0
+  hideFromModuleList: 0
+  ammoPoint: 0
+  dragModifier: 0
+  volatileExplosive: 0
+  explosionRadius: 1
+  explosionDamage: 100
+  explosionVFXPrefab: {fileID: 0}
+  explosionSFX: {fileID: 0}
