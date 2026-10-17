@@ -29,6 +29,14 @@ namespace Weapons
         [Tooltip("Nilai positif (misal 45) biar laras bebas membidik ke arah luar")]
         public float maxPitchSide = 45f;
 
+        [Header("=== BATAS YAW (OPSIONAL, DEFAULT FULL 360) ===")]
+        [Tooltip("Centang kalau turret ini TIDAK boleh full 360 (mis. senjata samping yang cuma boleh nembak ke depan). Default mati = yaw bebas penuh.")]
+        public bool useYawLimit = false;
+        [Tooltip("Yaw minimum relatif arah depan kendaraan (negatif = ke kiri), rentang -180 s/d 180")]
+        public float minYaw = -90f;
+        [Tooltip("Yaw maximum relatif arah depan kendaraan (positif = ke kanan), rentang -180 s/d 180")]
+        public float maxYaw = 90f;
+
         [Header("=== FITUR ANTI-GEMETERAN (BLIND SPOT FOLD) ===")]
         [Tooltip("Jika target masuk ke bodi mobil/blind spot, senjata samping bakal melipat halus ke posisi lurus")]
         public bool foldInBlindSpot = true;
@@ -43,6 +51,7 @@ namespace Weapons
         private float _activeMinPitch;
         private float _activeMaxPitch;
         private bool _isSideMounted = false;
+        private Transform _vehicleTransform;
 
         private static readonly RaycastHit[] _turretRaycastBuffer = new RaycastHit[32];
 
@@ -65,14 +74,14 @@ namespace Weapons
             _activeMinPitch = minPitch;
             _activeMaxPitch = maxPitch;
 
+            // Cari Rigidbody di parent (pasti bodi utama mobil/tank) — dipakai buat deteksi mounting & referensi batas yaw
+            Rigidbody vehicleRB = GetComponentInParent<Rigidbody>();
+            _vehicleTransform = (vehicleRB != null) ? vehicleRB.transform : transform.root;
+
             if (autoDetectSideMount)
             {
-                // Cari Rigidbody di parent (pasti bodi utama mobil/tank)
-                Rigidbody vehicleRB = GetComponentInParent<Rigidbody>();
-                Transform vehicleTransform = (vehicleRB != null) ? vehicleRB.transform : transform.root;
-                
                 // Konversi arah atas Oerlikon (-transform.forward) ke koordinat lokal bodi mobil
-                Vector3 localTurretUp = vehicleTransform.InverseTransformDirection(-transform.forward);
+                Vector3 localTurretUp = _vehicleTransform.InverseTransformDirection(-transform.forward);
 
                 // JIKA NILAI Y LOKAL DEKAT 0 = Senjata Samping (arah atasnya madep kiri/kanan mobil)
                 // JIKA NILAI Y LOKAL DEKAT 1 = Senjata Atap (arah atasnya searah atap mobil)
@@ -191,9 +200,29 @@ namespace Weapons
             if (currentMuzFlat.sqrMagnitude > 0.001f && targetFlat.sqrMagnitude > 0.001f)
             {
                 float yawError = Vector3.SignedAngle(currentMuzFlat, targetFlat, upAxis);
+
+                if (useYawLimit)
+                {
+                    yawError = ClampYawError(yawError, currentMuzFlat, upAxis);
+                }
+
                 Quaternion targetYawRot = Quaternion.AngleAxis(yawError, upAxis) * turretBase.rotation;
                 turretBase.rotation = Quaternion.RotateTowards(turretBase.rotation, targetYawRot, aimingSpeed * Time.deltaTime);
             }
+        }
+
+        // Clamp yawError biar heading turret (relatif arah depan kendaraan) tetap di rentang [minYaw, maxYaw]
+        private float ClampYawError(float yawError, Vector3 currentMuzFlat, Vector3 upAxis)
+        {
+            if (_vehicleTransform == null) return yawError;
+
+            Vector3 vehicleFlatFwd = Vector3.ProjectOnPlane(_vehicleTransform.forward, upAxis).normalized;
+            if (vehicleFlatFwd.sqrMagnitude < 0.001f) return yawError;
+
+            float currentYaw = Vector3.SignedAngle(vehicleFlatFwd, currentMuzFlat, upAxis);
+            float desiredYaw = currentYaw + yawError;
+            float clampedYaw = Mathf.Clamp(desiredYaw, minYaw, maxYaw);
+            return clampedYaw - currentYaw;
         }
 
         private void AimBarrelPitch(Vector3 targetPoint)
