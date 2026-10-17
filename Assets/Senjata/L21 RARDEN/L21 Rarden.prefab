@@ -184,6 +184,8 @@ MonoBehaviour:
   foldInBlindSpot: 1
   usePlayerInput: 1
   freeLookKey: 99
+  debugAimKey: 284
+  debugHitKey: 283
 --- !u!1 &3368283989897475414
 GameObject:
   m_ObjectHideFlags: 0
@@ -654,7 +656,6 @@ GameObject:
   serializedVersion: 6
   m_Component:
   - component: {fileID: 2286550510215232962}
-  - component: {fileID: 6876502807178897360}
   - component: {fileID: 3619569965256268993}
   - component: {fileID: 5657700743842120352}
   - component: {fileID: 8194406445601047371}
@@ -682,27 +683,6 @@ Transform:
   - {fileID: 2892378216206402501}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
---- !u!95 &6876502807178897360
-Animator:
-  serializedVersion: 5
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 7099321997086278707}
-  m_Enabled: 1
-  m_Avatar: {fileID: 0}
-  m_Controller: {fileID: 0}
-  m_CullingMode: 0
-  m_UpdateMode: 0
-  m_ApplyRootMotion: 0
-  m_LinearVelocityBlending: 0
-  m_StabilizeFeet: 0
-  m_WarningMessage: 
-  m_HasTransformHierarchy: 1
-  m_AllowConstantClipSamplingOptimization: 1
-  m_KeepAnimatorStateOnDisable: 0
-  m_WriteDefaultValuesOnDisable: 0
 --- !u!114 &3619569965256268993
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -734,6 +714,9 @@ MonoBehaviour:
     currentOffset: {x: 0, y: 0, z: 0}
     savedBasePos: {x: 0, y: 0, z: 0}
     hasSavedBasePos: 0
+  recoilLinearFraction: 0.8
+  recoilPitchMinSpeed: 0.5
+  recoilPitchFullSpeed: 2
   rotaryParts: []
   rotatableParts: []
   hideDuringReload: []
@@ -852,6 +835,8 @@ MonoBehaviour:
   baseColor: {r: 1, g: 0, b: 0, a: 0.8}
   clearanceColor: {r: 1, g: 0.5, b: 0, a: 0.8}
   showGizmos: 1
+  yOffset: 0.06
+  xRay: 1
 --- !u!114 &3680923882066123965
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -872,7 +857,10 @@ MonoBehaviour:
     currentHealth: 0
     spawnedPrefab: {fileID: 0}
     currentAmmoPoint: 0
+  moduleTemplate: {fileID: 11400000, guid: af29eaa344618314f8e842498b7bcc4c, type: 2}
   statsManager: {fileID: 0}
+  bakedGridPosition: {x: 0, y: 0}
+  bakedRotationAngle: 0
   currentHealth: 0
   isDestroyed: 0
 --- !u!1 &7118828087197266962
