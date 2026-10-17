@@ -30,12 +30,12 @@ namespace Weapons
         public float maxPitchSide = 45f;
 
         [Header("=== BATAS YAW (OPSIONAL, DEFAULT FULL 360) ===")]
-        [Tooltip("Centang kalau turret ini TIDAK boleh full 360 (mis. senjata samping yang cuma boleh nembak ke depan). Default mati = yaw bebas penuh.")]
+        [Tooltip("Centang kalau turret ini TIDAK boleh full 360. Default mati = yaw bebas penuh.")]
         public bool useYawLimit = false;
-        [Tooltip("Yaw minimum relatif arah depan kendaraan (negatif = ke kiri), rentang -180 s/d 180")]
-        public float minYaw = -90f;
-        [Tooltip("Yaw maximum relatif arah depan kendaraan (positif = ke kanan), rentang -180 s/d 180")]
-        public float maxYaw = 90f;
+        [Tooltip("Yaw minimum relatif ke arah default pasang di garasi (negatif = ke kiri mount), rentang -180 s/d 180")]
+        public float minYaw = -30f;
+        [Tooltip("Yaw maximum relatif ke arah default pasang di garasi (positif = ke kanan mount), rentang -180 s/d 180")]
+        public float maxYaw = 30f;
 
         [Header("=== FITUR ANTI-GEMETERAN (BLIND SPOT FOLD) ===")]
         [Tooltip("Jika target masuk ke bodi mobil/blind spot, senjata samping bakal melipat halus ke posisi lurus")]
@@ -52,6 +52,9 @@ namespace Weapons
         private float _activeMaxPitch;
         private bool _isSideMounted = false;
         private Transform _vehicleTransform;
+
+        // Kuncian arah pasang dari garasi biar gak gila kiblat ke moncong mobil
+        private Vector3 _localMountForward;
 
         private static readonly RaycastHit[] _turretRaycastBuffer = new RaycastHit[32];
 
@@ -74,33 +77,47 @@ namespace Weapons
             _activeMinPitch = minPitch;
             _activeMaxPitch = maxPitch;
 
-            // Cari Rigidbody di parent (pasti bodi utama mobil/tank) — dipakai buat deteksi mounting & referensi batas yaw
+            // Cari Rigidbody di parent (pasti bodi utama mobil/tank)
             Rigidbody vehicleRB = GetComponentInParent<Rigidbody>();
             _vehicleTransform = (vehicleRB != null) ? vehicleRB.transform : transform.root;
 
+            Vector3 upAxis = -transform.forward;
+
+            // CATAT ARAH PASANG DARI GARASI
+            // Kita rekam arah laras awal yang udah diproyeksikan ke upAxis, lalu simpen dalam koordinat lokal mobil
+            if (aimOrigin != null)
+            {
+                Vector3 initialAimFlat = Vector3.ProjectOnPlane(aimOrigin.forward, upAxis).normalized;
+                if (initialAimFlat.sqrMagnitude > 0.001f)
+                {
+                    _localMountForward = _vehicleTransform.InverseTransformDirection(initialAimFlat);
+                }
+                else
+                {
+                    _localMountForward = _vehicleTransform.InverseTransformDirection(transform.up);
+                }
+            }
+
             if (autoDetectSideMount)
             {
-                // Konversi arah atas Oerlikon (-transform.forward) ke koordinat lokal bodi mobil
                 Vector3 localTurretUp = _vehicleTransform.InverseTransformDirection(-transform.forward);
 
-                // JIKA NILAI Y LOKAL DEKAT 0 = Senjata Samping (arah atasnya madep kiri/kanan mobil)
-                // JIKA NILAI Y LOKAL DEKAT 1 = Senjata Atap (arah atasnya searah atap mobil)
                 if (Mathf.Abs(localTurretUp.y) < 0.5f)
                 {
                     _isSideMounted = true;
-                    _activeMinPitch = minPitchSide; // Pake -3 derajat untuk samping
+                    _activeMinPitch = minPitchSide;
                     _activeMaxPitch = maxPitchSide;
                     #if UNITY_EDITOR
-                    Debug.Log($"{gameObject.name} terdeteksi di SAMPING mobil. Limit samping aktif: {_activeMinPitch} s/d {_activeMaxPitch}");
+                    Debug.Log($"{gameObject.name} terdeteksi di SAMPING mobil. Limit samping: {_activeMinPitch} s/d {_activeMaxPitch}");
                     #endif
                 }
                 else
                 {
                     _isSideMounted = false;
-                    _activeMinPitch = minPitch; // Pake -15 derajat untuk atap (Depresi NATO!)
+                    _activeMinPitch = minPitch;
                     _activeMaxPitch = maxPitch;
                     #if UNITY_EDITOR
-                    Debug.Log($"{gameObject.name} terdeteksi di ATAP mobil. Limit atap aktif: {_activeMinPitch} s/d {_activeMaxPitch}");
+                    Debug.Log($"{gameObject.name} terdeteksi di ATAP mobil. Limit atap: {_activeMinPitch} s/d {_activeMaxPitch}");
                     #endif
                 }
             }
@@ -127,7 +144,6 @@ namespace Weapons
             {
                 float desiredPitch = CalculateOriginalDesiredPitch(_currentTargetPoint);
 
-                // Blind spot melipat hanya berlaku untuk senjata samping yang mencoba menembus bodi mobil (pitch < minPitchSide)
                 bool targetInBlindSpot = _isSideMounted && (desiredPitch < _activeMinPitch);
 
                 if (foldInBlindSpot && targetInBlindSpot)
@@ -211,17 +227,22 @@ namespace Weapons
             }
         }
 
-        // Clamp yawError biar heading turret (relatif arah depan kendaraan) tetap di rentang [minYaw, maxYaw]
+        // Clamp yawError relatif terhadap ARAH PASANG DEFAULT DI GARASI
         private float ClampYawError(float yawError, Vector3 currentMuzFlat, Vector3 upAxis)
         {
             if (_vehicleTransform == null) return yawError;
 
-            Vector3 vehicleFlatFwd = Vector3.ProjectOnPlane(_vehicleTransform.forward, upAxis).normalized;
-            if (vehicleFlatFwd.sqrMagnitude < 0.001f) return yawError;
+            // Balikin arah mount lokal ke world space saat kendaraan jalan/manuver
+            Vector3 worldMountFwd = _vehicleTransform.TransformDirection(_localMountForward);
+            Vector3 mountFlatFwd = Vector3.ProjectOnPlane(worldMountFwd, upAxis).normalized;
+            
+            if (mountFlatFwd.sqrMagnitude < 0.001f) return yawError;
 
-            float currentYaw = Vector3.SignedAngle(vehicleFlatFwd, currentMuzFlat, upAxis);
+            // Hitung sudut sekarang relatif ke arah hadap pasang di garasi
+            float currentYaw = Vector3.SignedAngle(mountFlatFwd, currentMuzFlat, upAxis);
             float desiredYaw = currentYaw + yawError;
             float clampedYaw = Mathf.Clamp(desiredYaw, minYaw, maxYaw);
+            
             return clampedYaw - currentYaw;
         }
 
@@ -300,18 +321,15 @@ namespace Weapons
                 }
             }
 
-            // Camera aim line (green = hit, red = miss)
             _debugLineLR.startColor = hitValid ? Color.green : Color.red;
             _debugLineLR.endColor = hitValid ? Color.green : Color.red;
             _debugLineLR.SetPosition(0, playerCamera.transform.position);
             _debugLineLR.SetPosition(1, targetPt);
 
-            // Hit point sphere
             _debugHitPoint.transform.position = targetPt;
             float scale = hitValid ? 0.15f : 0.3f;
             _debugHitPoint.transform.localScale = Vector3.one * scale;
 
-            // Aim origin line (blue)
             float dist = Vector3.Distance(aimOrigin.position, targetPt);
             _debugAimLineLR.startColor = Color.blue;
             _debugAimLineLR.endColor = Color.blue;
@@ -321,7 +339,6 @@ namespace Weapons
 
         private void CreateDebugObjects()
         {
-            // Line from camera to crosshair target
             _debugLineGO = new GameObject("___Debug_AimLine");
             _debugLineGO.transform.SetParent(transform);
             _debugLineLR = _debugLineGO.AddComponent<LineRenderer>();
@@ -330,14 +347,12 @@ namespace Weapons
             _debugLineLR.endWidth = 0.01f;
             _debugLineLR.positionCount = 2;
 
-            // Hit point sphere
             _debugHitPoint = GameObject.CreatePrimitive(PrimitiveType.Sphere);
             _debugHitPoint.name = "___Debug_AimPoint";
             _debugHitPoint.transform.SetParent(transform);
             Collider c = _debugHitPoint.GetComponent<Collider>();
             if (c != null) c.enabled = false;
 
-            // Blue line from aim origin
             _debugAimLineGO = new GameObject("___Debug_AimOriginLine");
             _debugAimLineGO.transform.SetParent(transform);
             _debugAimLineLR = _debugAimLineGO.AddComponent<LineRenderer>();
