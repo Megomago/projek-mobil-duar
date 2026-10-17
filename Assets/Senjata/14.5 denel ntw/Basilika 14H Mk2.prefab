@@ -94,6 +94,7 @@ GameObject:
   - component: {fileID: 2511481055113779591}
   - component: {fileID: 7233276443870163779}
   - component: {fileID: 3716432268898473537}
+  - component: {fileID: 1768153994140277373}
   m_Layer: 0
   m_Name: body pitch
   m_TagString: Untagged
@@ -168,6 +169,27 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &1768153994140277373
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 923053217110130374}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.14736539, y: 1.3159853, z: 0.21182474}
+  m_Center: {x: 0.025305877, y: 0.0070832884, z: 0.053929888}
 --- !u!1 &3023380219835765039
 GameObject:
   m_ObjectHideFlags: 0
@@ -182,6 +204,7 @@ GameObject:
   - component: {fileID: 1183349848347428444}
   - component: {fileID: 418411265612243779}
   - component: {fileID: 5487994897451750230}
+  - component: {fileID: 4808549138707214174}
   m_Layer: 0
   m_Name: 14.5 ref denel ntw smart uv ani mag 1
   m_TagString: Untagged
@@ -326,6 +349,27 @@ MonoBehaviour:
   freeLookKey: 99
   debugAimKey: 284
   debugHitKey: 283
+--- !u!65 &4808549138707214174
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3023380219835765039}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.8693956, y: 0.9067769, z: 0.12329288}
+  m_Center: {x: 0, y: 0.08903872, z: 0.017904786}
 --- !u!1 &3349814268335582400
 GameObject:
   m_ObjectHideFlags: 0
@@ -337,6 +381,7 @@ GameObject:
   - component: {fileID: 2484051031781264504}
   - component: {fileID: 758854854861062166}
   - component: {fileID: 6978676962630940539}
+  - component: {fileID: 5198525391940578060}
   m_Layer: 0
   m_Name: barrel
   m_TagString: Untagged
@@ -411,6 +456,27 @@ MeshRenderer:
   m_SortingLayer: 0
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!65 &5198525391940578060
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3349814268335582400}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 0
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.16682972, y: 2.3425858, z: 0.08186982}
+  m_Center: {x: 0.000000007450581, y: -0.9690962, z: -0.000000067055225}
 --- !u!1 &3828928552335739455
 GameObject:
   m_ObjectHideFlags: 0
@@ -485,7 +551,7 @@ MonoBehaviour:
   ejectionPortTransform: {fileID: 1646872087942051212}
   magazineDropPoint: {fileID: 3953705732899741936}
   recoilParts:
-  - mesh: {fileID: 0}
+  - mesh: {fileID: 2484051031781264504}
     recoilAxis: {x: 0, y: -1, z: 0}
     recoilDistance: 0.3
     snapSpeed: 0
@@ -496,7 +562,7 @@ MonoBehaviour:
     currentOffset: {x: 0, y: 0, z: 0}
     savedBasePos: {x: 0, y: 0, z: 0}
     hasSavedBasePos: 0
-  - mesh: {fileID: 0}
+  - mesh: {fileID: 3953705732899741936}
     recoilAxis: {x: 0, y: -1, z: 0}
     recoilDistance: 0.3
     snapSpeed: 0
