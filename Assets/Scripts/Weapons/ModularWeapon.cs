@@ -26,6 +26,8 @@ namespace Weapons
         public float returnSpeed = 10f;
         [Tooltip("Centang ini jika bagian ini digerakkan juga oleh Animator (misal: Reload)")]
         public bool isAnimated = false;
+        [Tooltip("Reverse arah gerakan: snap MAJU (+) bukan mundur (-). Untuk ammo belt yang bergerak kanan→kiri.")]
+        public bool reverseBehavior = false;
 
         // Runtime state (otomatis, tidak perlu diisi)
         [HideInInspector] public Vector3 originalLocalPos;
@@ -202,6 +204,7 @@ namespace Weapons
                     {
                         part.originalLocalPos = part.mesh.localPosition;
                         part.currentVelocity = Vector3.zero;
+                        part.currentOffset = Vector3.zero;
                     }
                 }
             }
@@ -438,15 +441,17 @@ namespace Weapons
                 {
                     if (part.mesh != null)
                     {
+                        // Reverse: arah dibalik (maju bukan mundur)
+                        float dir = part.reverseBehavior ? 1f : -1f;
+                        Vector3 offset = part.recoilAxis.normalized * part.recoilDistance * dir;
+
                         if (part.isAnimated)
                         {
-                            // Tambahkan ke offset (bukan langsung ke posisi lokal)
-                            part.currentOffset -= part.recoilAxis.normalized * part.recoilDistance;
+                            part.currentOffset += offset;
                         }
                         else
                         {
-                            // Snap mundur secara instan (menghentak)
-                            part.mesh.localPosition -= part.recoilAxis.normalized * part.recoilDistance;
+                            part.mesh.localPosition += offset;
                         }
                     }
                 }
@@ -609,18 +614,18 @@ namespace Weapons
                 if (part.isAnimated)
                 {
                     part.currentOffset = Vector3.SmoothDamp(
-                        part.currentOffset, 
-                        Vector3.zero, 
-                        ref part.currentVelocity, 
+                        part.currentOffset,
+                        Vector3.zero,
+                        ref part.currentVelocity,
                         smoothTime
                     );
                 }
                 else
                 {
                     part.mesh.localPosition = Vector3.SmoothDamp(
-                        part.mesh.localPosition, 
-                        part.originalLocalPos, 
-                        ref part.currentVelocity, 
+                        part.mesh.localPosition,
+                        part.originalLocalPos,
+                        ref part.currentVelocity,
                         smoothTime
                     );
                 }
