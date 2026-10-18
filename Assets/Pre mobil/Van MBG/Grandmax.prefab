@@ -1346,6 +1346,7 @@ MonoBehaviour:
   frontalArea: 2.6
   preventWheelSlipRPM: 1
   movementLocked: 1
+  autoAttachWheelEffects: 1
   currentRPM: 0
   currentTorqueNm: 0
   engineLoad: 0
@@ -2579,7 +2580,8 @@ MonoBehaviour:
   volatileExplosive: 0
   explosionDamage: 200
   explosionRadius: 5
-  explosionVFXPrefab: {fileID: 0}
+  explosionVFXPrefab: {fileID: 3330918266733791263, guid: 9b59fcb2a61a1d5498b8231db5ceed58,
+    type: 3}
   explosionSFX: {fileID: 0}
   destroyedPrefab: {fileID: 0}
 --- !u!65 &5932279255782085389

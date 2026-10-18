@@ -67,6 +67,7 @@ public class VehicleCriticalPart : MonoBehaviour
     public bool isLamp = false;
 
     [Header("Ledakan")]
+    [Tooltip("Penanda part eksplosif (info saja). VFX/SFX ledakan main OTOMATIS saat part hancur asal di-assign — gak perlu dicentang.")]
     public bool volatileExplosive = false;
     public float explosionDamage = 200f;
     public float explosionRadius = 5f;
@@ -154,8 +155,10 @@ public class VehicleCriticalPart : MonoBehaviour
                 Instantiate(destroyedPrefab, pos, Quaternion.identity);
         }
 
-        // Efek ledakan kalo volatile
-        if (volatileExplosive)
+        // Efek ledakan: main kalau VFX/SFX-nya di-assign. Sebelumnya digated flag
+        // volatileExplosive → VFX udah dipasang tapi gak pernah main kalau flag-nya
+        // lupa dicentang. Kehadiran VFX = niat memasang ledakan.
+        if (explosionVFXPrefab != null || explosionSFX != null)
         {
             #if UNITY_EDITOR
             Debug.Log($"[CriticalPart] {partName} MELEDAK!");
