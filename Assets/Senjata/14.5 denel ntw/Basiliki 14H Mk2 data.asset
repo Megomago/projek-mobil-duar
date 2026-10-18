@@ -26,7 +26,7 @@ MonoBehaviour:
   maxAmmo: 5
   autoReload: 1
   reloadTime: 4.5
-  projectilePrefab: {fileID: 1438585710772045704, guid: a0e9a2e013d833545a1b8c86fda4d850,
+  projectilePrefab: {fileID: 7714716819573549247, guid: d2bdf21adf901784b83185ba614f60cc,
     type: 3}
   pelletCount: 1
   baseDispersion: 0.5
@@ -65,7 +65,7 @@ MonoBehaviour:
   magazineDespawnTime: 3
   magazineDropForce: {x: 0, y: -1.5, z: 0}
   magazineDropTorque: 2
-  isExplosive: 0
+  isExplosive: 1
   explosiveRadius: 5
   explosiveDamage: 200
   explosiveForce: 500
