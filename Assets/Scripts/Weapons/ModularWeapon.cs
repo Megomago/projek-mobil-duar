@@ -549,19 +549,16 @@ namespace Weapons
             if (_ownerVehicleController != null && _ownerVehicleController.handbrakeInput > 0.5f)
                 pitchScale = 0f;
 
-            // ARCADE BOOST: saat speed hampir nol, tambah gaya impuls biar tembus
-            // gesekan statis roda (WheelCollider stiffness). Multiplier turun halus
-            // saat speed naik — di atas recoilPitchFullSpeed multiplier = 1 (normal).
-            float speed01 = Mathf.Clamp01(_vehicleRb.velocity.magnitude / Mathf.Max(0.01f, recoilPitchFullSpeed));
-            float arcadeBoost = Mathf.Lerp(3f, 1f, speed01); // 3x di diam, 1x di laju
-            impulseMag *= arcadeBoost;
+            // Recoil disamakan: boost "3x saat diam" DIHAPUS — impuls identik mau diam
+            // atau melaju. (Dulu 3x di speed ~0 buat nembus gesekan statis ban,
+            // efeknya bikin recoil kerasa lebih kuat pas kendaraan diem.)
 
             // Override brake torque sesaat biar roda bisa slip dari impulso
             if (_ownerVehicleController != null)
                 _ownerVehicleController.TriggerRecoilBrakeOverride();
 
-            // Total impuls TETAP sama (sudah diboost) — porsi pitch yang hilang dipindah ke
-            // dorongan linear, jadi feel recoil saat melaju tidak berubah.
+            // Total impuls sama di semua kecepatan — porsi pitch yang hilang dipindah
+            // ke dorongan linear, jadi kekuatan recoil konsisten (diam == melaju).
             float effectiveLinearFraction = recoilLinearFraction + (1f - recoilLinearFraction) * (1f - pitchScale);
 
             _pendingRecoilImpulse += recoilDir * (impulseMag * effectiveLinearFraction);
