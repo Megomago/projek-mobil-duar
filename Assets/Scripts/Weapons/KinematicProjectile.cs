@@ -60,6 +60,27 @@ namespace Weapons
         private static readonly RaycastHit[] _raycastHitsBuffer = new RaycastHit[16];
         private static readonly List<PlacedModule> _chainVictims = new List<PlacedModule>();
 
+        // Material cross debug hit — ZTest Always biar tembus bodi. Cross crit (orange)
+        // sering spawn di DALAM mesin yang ketutup panel bodi; material depth-tested
+        // bikin dia invisible. Cache static: cuma bikin Material 1x, bukan per hit.
+        private static Material _debugCrossMaterial;
+
+        private static Material DebugCrossMaterial
+        {
+            get
+            {
+                if (_debugCrossMaterial == null)
+                {
+                    Shader shader = Shader.Find("Custom/XRayLine");
+                    if (shader == null) shader = Shader.Find("Custom/GridOverlay");
+                    if (shader == null) shader = Shader.Find("Sprites/Default");
+                    _debugCrossMaterial = new Material(shader);
+                    _debugCrossMaterial.hideFlags = HideFlags.DontSave;
+                }
+                return _debugCrossMaterial;
+            }
+        }
+
         private void Awake()
         {
             _trailRenderer = GetComponent<TrailRenderer>();
@@ -185,6 +206,10 @@ namespace Weapons
             {
                 ExplosionManager.Detonate(hit.point, _explosiveRadius, _explosiveDamage, _explosiveForce, statsMgr, hitMask, _ownerStatsManager, _pen);
 
+                // Feedback HUD untuk ammo explosive (part detail di-handle Detonate)
+                if (statsMgr != null && HitFeedbackHUD.IsPlayerShooter(_ownerStatsManager))
+                    HitFeedbackHUD.ReportHit("HE", 0f, false);
+
                 if (_explosionVFXPrefab != null && ObjectPool.Instance != null)
                 {
                     GameObject vfx = ObjectPool.Instance.Spawn(_explosionVFXPrefab, hit.point, Quaternion.LookRotation(hit.normal));
@@ -212,6 +237,11 @@ namespace Weapons
             OptResult? result = null;
             string dbgType = "unknown";
 
+            // Feedback HUD (War Thunder style) — diisi oleh branch yang kena
+            string fbName = null;
+            bool fbDestroyed = false;
+            bool fbKilled = false;
+
             // Bukan kendaraan — cek SimpleTarget dulu sebelum skip
             if (proxy == null && statsMgr == null)
             {
@@ -220,6 +250,8 @@ namespace Weapons
                 {
                     dbgType = "target";
                     result = st.TakeDamage(_atk, EffectivePen, _currentVelocity.magnitude);
+                    fbName = "Target";
+                    fbKilled = st.currentHealth <= 0f;
                     goto AFTER_DAMAGE;
                 }
 
@@ -265,7 +297,10 @@ namespace Weapons
             if (statsMgr != null && statsMgr.moduleColliderMap.TryGetValue(hit.collider, out var hitModule))
             {
                 dbgType = "module";
+                ModuleTemplate fbTemplate = hitModule.moduleTemplate;
                 result = ApplyModuleDamage(hitModule, statsMgr);
+                fbName = fbTemplate != null ? fbTemplate.moduleName : "Module";
+                fbDestroyed = hitModule.currentHealth <= 0f;
                 goto AFTER_DAMAGE;
             }
 
@@ -273,20 +308,28 @@ namespace Weapons
             if (modComp != null && statsMgr != null && modComp.placedModuleData != null)
             {
                 dbgType = "module";
-                result = ApplyModuleDamage(modComp.placedModuleData, statsMgr);
+                PlacedModule fbPlaced = modComp.placedModuleData;
+                ModuleTemplate fbTemplate = fbPlaced.moduleTemplate;
+                result = ApplyModuleDamage(fbPlaced, statsMgr);
+                fbName = fbTemplate != null ? fbTemplate.moduleName : "Module";
+                fbDestroyed = fbPlaced.currentHealth <= 0f;
                 goto AFTER_DAMAGE;
             }
 
             // Modul standalone (tidak terpasang di kendaraan) → damage langsung sekali
             if (modComp != null)
             {
-                float def = 10f;
+                ModuleTemplate fbTemplate = null;
                 if (modComp.placedModuleData != null && modComp.placedModuleData.moduleTemplate != null)
-                    def = modComp.placedModuleData.moduleTemplate.armor;
+                    fbTemplate = modComp.placedModuleData.moduleTemplate;
                 else if (modComp.moduleTemplate != null)
-                    def = modComp.moduleTemplate.armor;
+                    fbTemplate = modComp.moduleTemplate;
+
+                float def = fbTemplate != null ? fbTemplate.armor : 10f;
                 result = OptFormula.Calculate(_atk, EffectivePen, def, _currentVelocity.magnitude);
                 modComp.TakeDamage(result.Value.damage);
+                fbName = fbTemplate != null ? fbTemplate.moduleName : "Module";
+                fbDestroyed = modComp.isDestroyed;
                 dbgType = "module";
                 goto AFTER_DAMAGE;
             }
@@ -297,6 +340,8 @@ namespace Weapons
                 dbgType = "wheel";
                 result = OptFormula.Calculate(_atk, EffectivePen, wheelHealth.armor, _currentVelocity.magnitude);
                 wheelHealth.TakeDamage(result.Value.damage);
+                fbName = "Wheel";
+                fbDestroyed = wheelHealth.isDestroyed;
                 #if UNITY_EDITOR
                 Debug.Log($"[WHEEL] {wheelHealth.gameObject.name} ATK:{_atk} PEN:{_pen} DEF:{wheelHealth.armor} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel} | HP:{wheelHealth.currentHealth}/{wheelHealth.maxHealth}");
                 #endif
@@ -313,6 +358,8 @@ namespace Weapons
                 Debug.Log($"[CRIT] {critPart.partName} ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
                 #endif
                 critPart.TakeDamage(result.Value.damage);
+                fbName = critPart.partName;
+                fbDestroyed = critPart.currentHealth <= 0f;
                 goto AFTER_DAMAGE;
             }
 
@@ -321,6 +368,8 @@ namespace Weapons
             {
                 dbgType = "target";
                 result = simpleTarget.TakeDamage(_atk, EffectivePen, _currentVelocity.magnitude);
+                fbName = "Target";
+                fbKilled = simpleTarget.currentHealth <= 0f;
                 goto AFTER_DAMAGE;
             }
 
@@ -330,12 +379,22 @@ namespace Weapons
                 dbgType = "body";
                 float def = statsMgr.currentChassisArmor;
                 result = OptFormula.Calculate(_atk, EffectivePen, def, _currentVelocity.magnitude);
+                fbName = "Hull";
                 #if UNITY_EDITOR
                 Debug.Log($"[BODY] Chassis ATK:{_atk} PEN:{_pen} DEF:{def} → DMG:{result.Value.damage} PIERCE:{result.Value.pierce} EXIT:{result.Value.exitVel}");
                 #endif
             }
 
         AFTER_DAMAGE:
+            // ——— HIT FEEDBACK HUD (War Thunder style) — hanya saat penembak = kendaraan player ———
+            if (fbName != null && HitFeedbackHUD.IsPlayerShooter(_ownerStatsManager))
+            {
+                if (fbKilled)
+                    HitFeedbackHUD.ReportKill("Target");
+                else
+                    HitFeedbackHUD.ReportHit(fbName, result.HasValue ? result.Value.damage : 0f, fbDestroyed);
+            }
+
             // ——— DEBUG HIT INDICATOR (Build Visible) ———
             SpawnDebugHitCross(hit.point, dbgType);
 
@@ -449,34 +508,56 @@ namespace Weapons
             if (!ShowHitDebug) return;
 
             Color color = Color.white;
+            bool isCritical = false;
             switch (hitType)
             {
                 case "module": color = Color.green; break;
                 case "wheel":  color = Color.red; break;
-                case "crit":   color = Color.yellow; break;
+                case "crit":   color = new Color(1f, 0.5f, 0f); isCritical = true; break; // orange — sengaja beda jauh dari hull (biru)
                 case "body":   color = Color.blue; break;
                 case "target": color = Color.magenta; break;
             }
 
-            Debug.DrawLine(point + Vector3.left * 0.2f, point + Vector3.right * 0.2f, color, 3f);
-            Debug.DrawLine(point + Vector3.up * 0.2f, point + Vector3.down * 0.2f, color, 3f);
-            Debug.DrawLine(point + Vector3.forward * 0.2f, point + Vector3.back * 0.2f, color, 3f);
+            // Critical part: cross lebih besar + tongkat vertikal, biar tidak "menyatu"
+            // dengan cross hull saat posisinya bertumpuk (peluru nembus bodi → kena part)
+            float arm = isCritical ? 0.35f : 0.2f;
+
+            Debug.DrawLine(point + Vector3.left * arm, point + Vector3.right * arm, color, 3f);
+            Debug.DrawLine(point + Vector3.up * arm, point + Vector3.down * arm, color, 3f);
+            Debug.DrawLine(point + Vector3.forward * arm, point + Vector3.back * arm, color, 3f);
 
             GameObject go = new GameObject("___HitDebug");
             go.transform.position = point;
             var lr = go.AddComponent<LineRenderer>();
-            lr.material = new Material(Shader.Find("Sprites/Default"));
+            // sharedMaterial XRayLine (ZTest Always): cross tetap kelihatan walau
+            // spawn di dalam bodi (kasus crit part mesin) — anti ketutup panel.
+            lr.sharedMaterial = DebugCrossMaterial;
             lr.startColor = color;
             lr.endColor = color;
-            lr.startWidth = 0.02f;
-            lr.endWidth = 0.02f;
-            lr.positionCount = 6;
-            lr.SetPositions(new Vector3[]
+            lr.startWidth = isCritical ? 0.035f : 0.02f;
+            lr.endWidth = isCritical ? 0.035f : 0.02f;
+
+            if (isCritical)
             {
-                point + Vector3.left * 0.2f, point + Vector3.right * 0.2f,
-                point + Vector3.up * 0.2f, point + Vector3.down * 0.2f,
-                point + Vector3.forward * 0.2f, point + Vector3.back * 0.2f
-            });
+                lr.positionCount = 8;
+                lr.SetPositions(new Vector3[]
+                {
+                    point + Vector3.left * arm, point + Vector3.right * arm,
+                    point + Vector3.up * arm, point + Vector3.down * arm,
+                    point + Vector3.forward * arm, point + Vector3.back * arm,
+                    point, point + Vector3.up * (arm + 0.3f)
+                });
+            }
+            else
+            {
+                lr.positionCount = 6;
+                lr.SetPositions(new Vector3[]
+                {
+                    point + Vector3.left * arm, point + Vector3.right * arm,
+                    point + Vector3.up * arm, point + Vector3.down * arm,
+                    point + Vector3.forward * arm, point + Vector3.back * arm
+                });
+            }
             Object.Destroy(go, 3f);
         }
 
