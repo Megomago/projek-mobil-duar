@@ -478,6 +478,11 @@ public class VehicleController : MonoBehaviour
             else
             {
                 VehicleStatsManager vsm = GetComponent<VehicleStatsManager>();
+
+                // Part Engine hancur = starter dikunci. Tanpa ini mesin bisa "nyala
+                // tanpa tenaga": audio & RPM free-rev jalan padahal speed/gear diam.
+                if (vsm != null && !vsm.hasFunctionalEngine) return;
+
                 bool hasFuel = vsm == null || vsm.currentFuelAmount > 0f || vsm.isPreviewMode;
                 if (!hasFuel) return;
 

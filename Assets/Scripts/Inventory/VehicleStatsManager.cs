@@ -19,6 +19,9 @@ public class VehicleStatsManager : MonoBehaviour
     public float totalLampPower;
     public float activePowerConsumption;
 
+    [Tooltip("False kalau part Engine hancur — starter dikunci permanen (mesin mati total, audio & RPM free-rev ikut mati)")]
+    public bool hasFunctionalEngine = true;
+
     private float _enginePowerGeneration;
     public float enginePowerGeneration => _enginePowerGeneration;
 
@@ -413,6 +416,11 @@ public class VehicleStatsManager : MonoBehaviour
             else
                 currentPowerGeneration += part.powerGeneration;
         }
+
+        // Part Engine hancur/hilang → kunci starter. Dipakai VehicleController buat nolak
+        // ignition: tanpa ini mesin bisa "nyala tanpa tenaga" (audio + RPM free-rev jalan,
+        // speed/gear diam, charging mati).
+        hasFunctionalEngine = hasEngineModule;
 
         // Cache critical parts untuk Update() — zero hierarchy traversal per frame
         _cachedCriticalParts.Clear();
