@@ -52,6 +52,9 @@ public class VehicleStatsManager : MonoBehaviour
     [HideInInspector]
     public bool isGridFullyLoaded = false;
 
+    [Tooltip("Biarkan ON untuk mobil player. MATIKAN untuk kendaraan bot/dekorasi: grid-nya jangan pernah ditimpa ke file save saat objek hancur / keluar Play mode.")]
+    public bool persistGridOnDestroy = true;
+
     private Rigidbody rb;
     private VehicleController _vc;
     public Rigidbody VehicleRigidbody => rb;
@@ -335,6 +338,10 @@ public class VehicleStatsManager : MonoBehaviour
         // dan ammo tidak bisa berubah di garasi. Menghindari I/O file di frame transisi
         // scene (lobby ↔ garasi).
         if (isPreviewMode) return;
+
+        // Bot/dekorasi: baked grid JANGAN menimpa save player saat play exit / hancur.
+        // (Nama bot di scene bisa sama dengan nama mobil player → file Grid_<nama>.json ketimpa.)
+        if (!persistGridOnDestroy) return;
 
         PersistAmmo();
     }
