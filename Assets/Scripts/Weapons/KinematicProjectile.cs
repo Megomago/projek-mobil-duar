@@ -168,6 +168,22 @@ namespace Weapons
                 if (_piercedColliders.Contains(h.collider)) 
                     continue;
 
+                // Tembus collider kendaraan PENEMBAH sendiri (modul/bodi/roda sendiri).
+                // Kalau cuma di-skip di HandleHit, peluru diam di tempat ("mematung")
+                // karena posisinya tidak pernah maju — misal peluru kena modul yang
+                // terpasang di kendaraan yang sama, persis di depan laras.
+                if (_ownerStatsManager != null)
+                {
+                    var ownerProxy = h.collider.GetComponent<HitboxProxy>();
+                    VehicleStatsManager hitStats = ownerProxy != null ? ownerProxy.statsManager
+                        : h.collider.GetComponentInParent<VehicleStatsManager>();
+                    if (hitStats == _ownerStatsManager)
+                    {
+                        _piercedColliders.Add(h.collider);
+                        continue;
+                    }
+                }
+
                 // Jangan abaikan distance == 0 secara umum, karena bisa jadi itu adalah armor plate 
                 // yang letaknya menempel erat (adjacent) dan kita berada tepat di perbatasannya.
 
@@ -196,10 +212,15 @@ namespace Weapons
             // HitboxProxy: satu GetComponent flat, zero hierarchy traversal
             var proxy = hit.collider.GetComponent<HitboxProxy>();
 
-            // Skip hits on the shooter's own vehicle — prevent self-damage
+            // Skip hits on the shooter's own vehicle — prevent self-damage.
+            // Tandai pierced juga: kalau tidak, raycast frame berikutnya memilih
+            // collider yang sama lagi dan peluru nyangkut mematung di udara.
             var statsMgr = proxy != null ? proxy.statsManager : hit.collider.GetComponentInParent<VehicleStatsManager>();
             if (statsMgr != null && _ownerStatsManager != null && statsMgr == _ownerStatsManager)
+            {
+                _piercedColliders.Add(hit.collider);
                 return;
+            }
 
             // Explosive ammo: bypass kinetic damage pipeline, langsung detonate
             if (_isExplosive)
