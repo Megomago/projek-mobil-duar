@@ -431,7 +431,7 @@ namespace Weapons
             // Efek Guncangan Kamera (Camera Shake) berdasarkan recoil
             if (VehicleCamera.Instance != null && weaponData.cameraShakeMultiplier > 0f)
             {
-                VehicleCamera.Instance.Shake(weaponData.recoilForce * weaponData.cameraShakeMultiplier, weaponData.cameraShakeDuration);
+                VehicleCamera.Instance.Shake(weaponData.GetInstanceID(), weaponData.recoilForce * weaponData.cameraShakeMultiplier, weaponData.cameraShakeDuration);
             }
 
             // Picu animasi hentakan SEMUA recoil part
