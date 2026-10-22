@@ -881,11 +881,11 @@ public class VehicleController : MonoBehaviour
             float nextGearRatio = Mathf.Abs(gearRatios[currentGearIndex - 1].ratio);
             float projectedRPM = Mathf.Abs(_wheelRPM) * nextGearRatio * finalDriveRatio;
             
-            // Paksa turun gigi jika kita berada di bawah Peak Torque RPM, DAN turun gigi tidak akan bikin mesin meleduk (over-rev)
-            if (currentRPM < engine.peakTorqueRPM && projectedRPM < engine.maxRPM * 0.9f)
+            // Hanya downshift kalau RPM beneran sekarat mendekati batas downshift, bukan cuma di bawah peak torque!
+            if (currentRPM < (autoDownshiftRPM + 400f) && projectedRPM < engine.maxRPM * 0.9f)
             {
                 ShiftDown();
-                _shiftCooldown = 0.3f; // Cooldown dicepatkan agar bisa turun gigi berkali-kali dengan cepat
+                _shiftCooldown = 0.5f;
             }
         }
         // Downshift Normal: lebih smooth saat melambat / lepas gas
