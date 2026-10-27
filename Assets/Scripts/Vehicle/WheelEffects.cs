@@ -294,7 +294,7 @@ public class WheelEffects : MonoBehaviour
             }
 
             main.maxParticles = Mathf.Min(main.maxParticles, 200);
-            main.cullingMode = ParticleSystemCullingMode.Automatic;
+            main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
 
             var renderer = dust.GetComponent<ParticleSystemRenderer>();
             if (renderer != null)
@@ -393,7 +393,7 @@ public class WheelEffects : MonoBehaviour
         main.simulationSpace = ParticleSystemSimulationSpace.World;
         main.maxParticles = 200;
         main.playOnAwake = false;
-        main.cullingMode = ParticleSystemCullingMode.Automatic;
+        main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
 
         var emission = ps.emission;
         emission.enabled = true;

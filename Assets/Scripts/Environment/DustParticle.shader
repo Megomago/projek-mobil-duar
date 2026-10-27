@@ -30,6 +30,7 @@
             #pragma fragment frag
 
             #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+            #include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Lighting.hlsl"
 
             struct Attributes
             {
@@ -68,10 +69,13 @@
                 half texAlpha = SAMPLE_TEXTURE2D(_MainTex, sampler_MainTex, i.uv).a;
                 half alpha = texAlpha * i.color.a * _Alpha;
 
-                return half4(_TintColor.rgb, alpha);
+                Light mainLight = GetMainLight();
+                half3 ambient = SampleSH(float3(0, 1, 0));
+                half3 lighting = (mainLight.color * 0.5h) + ambient;
+
+                return half4(_TintColor.rgb * lighting, alpha);
             }
             ENDHLSL
         }
     }
 }
-
