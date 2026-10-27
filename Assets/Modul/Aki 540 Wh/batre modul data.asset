@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: batre modul data
   m_EditorClassIdentifier: 
   uid: 554287b8edd340a392a21837cb060ecc
-  moduleName: Aki Astra GS Premium 540 Wh
+  moduleName: Aki TXL Trilogy 540 WH
   moduleType: 1
   moduleIcon: {fileID: 0}
   weaponData: {fileID: 0}
