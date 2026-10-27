@@ -5368,7 +5368,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2100000, guid: 02d627e5eabf47ba9c6ffd406e122da8, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -10207,7 +10207,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2100000, guid: 02d627e5eabf47ba9c6ffd406e122da8, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -16305,7 +16305,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2100000, guid: 02d627e5eabf47ba9c6ffd406e122da8, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -21847,7 +21847,7 @@ ParticleSystemRenderer:
   m_RenderingLayerMask: 1
   m_RendererPriority: 0
   m_Materials:
-  - {fileID: 0}
+  - {fileID: 2100000, guid: 02d627e5eabf47ba9c6ffd406e122da8, type: 2}
   m_StaticBatchInfo:
     firstSubMesh: 0
     subMeshCount: 0
@@ -28283,6 +28283,7 @@ MonoBehaviour:
   dustSpreadAngle: 28
   dustGravity: -0.02
   driftDustBoost: 1.5
+  dustThickness: 1.6
   dustMaterial: {fileID: 0}
   tireSmokeSystems: []
   smokeThreshold: 0.4
@@ -28313,6 +28314,7 @@ MonoBehaviour:
   markLifetime: 16
   maxPointsPerWheel: 160
   treadWorldLength: 0.7
+  hideWhenDustActive: 0
   trackColor: {r: 0.32, g: 0.27, b: 0.2, a: 0.65}
   treadTexture: {fileID: 0}
   treadNormalMap: {fileID: 0}

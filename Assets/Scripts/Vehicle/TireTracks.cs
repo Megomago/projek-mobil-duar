@@ -26,6 +26,10 @@ public class TireTracks : MonoBehaviour
     [Tooltip("Panjang 1 tile texture tread di dunia (meter)")]
     public float treadWorldLength = 0.7f;
 
+    [Header("=== DUST INTERACTION ===")]
+    [Tooltip("Sembunyikan TOTAL jejak ban saat debu aktif. Default OFF: debu digambar di atas track supaya track tetap ada tapi tertutup debu.")]
+    public bool hideWhenDustActive = false;
+
     [Header("=== LOOK ===")]
     [Tooltip("Warna gelap cetakan. Alpha = seberapa pekat jejaknya")]
     public Color trackColor = new Color(0.32f, 0.27f, 0.20f, 0.65f);
@@ -52,12 +56,18 @@ public class TireTracks : MonoBehaviour
         public readonly List<float> times = new List<float>();
         public readonly List<bool> connect = new List<bool>();
         public bool wasGrounded;
+        public bool dirty;
     }
 
+    private const float FadeRebuildInterval = 0.1f;
+
     private VehicleController _vc;
+    private WheelEffects _wheelEffects;
     private GameObject _container;
     private WheelTrack[] _tracks;
     private Material _material;
+    private float _fadeTimer;
+    private bool _hiddenByDust;
 
     private readonly List<Vector3> _verts = new List<Vector3>(1024);
     private readonly List<Vector3> _norms = new List<Vector3>(1024);
@@ -70,6 +80,7 @@ public class TireTracks : MonoBehaviour
     private void Awake()
     {
         _vc = GetComponent<VehicleController>();
+        _wheelEffects = GetComponent<WheelEffects>();
         if (!enableTracks || _vc == null || _vc.wheels == null || _vc.wheels.Length == 0) return;
 
         _container = new GameObject("TireTracks_" + name);
@@ -103,42 +114,87 @@ public class TireTracks : MonoBehaviour
     {
         if (_tracks == null) return;
 
+        if (_wheelEffects == null) _wheelEffects = GetComponent<WheelEffects>();
+        bool dustActive = hideWhenDustActive && _wheelEffects != null && _wheelEffects.IsDustActive;
+
+        if (_hiddenByDust != dustActive)
+        {
+            _hiddenByDust = dustActive;
+            if (_container != null) _container.SetActive(!dustActive);
+
+            if (!dustActive)
+            {
+                for (int i = 0; i < _tracks.Length; i++)
+                    if (_tracks[i] != null) _tracks[i].dirty = true;
+            }
+        }
+
+        _fadeTimer -= Time.deltaTime;
+        bool fadeTick = _fadeTimer <= 0f;
+        if (fadeTick) _fadeTimer = FadeRebuildInterval;
+
         float speed = _vc.speedKmh;
-        bool fastEnough = speed > minSpeedKmh;
+        bool canTrack = !_vc.movementLocked;
+        bool fastEnough = canTrack && speed > minSpeedKmh;
 
         for (int i = 0; i < _vc.wheels.Length && i < _tracks.Length; i++)
         {
             var w = _vc.wheels[i];
             var track = _tracks[i];
 
-            WheelHit hit = default;
-            bool grounded = w.collider != null && w.collider.GetGroundHit(out hit);
-            float slip = 0f;
-            if (grounded) slip = Mathf.Abs(hit.forwardSlip) + Mathf.Abs(hit.sidewaysSlip);
-
-            bool qualified = grounded && fastEnough && (!slipOnly || slip > slipThreshold);
-
-            if (qualified)
+            if (canTrack)
             {
-                Vector3 p = hit.point + hit.normal * yOffset;
+                WheelHit hit = default;
+                bool grounded = w.collider != null && w.collider.GetGroundHit(out hit);
+                float slip = 0f;
+                if (grounded) slip = Mathf.Abs(hit.forwardSlip) + Mathf.Abs(hit.sidewaysSlip);
 
-                if (track.points.Count == 0)
+                bool qualified = grounded && fastEnough && (!slipOnly || slip > slipThreshold);
+
+                if (qualified)
                 {
-                    AddPoint(track, p, hit.normal, false);
-                }
-                else
-                {
-                    float d = Vector3.Distance(p, track.points[track.points.Count - 1]);
-                    if (!track.wasGrounded || d > segmentSpacing * 8f)
+                    Vector3 p = hit.point + hit.normal * yOffset;
+
+                    if (track.points.Count == 0)
+                    {
                         AddPoint(track, p, hit.normal, false);
-                    else if (d >= segmentSpacing)
-                        AddPoint(track, p, hit.normal, true);
+                        track.dirty = true;
+                    }
+                    else
+                    {
+                        float d = Vector3.Distance(p, track.points[track.points.Count - 1]);
+                        if (!track.wasGrounded || d > segmentSpacing * 8f)
+                        {
+                            AddPoint(track, p, hit.normal, false);
+                            track.dirty = true;
+                        }
+                        else if (d >= segmentSpacing)
+                        {
+                            AddPoint(track, p, hit.normal, true);
+                            track.dirty = true;
+                        }
+                    }
                 }
+
+                track.wasGrounded = grounded;
+            }
+            else
+            {
+                track.wasGrounded = false;
             }
 
-            track.wasGrounded = grounded;
-            DiscardOldest(track);
-            Rebuild(track);
+            if (fadeTick)
+            {
+                int before = track.points.Count;
+                DiscardOldest(track);
+                if (track.points.Count != before) track.dirty = true;
+            }
+
+            if (!dustActive && (track.dirty || (fadeTick && track.points.Count > 0)))
+            {
+                Rebuild(track);
+                track.dirty = false;
+            }
         }
     }
 
@@ -277,20 +333,47 @@ public class TireTracks : MonoBehaviour
         if (trackMaterial != null) return trackMaterial;
         if (_material != null) return _material;
 
-        Shader sh = Shader.Find("Custom/TireTrack");
-        if (sh == null)
+        Material baseMat = Resources.Load<Material>("VehicleFX/TireTrack");
+        if (baseMat != null)
         {
-            Debug.LogWarning("TireTracks: shader Custom/TireTrack tidak ketemu. Tambahkan ke Always Included Shaders.");
-            return null;
+            _material = new Material(baseMat) { name = "TireTrack_Runtime" };
+        }
+        else
+        {
+            Shader sh = Shader.Find("Custom/TireTrack");
+            if (sh == null)
+            {
+                Debug.LogWarning("TireTracks: shader Custom/TireTrack tidak ketemu. Menggunakan fallback shader URP.");
+                sh = Shader.Find("Universal Render Pipeline/Unlit");
+                if (sh == null) sh = Shader.Find("Universal Render Pipeline/Simple Lit");
+                if (sh == null) sh = Shader.Find("Sprites/Default");
+                if (sh == null) sh = Shader.Find("Unlit/Transparent");
+            }
+
+            if (sh == null)
+            {
+                Debug.LogError("TireTracks: Tidak ditemukan shader fallback yang valid!");
+                return null;
+            }
+
+            _material = new Material(sh) { name = "TireTrack_Runtime" };
+        }
+        if (_material.HasProperty("_BaseColor")) _material.SetColor("_BaseColor", trackColor);
+        if (_material.HasProperty("_Color")) _material.SetColor("_Color", trackColor);
+        if (_material.HasProperty("_NormalStrength")) _material.SetFloat("_NormalStrength", normalStrength);
+        if (_material.HasProperty("_EdgeShadow")) _material.SetFloat("_EdgeShadow", edgeShadow);
+        if (_material.HasProperty("_Ambient")) _material.SetFloat("_Ambient", ambient);
+
+        if (treadTexture != null)
+        {
+            if (_material.HasProperty("_BaseMap")) _material.SetTexture("_BaseMap", treadTexture);
+            if (_material.HasProperty("_MainTex")) _material.SetTexture("_MainTex", treadTexture);
         }
 
-        _material = new Material(sh) { name = "TireTrack_Runtime" };
-        _material.SetColor("_BaseColor", trackColor);
-        _material.SetFloat("_NormalStrength", normalStrength);
-        _material.SetFloat("_EdgeShadow", edgeShadow);
-        _material.SetFloat("_Ambient", ambient);
-        if (treadTexture != null) _material.SetTexture("_BaseMap", treadTexture);
-        if (treadNormalMap != null) _material.SetTexture("_NormalMap", treadNormalMap);
+        if (treadNormalMap != null && _material.HasProperty("_NormalMap"))
+            _material.SetTexture("_NormalMap", treadNormalMap);
+
+        _material.renderQueue = (int)RenderQueue.Transparent + 10;
         return _material;
     }
 }

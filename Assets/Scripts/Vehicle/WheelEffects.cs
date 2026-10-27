@@ -32,6 +32,8 @@ public class WheelEffects : MonoBehaviour
     public float dustGravity = -0.02f;
     [Tooltip("Bonus kepadatan debu saat roda selip / drift")]
     [Range(0f, 3f)] public float driftDustBoost = 1.5f;
+    [Tooltip("Pengali ketebalan debu (ukuran, opacity, dan kepadatan). 1 = normal, 2 = dua kali lebih tebal.")]
+    [Range(0.5f, 3f)] public float dustThickness = 1.6f;
     [Tooltip("Material debu opsional. Kalau kosong, dibuat otomatis pakai URP Particles/Unlit")]
     public Material dustMaterial;
 
@@ -47,6 +49,8 @@ public class WheelEffects : MonoBehaviour
     public AudioSource tireSquealSource;
     [Range(0f, 1f)] public float squealMinVolume = 0f;
     [Range(0f, 1f)] public float squealMaxVolume = 0.8f;
+
+    public bool IsDustActive { get; private set; }
 
     private VehicleController _vc;
 
@@ -67,17 +71,30 @@ public class WheelEffects : MonoBehaviour
             tireSquealSource.maxDistance = 80f;
         }
 
+        bool hasAssignedDust = tireDustSystems != null && tireDustSystems.Length > 0;
         if (autoCreateDustParticles)
             EnsureDustParticles();
+
+        if (hasAssignedDust)
+            ApplyDustThicknessToAssignedSystems();
     }
 
     private void Update()
     {
         if (_vc == null) return;
 
+        if (_vc.movementLocked)
+        {
+            SetWheelEffectsIdle();
+            UpdateSquealAudio(0f);
+            IsDustActive = HasVisibleDustParticles();
+            return;
+        }
+
         float maxSlip = 0f;
         float speedT = Mathf.Clamp01(_vc.speedKmh / Mathf.Max(1f, dustMaxSpeed));
         bool moving = _vc.speedKmh > dustMinSpeedKmh;
+        bool dustActive = false;
 
         for (int i = 0; i < _vc.wheels.Length; i++)
         {
@@ -96,13 +113,26 @@ public class WheelEffects : MonoBehaviour
                 if (hasDust)
                 {
                     var dust = tireDustSystems[i];
-                    dust.transform.SetPositionAndRotation(contactPoint, Quaternion.identity);
-
                     var emission = dust.emission;
-                    emission.enabled = true;
-                    float rate = Mathf.Lerp(dustMinRate, dustMaxRate, speedT);
-                    rate *= 1f + Mathf.Clamp01(slip) * driftDustBoost;
-                    emission.rateOverTime = moving ? rate : 0f;
+
+                    if (moving)
+                    {
+                        if (!dust.isPlaying) dust.Play();
+
+                        dust.transform.SetPositionAndRotation(contactPoint, Quaternion.identity);
+                        emission.enabled = true;
+                        dustActive = true;
+                        float rate = Mathf.Lerp(dustMinRate, dustMaxRate, speedT);
+                        rate *= 1f + Mathf.Clamp01(slip) * driftDustBoost;
+                        rate *= Mathf.Lerp(1f, dustThickness, 0.35f);
+                        emission.rateOverTime = rate;
+                    }
+                    else
+                    {
+                        emission.enabled = false;
+                        emission.rateOverTime = 0f;
+                        if (dust.isPlaying) dust.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+                    }
                 }
 
                 if (hasSmoke)
@@ -119,6 +149,7 @@ public class WheelEffects : MonoBehaviour
                 {
                     var emission = tireDustSystems[i].emission;
                     emission.enabled = false;
+                    emission.rateOverTime = 0f;
                 }
                 if (hasSmoke)
                 {
@@ -129,21 +160,132 @@ public class WheelEffects : MonoBehaviour
         }
 
         _vc.wheelSlipRatio = maxSlip;
+        if (!dustActive) dustActive = HasVisibleDustParticles();
+        IsDustActive = dustActive;
+        UpdateSquealAudio(maxSlip);
+    }
 
-        if (tireSquealSource != null)
+    private bool HasVisibleDustParticles()
+    {
+        if (tireDustSystems == null) return false;
+
+        for (int i = 0; i < tireDustSystems.Length; i++)
         {
-            float slipNorm = Mathf.Clamp01(maxSlip / 2f);
-            float targetVol = slipNorm > 0.08f ? Mathf.Lerp(squealMinVolume, squealMaxVolume, slipNorm) : 0f;
-            tireSquealSource.volume = Mathf.Lerp(tireSquealSource.volume, targetVol, Time.deltaTime * 10f);
+            var dust = tireDustSystems[i];
+            if (dust != null && dust.particleCount > 0) return true;
+        }
 
-            if (tireSquealSource.volume > 0.005f)
+        return false;
+    }
+
+    private void ApplyDustThicknessToAssignedSystems()
+    {
+        if (tireDustSystems == null) return;
+
+        float thickness = Mathf.Max(0.1f, dustThickness);
+        float alphaMul = Mathf.Lerp(1f, thickness, 0.5f);
+
+        for (int i = 0; i < tireDustSystems.Length; i++)
+        {
+            var dust = tireDustSystems[i];
+            if (dust == null) continue;
+
+            var main = dust.main;
+            var size = main.startSize;
+
+            switch (size.mode)
             {
-                if (!tireSquealSource.isPlaying) tireSquealSource.Play();
+                case ParticleSystemCurveMode.Constant:
+                    main.startSize = new ParticleSystem.MinMaxCurve(size.constant * thickness);
+                    break;
+                case ParticleSystemCurveMode.TwoConstants:
+                    main.startSize = new ParticleSystem.MinMaxCurve(size.constantMin * thickness, size.constantMax * thickness);
+                    break;
+                case ParticleSystemCurveMode.Curve:
+                    main.startSize = new ParticleSystem.MinMaxCurve(size.curveMultiplier * thickness, size.curve);
+                    break;
+                case ParticleSystemCurveMode.TwoCurves:
+                    main.startSize = new ParticleSystem.MinMaxCurve(size.curveMultiplier * thickness, size.curveMin, size.curveMax);
+                    break;
             }
-            else if (tireSquealSource.isPlaying)
+
+            var startColor = main.startColor;
+            switch (startColor.mode)
             {
-                tireSquealSource.Stop();
+                case ParticleSystemGradientMode.Color:
+                    Color c = startColor.color;
+                    c.a = Mathf.Clamp01(c.a * alphaMul);
+                    main.startColor = c;
+                    break;
+                case ParticleSystemGradientMode.TwoColors:
+                    Color cMin = startColor.colorMin;
+                    Color cMax = startColor.colorMax;
+                    cMin.a = Mathf.Clamp01(cMin.a * alphaMul);
+                    cMax.a = Mathf.Clamp01(cMax.a * alphaMul);
+                    main.startColor = new ParticleSystem.MinMaxGradient(cMin, cMax);
+                    break;
             }
+
+            main.maxParticles = Mathf.Min(main.maxParticles, 200);
+            main.cullingMode = ParticleSystemCullingMode.Automatic;
+
+            var renderer = dust.GetComponent<ParticleSystemRenderer>();
+            if (renderer != null)
+            {
+                Material mat = GetDustMaterial();
+                if (mat != null) renderer.sharedMaterial = mat;
+
+                renderer.renderMode = ParticleSystemRenderMode.Billboard;
+                renderer.alignment = ParticleSystemRenderSpace.View;
+                renderer.shadowCastingMode = ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                renderer.sortingFudge = -0.01f;
+            }
+        }
+    }
+
+    private void SetWheelEffectsIdle()
+    {
+        if (tireDustSystems != null)
+        {
+            for (int i = 0; i < tireDustSystems.Length; i++)
+            {
+                var dust = tireDustSystems[i];
+                if (dust == null) continue;
+
+                var emission = dust.emission;
+                emission.enabled = false;
+                emission.rateOverTime = 0f;
+                if (dust.isPlaying) dust.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            }
+        }
+
+        if (tireSmokeSystems != null)
+        {
+            for (int i = 0; i < tireSmokeSystems.Length; i++)
+            {
+                if (tireSmokeSystems[i] == null) continue;
+                var emission = tireSmokeSystems[i].emission;
+                emission.enabled = false;
+            }
+        }
+    }
+
+    private void UpdateSquealAudio(float maxSlip)
+    {
+        if (tireSquealSource == null) return;
+
+        float slipNorm = Mathf.Clamp01(maxSlip / 2f);
+        float targetVol = slipNorm > 0.08f ? Mathf.Lerp(squealMinVolume, squealMaxVolume, slipNorm) : 0f;
+        tireSquealSource.volume = Mathf.Lerp(tireSquealSource.volume, targetVol, Time.deltaTime * 10f);
+
+        if (tireSquealSource.volume > 0.005f)
+        {
+            if (!tireSquealSource.isPlaying) tireSquealSource.Play();
+        }
+        else if (tireSquealSource.isPlaying)
+        {
+            tireSquealSource.Stop();
         }
     }
 
@@ -166,20 +308,25 @@ public class WheelEffects : MonoBehaviour
         var ps = go.AddComponent<ParticleSystem>();
         ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
 
+        float thickness = Mathf.Max(0.1f, dustThickness);
+        float startSize = dustStartSize * thickness;
+        Color dustTint = dustColor;
+        dustTint.a = Mathf.Clamp01(dustColor.a * Mathf.Lerp(1f, thickness, 0.5f));
+
         var main = ps.main;
         main.loop = true;
         main.prewarm = false;
         main.duration = 5f;
         main.startLifetime = dustLifetime;
         main.startSpeed = new ParticleSystem.MinMaxCurve(dustRiseSpeed * 0.3f, dustRiseSpeed);
-        main.startSize = new ParticleSystem.MinMaxCurve(dustStartSize * 0.5f, dustStartSize);
+        main.startSize = new ParticleSystem.MinMaxCurve(startSize * 0.5f, startSize);
         main.startRotation = new ParticleSystem.MinMaxCurve(0f, Mathf.PI * 2f);
-        main.startColor = dustColor;
+        main.startColor = dustTint;
         main.gravityModifier = dustGravity;
         main.simulationSpace = ParticleSystemSimulationSpace.World;
-        main.maxParticles = 400;
+        main.maxParticles = 200;
         main.playOnAwake = false;
-        main.cullingMode = ParticleSystemCullingMode.AlwaysSimulate;
+        main.cullingMode = ParticleSystemCullingMode.Automatic;
 
         var emission = ps.emission;
         emission.enabled = true;
@@ -198,7 +345,7 @@ public class WheelEffects : MonoBehaviour
         sizeOverLifetime.size = new ParticleSystem.MinMaxCurve(1f, new AnimationCurve(
             new Keyframe(0f, 0.45f),
             new Keyframe(0.35f, 1f),
-            new Keyframe(1f, 1.7f)));
+            new Keyframe(1f, 1.7f * Mathf.Lerp(1f, thickness, 0.35f))));
 
         var colorOverLifetime = ps.colorOverLifetime;
         colorOverLifetime.enabled = true;
@@ -224,7 +371,6 @@ public class WheelEffects : MonoBehaviour
             renderer.sortingFudge = -0.01f;
         }
 
-        ps.Play();
         return ps;
     }
 
@@ -233,14 +379,27 @@ public class WheelEffects : MonoBehaviour
         if (dustMaterial != null) return dustMaterial;
         if (_runtimeDustMat != null) return _runtimeDustMat;
 
-        Shader sh = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-        if (sh == null) sh = Shader.Find("Universal Render Pipeline/Particles/Simple Lit");
-        if (sh == null) sh = Shader.Find("Mobile/Particles/Alpha Blended");
-        if (sh == null) sh = Shader.Find("Legacy Shaders/Particles/Alpha Blended");
-        if (sh == null) sh = Shader.Find("Particles/Standard Unlit");
-        if (sh == null) return null;
+        Material baseMat = Resources.Load<Material>("VehicleFX/DustParticle");
+        if (baseMat != null)
+        {
+            _runtimeDustMat = new Material(baseMat) { name = "DustTrail_Runtime" };
+        }
+        else
+        {
+            Shader sh = Shader.Find("Custom/DustParticle");
+            if (sh == null) sh = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (sh == null) sh = Shader.Find("Universal Render Pipeline/Particles/Simple Lit");
+            if (sh == null) sh = Shader.Find("Mobile/Particles/Alpha Blended");
+            if (sh == null) sh = Shader.Find("Legacy Shaders/Particles/Alpha Blended");
+            if (sh == null) sh = Shader.Find("Particles/Standard Unlit");
+            if (sh == null)
+            {
+                Debug.LogError("WheelEffects: tidak ada shader debu yang tersedia!");
+                return null;
+            }
 
-        _runtimeDustMat = new Material(sh) { name = "DustTrail_Runtime" };
+            _runtimeDustMat = new Material(sh) { name = "DustTrail_Runtime" };
+        }
 
         Texture2D tex = GetSoftParticleTexture();
         if (_runtimeDustMat.HasProperty("_BaseMap")) _runtimeDustMat.SetTexture("_BaseMap", tex);
@@ -259,7 +418,8 @@ public class WheelEffects : MonoBehaviour
 
         _runtimeDustMat.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
         _runtimeDustMat.DisableKeyword("_ALPHATEST_ON");
-        _runtimeDustMat.renderQueue = (int)RenderQueue.Transparent;
+        // Render debu SETELAH jejak ban (TireTracks = Transparent + 10) supaya debu menutupi track.
+        _runtimeDustMat.renderQueue = (int)RenderQueue.Transparent + 20;
         return _runtimeDustMat;
     }
 
