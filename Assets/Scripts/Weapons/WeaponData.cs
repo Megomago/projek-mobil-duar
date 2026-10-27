@@ -161,6 +161,8 @@ namespace Weapons
         public float explosiveForce = 500f;
         [Tooltip("Prefab VFX ledakan (WarFX Explosion atau kustom).")]
         public GameObject explosionVFXPrefab;
+        [Tooltip("Hapus otomatis VFX ledakan setelah X detik. 0 = tidak dihapus otomatis (atur durasi di prefab).")]
+        public float explosionVFXDespawnTime = 0f;
         [Tooltip("Clip suara ledakan.")]
         public AudioClip explosionSFX;
         #endregion

@@ -72,6 +72,8 @@ public class VehicleCriticalPart : MonoBehaviour
     public float explosionDamage = 200f;
     public float explosionRadius = 5f;
     public GameObject explosionVFXPrefab;
+    [Tooltip("Hapus otomatis explosion VFX setelah X detik. 0 = tidak dihapus otomatis (atur durasi di prefab).")]
+    public float explosionVFXDespawnTime = 0f;
     public AudioClip explosionSFX;
 
     [Header("Destroyed Effect")]
@@ -146,7 +148,8 @@ public class VehicleCriticalPart : MonoBehaviour
 
         Vector3 pos = transform.position;
 
-        // Spawn destroyed prefab (api/kobaran)
+        // Spawn destroyed prefab (api/kobaran). Sengaja tidak di-parent ke kendaraan
+        // supaya efek tetap ada di lokasi hancur dan tidak ikut hilang saat kendaraan di-pool.
         if (destroyedPrefab != null)
         {
             if (ObjectPool.Instance != null)
@@ -173,6 +176,8 @@ public class VehicleCriticalPart : MonoBehaviour
                     {
                         float scale = explosionRadius * 0.15f;
                         vfx.transform.localScale = Vector3.one * Mathf.Max(scale, 0.5f);
+                        if (explosionVFXDespawnTime > 0f)
+                            ObjectPool.Instance.Despawn(vfx, explosionVFXDespawnTime);
                     }
                 }
                 else
@@ -180,6 +185,8 @@ public class VehicleCriticalPart : MonoBehaviour
                     GameObject vfx = Instantiate(explosionVFXPrefab, pos, Quaternion.identity);
                     float scale = explosionRadius * 0.15f;
                     vfx.transform.localScale = Vector3.one * Mathf.Max(scale, 0.5f);
+                    if (explosionVFXDespawnTime > 0f)
+                        Destroy(vfx, explosionVFXDespawnTime);
                 }
             }
 
@@ -194,6 +201,6 @@ public class VehicleCriticalPart : MonoBehaviour
         gameObject.SetActive(false);
 
         if (_statsManager != null)
-            _statsManager.CalculateAndApplyStats();
+            _statsManager.MarkStatsDirty();
     }
 }

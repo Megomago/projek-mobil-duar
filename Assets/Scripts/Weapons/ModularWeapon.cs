@@ -502,8 +502,8 @@ namespace Weapons
             KinematicProjectile kp = ObjectPool.Instance.Spawn<KinematicProjectile>(weaponData.projectilePrefab, muzzleTransform.position, Quaternion.identity);
             if (kp != null)
             {
-                kp.SetExplosive(weaponData.isExplosive, weaponData.explosiveRadius, weaponData.explosiveDamage, weaponData.explosiveForce, weaponData.explosionVFXPrefab, weaponData.explosionSFX);
                 kp.Initialize(muzzleTransform.position, finalDirection, weaponData.muzzleVelocity, weaponData.attackPower, weaponData.penetration, _ownerStatsManager);
+                kp.SetExplosive(weaponData.isExplosive, weaponData.explosiveRadius, weaponData.explosiveDamage, weaponData.explosiveForce, weaponData.explosionVFXPrefab, weaponData.explosionVFXDespawnTime, weaponData.explosionSFX);
             }
         }
 

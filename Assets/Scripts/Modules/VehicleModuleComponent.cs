@@ -102,6 +102,8 @@ public class VehicleModuleComponent : MonoBehaviour
             {
                 float vfxScale = template.explosionRadius * 0.25f * 0.5f;
                 vfx.transform.localScale = Vector3.one * Mathf.Max(vfxScale, 0.5f);
+                if (template.explosionVFXDespawnTime > 0f)
+                    ObjectPool.Instance.Despawn(vfx, template.explosionVFXDespawnTime);
             }
         }
 

@@ -40,6 +40,7 @@ namespace Weapons
         private float _explosiveDamage;
         private float _explosiveForce;
         private GameObject _explosionVFXPrefab;
+        private float _explosionVFXDespawnTime;
         private AudioClip _explosionSFX;
 
         // Pembatas spawn impact VFX per frame (ANTI LAG SPIKE)
@@ -122,16 +123,18 @@ namespace Weapons
             _explosiveDamage = 0f;
             _explosiveForce = 0f;
             _explosionVFXPrefab = null;
+            _explosionVFXDespawnTime = 0f;
             _explosionSFX = null;
         }
 
-        public void SetExplosive(bool isExplosive, float radius, float damage, float force, GameObject vfx, AudioClip sfx)
+        public void SetExplosive(bool isExplosive, float radius, float damage, float force, GameObject vfx, float vfxDespawnTime, AudioClip sfx)
         {
             _isExplosive = isExplosive;
             _explosiveRadius = radius;
             _explosiveDamage = damage;
             _explosiveForce = force;
             _explosionVFXPrefab = vfx;
+            _explosionVFXDespawnTime = vfxDespawnTime;
             _explosionSFX = sfx;
         }
 
@@ -227,17 +230,40 @@ namespace Weapons
             {
                 ExplosionManager.Detonate(hit.point, _explosiveRadius, _explosiveDamage, _explosiveForce, statsMgr, hitMask, _ownerStatsManager, _pen);
 
-                // Feedback HUD untuk ammo explosive (part detail di-handle Detonate)
-                if (statsMgr != null && HitFeedbackHUD.IsPlayerShooter(_ownerStatsManager))
-                    HitFeedbackHUD.ReportHit("HE", 0f, false);
-
-                if (_explosionVFXPrefab != null && ObjectPool.Instance != null)
+                // Feedback HUD untuk ammo explosive
+                if (HitFeedbackHUD.IsPlayerShooter(_ownerStatsManager))
                 {
-                    GameObject vfx = ObjectPool.Instance.Spawn(_explosionVFXPrefab, hit.point, Quaternion.LookRotation(hit.normal));
+                    string targetName = statsMgr != null ? "Target" : "HE Impact";
+                    HitFeedbackHUD.ReportHit(targetName, _explosiveDamage, false);
+                }
+
+                // Visualisasi Gizmo area ledakan (wire sphere 3D tahan 3 detik)
+                SpawnDebugExplosionGizmo(hit.point, _explosiveRadius);
+
+                // Fallback VFX: gunakan explosionVFXPrefab jika ada, atau fallback ke hitImpactPrefab
+                GameObject vfxPrefab = _explosionVFXPrefab != null ? _explosionVFXPrefab : hitImpactPrefab;
+                if (vfxPrefab != null && ObjectPool.Instance != null)
+                {
+                    Quaternion rot = hit.normal != Vector3.zero ? Quaternion.LookRotation(hit.normal) : Quaternion.identity;
+                    GameObject vfx = ObjectPool.Instance.Spawn(vfxPrefab, hit.point, rot);
                     if (vfx != null)
                     {
-                        float vfxScale = _explosiveRadius * 0.35f;
-                        vfx.transform.localScale = Vector3.one * Mathf.Max(vfxScale, 0.5f);
+                        if (_explosionVFXPrefab != null)
+                        {
+                            float vfxScale = _explosiveRadius * 0.35f;
+                            vfx.transform.localScale = Vector3.one * Mathf.Max(vfxScale, 0.5f);
+                        }
+                        // VFX ledakan: durasi diatur dari WeaponData. 0 = biarkan prefab yang atur.
+                        // Fallback impact tetap dibersihkan 4 detik agar tidak bocor di scene.
+                        if (_explosionVFXPrefab != null)
+                        {
+                            if (_explosionVFXDespawnTime > 0f)
+                                ObjectPool.Instance.Despawn(vfx, _explosionVFXDespawnTime);
+                        }
+                        else
+                        {
+                            ObjectPool.Instance.Despawn(vfx, 4f);
+                        }
                     }
                 }
 
@@ -245,9 +271,6 @@ namespace Weapons
                     AudioPool.PlayClipAtPoint(_explosionSFX, hit.point, 1f, Random.Range(0.92f, 1.08f), 1f, 150f);
 
                 #if UNITY_EDITOR
-                Debug.DrawLine(hit.point + Vector3.left * 0.3f, hit.point + Vector3.right * 0.3f, Color.red, 3f);
-                Debug.DrawLine(hit.point + Vector3.up * 0.3f, hit.point + Vector3.down * 0.3f, Color.red, 3f);
-                Debug.DrawLine(hit.point + Vector3.forward * 0.3f, hit.point + Vector3.back * 0.3f, Color.red, 3f);
                 Debug.Log($"[EXPLOSIVE] {_explosiveDamage} dmg radius {_explosiveRadius}m at {hit.point}");
                 #endif
 
@@ -582,6 +605,63 @@ namespace Weapons
             Object.Destroy(go, 3f);
         }
 
+        private void SpawnDebugExplosionGizmo(Vector3 point, float radius)
+        {
+            #if UNITY_EDITOR
+            DrawDebugExplosionSphere(point, radius, new Color(1f, 0.45f, 0f, 0.9f), 3f);
+            #endif
+
+            if (!ShowHitDebug) return;
+
+            GameObject go = new GameObject("___ExplosionDebug");
+            go.transform.position = point;
+            var lr = go.AddComponent<LineRenderer>();
+            lr.sharedMaterial = DebugCrossMaterial;
+            lr.startColor = new Color(1f, 0.45f, 0f, 0.85f);
+            lr.endColor = new Color(1f, 0.45f, 0f, 0.85f);
+            lr.startWidth = 0.05f;
+            lr.endWidth = 0.05f;
+            lr.useWorldSpace = true;
+
+            int segments = 32;
+            lr.positionCount = segments + 1;
+            float step = 360f / segments;
+            for (int i = 0; i <= segments; i++)
+            {
+                float rad = Mathf.Deg2Rad * (i * step);
+                Vector3 pos = point + new Vector3(Mathf.Cos(rad) * radius, 0.05f, Mathf.Sin(rad) * radius);
+                lr.SetPosition(i, pos);
+            }
+            Object.Destroy(go, 3f);
+        }
+
+        public static void DrawDebugExplosionSphere(Vector3 center, float radius, Color color, float duration = 3f, int segments = 24)
+        {
+            float angleStep = 360f / segments;
+            for (int i = 0; i < segments; i++)
+            {
+                float a1 = Mathf.Deg2Rad * (i * angleStep);
+                float a2 = Mathf.Deg2Rad * ((i + 1) * angleStep);
+
+                float c1 = Mathf.Cos(a1) * radius;
+                float s1 = Mathf.Sin(a1) * radius;
+                float c2 = Mathf.Cos(a2) * radius;
+                float s2 = Mathf.Sin(a2) * radius;
+
+                // Lingkaran bidang XZ (horizontal ground)
+                Debug.DrawLine(center + new Vector3(c1, 0f, s1), center + new Vector3(c2, 0f, s2), color, duration);
+                // Lingkaran bidang XY (vertikal melintang)
+                Debug.DrawLine(center + new Vector3(c1, s1, 0f), center + new Vector3(c2, s2, 0f), color, duration);
+                // Lingkaran bidang YZ (vertikal membujur)
+                Debug.DrawLine(center + new Vector3(0f, s1, c1), center + new Vector3(0f, s2, c2), color, duration);
+            }
+
+            // Cross di pusat ledakan
+            Debug.DrawLine(center + Vector3.left * 0.5f, center + Vector3.right * 0.5f, Color.red, duration);
+            Debug.DrawLine(center + Vector3.up * 0.5f, center + Vector3.down * 0.5f, Color.red, duration);
+            Debug.DrawLine(center + Vector3.forward * 0.5f, center + Vector3.back * 0.5f, Color.red, duration);
+        }
+
         private void SpawnImpactAt(Vector3 point, Vector3 normal)
         {
             if (Time.time != _lastImpactFrameTime)
@@ -592,7 +672,11 @@ namespace Weapons
 
             if (_impactsThisFrame < MAX_IMPACTS_PER_FRAME)
             {
-                ObjectPool.Instance.Spawn(hitImpactPrefab, point, Quaternion.LookRotation(normal));
+                GameObject impact = ObjectPool.Instance.Spawn(hitImpactPrefab, point, Quaternion.LookRotation(normal));
+                if (impact != null)
+                {
+                    ObjectPool.Instance.Despawn(impact, 2f);
+                }
                 _impactsThisFrame++;
             }
         }
@@ -610,10 +694,10 @@ namespace Weapons
         }
 
 #if UNITY_EDITOR
-        private void OnDrawGizmosSelected()
+        private void OnDrawGizmos()
         {
             if (!Application.isPlaying) return;
-            if (_explosiveRadius > 0f)
+            if (_isExplosive && _explosiveRadius > 0f)
             {
                 Gizmos.color = new Color(1f, 0.4f, 0f, 0.15f);
                 Gizmos.DrawSphere(transform.position, _explosiveRadius);

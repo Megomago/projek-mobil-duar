@@ -114,6 +114,8 @@ public class ModuleTemplate : ScriptableObject
     public float explosionDamage = 100f;
     [Tooltip("Prefab VFX ledakan saat modul ini meledak (WarFX atau kustom).")]
     public GameObject explosionVFXPrefab;
+    [Tooltip("Hapus otomatis explosion VFX setelah X detik. 0 = tidak dihapus otomatis (atur durasi di prefab).")]
+    public float explosionVFXDespawnTime = 0f;
     [Tooltip("Clip suara ledakan saat modul ini meledak.")]
     public AudioClip explosionSFX;
 }

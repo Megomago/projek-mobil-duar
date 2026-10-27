@@ -16,6 +16,16 @@ namespace Weapons
         private Dictionary<GameObject, Queue<GameObject>> poolDictionary = new Dictionary<GameObject, Queue<GameObject>>();
         private Dictionary<GameObject, GameObject> instanceToPrefabMap = new Dictionary<GameObject, GameObject>();
 
+        private class CachedRefs
+        {
+            public ParticleSystem[] Particles;
+            public TrailRenderer[] Trails;
+            public Rigidbody Body;
+        }
+
+        private readonly Dictionary<GameObject, CachedRefs> _refsCache = new Dictionary<GameObject, CachedRefs>();
+        private readonly List<GameObject> _deadKeys = new List<GameObject>();
+
         private struct DelayedDespawnData
         {
             public GameObject Obj;
@@ -35,6 +45,60 @@ namespace Weapons
             else
             {
                 Destroy(gameObject);
+            }
+        }
+
+        private void OnEnable()
+        {
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+        }
+
+        private void OnDisable()
+        {
+            UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+        }
+
+        private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+        {
+            DespawnAll();
+            PruneDestroyedEntries();
+        }
+
+        private void PruneDestroyedEntries()
+        {
+            _deadKeys.Clear();
+            foreach (var pair in _refsCache)
+            {
+                if (pair.Key == null) _deadKeys.Add(pair.Key);
+            }
+            for (int i = 0; i < _deadKeys.Count; i++)
+                _refsCache.Remove(_deadKeys[i]);
+
+            _deadKeys.Clear();
+            foreach (var pair in instanceToPrefabMap)
+            {
+                if (pair.Key == null) _deadKeys.Add(pair.Key);
+            }
+            for (int i = 0; i < _deadKeys.Count; i++)
+                instanceToPrefabMap.Remove(_deadKeys[i]);
+        }
+
+        /// <summary>
+        /// Mengembalikan semua objek yang sedang aktif keluar ke pool.
+        /// Dipanggil otomatis saat perpindahan scene (misal tekan ESC ke Garasi / masuk Battlefield)
+        /// agar tidak ada partikel ledakan, kobaran api, selongsong, atau peluru tersisa di scene baru.
+        /// </summary>
+        public void DespawnAll()
+        {
+            delayedDespawns.Clear();
+
+            foreach (var pair in instanceToPrefabMap)
+            {
+                GameObject obj = pair.Key;
+                if (obj != null && obj.activeSelf)
+                {
+                    Despawn(obj);
+                }
             }
         }
 
@@ -91,7 +155,7 @@ namespace Weapons
             else
             {
                 objectToSpawn = Instantiate(prefab, position, rotation);
-                objectToSpawn.transform.SetParent(transform);
+                objectToSpawn.transform.SetParent(null);
                 instanceToPrefabMap[objectToSpawn] = prefab;
             }
 
@@ -107,6 +171,38 @@ namespace Weapons
 
             // Mencegah duplicate enqueue jika object sudah despawn/inactive
             if (!obj.activeSelf) return;
+
+            // Bersihkan sisa partikel & trail agar tidak 'flash' saat dipake ulang.
+            // Komponen di-cache sekali per instance supaya tidak alloc tiap despawn.
+            if (!_refsCache.TryGetValue(obj, out CachedRefs refs))
+            {
+                refs = new CachedRefs
+                {
+                    Particles = obj.GetComponentsInChildren<ParticleSystem>(true),
+                    Trails = obj.GetComponentsInChildren<TrailRenderer>(true),
+                    Body = obj.GetComponent<Rigidbody>()
+                };
+                _refsCache[obj] = refs;
+            }
+
+            var particles = refs.Particles;
+            for (int i = 0; i < particles.Length; i++)
+            {
+                if (particles[i] != null) particles[i].Clear();
+            }
+
+            var trails = refs.Trails;
+            for (int i = 0; i < trails.Length; i++)
+            {
+                if (trails[i] != null) trails[i].Clear();
+            }
+
+            var rb = refs.Body;
+            if (rb != null)
+            {
+                rb.velocity = Vector3.zero;
+                rb.angularVelocity = Vector3.zero;
+            }
 
             obj.SetActive(false);
             obj.transform.SetParent(transform); // Tarik kembali ke Object Pool agar aman dari Destroy parent
