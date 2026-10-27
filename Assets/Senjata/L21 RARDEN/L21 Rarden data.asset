@@ -21,7 +21,7 @@ MonoBehaviour:
   muzzleVelocity: 1200
   fireRateRPM: 90
   attackPower: 500
-  penetration: 500
+  penetration: 1700
   ammoCostPerShot: 10
   maxAmmo: 3
   autoReload: 1
@@ -37,8 +37,8 @@ MonoBehaviour:
   maxHeat: 100
   heatDispersionMultiplier: 4
   overheatDispersionThreshold: 0.8
-  recoilForce: 2500
-  cameraShakeMultiplier: 0.0002
+  recoilForce: 12000
+  cameraShakeMultiplier: 0.00005
   cameraShakeDuration: 0.2
   shootSound: {fileID: 8300000, guid: 440ff0a513a6c3a47bd663e828c612e7, type: 3}
   reloadSound: {fileID: 0}

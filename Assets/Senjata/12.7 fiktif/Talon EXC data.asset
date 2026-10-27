@@ -37,8 +37,8 @@ MonoBehaviour:
   maxHeat: 100
   heatDispersionMultiplier: 4
   overheatDispersionThreshold: 0.8
-  recoilForce: 20
-  cameraShakeMultiplier: 0.0005
+  recoilForce: 30
+  cameraShakeMultiplier: 0.003
   cameraShakeDuration: 0.2
   shootSound: {fileID: 8300000, guid: a0a86146ab31a5c4f98897d54dbd3f2c, type: 3}
   reloadSound: {fileID: 0}
@@ -65,7 +65,7 @@ MonoBehaviour:
   magazineDespawnTime: 3
   magazineDropForce: {x: 0, y: 0, z: 0}
   magazineDropTorque: 2
-  isExplosive: 1
+  isExplosive: 0
   explosiveRadius: 5
   explosiveDamage: 200
   explosiveForce: 500

@@ -12,13 +12,22 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: eb63ac7e609242f499101012a8337637, type: 3}
   m_Name: modul 20 mm Oerlikon
   m_EditorClassIdentifier: 
-  moduleName: 20 mm oerlikon
+  uid: bd301114862f473e90400e84f1bc5bd6
+  moduleName: Oerlikon AA 20 mm
   moduleType: 0
   moduleIcon: {fileID: 0}
   weaponData: {fileID: 11400000, guid: 79af7aa5d5508e147a10727f379d2fb1, type: 2}
   modulePrefab: {fileID: 0}
   width: 2
   height: 3
+  canInternal: 0
+  isSmall: 0
+  enableClearance: 0
+  enableAccessClearance: 1
+  clearanceRight: 0
+  clearanceLeft: 0
+  clearanceFront: 0
+  clearanceBack: 0
   weight: 50
   maxHealth: 100
   armor: 10
@@ -29,6 +38,11 @@ MonoBehaviour:
   extraMaxOutput: 0
   capacitorCapacity: 0
   chargeRate: 0
+  hideFromModuleList: 0
+  ammoPoint: 0
+  dragModifier: 0
   volatileExplosive: 0
   explosionRadius: 1
   explosionDamage: 100
+  explosionVFXPrefab: {fileID: 0}
+  explosionSFX: {fileID: 0}
