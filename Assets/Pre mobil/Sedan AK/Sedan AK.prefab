@@ -101,7 +101,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 0.28091288, y: 0.74135214, z: 0.7413522}
   m_Center: {x: 0.007814072, y: 0, z: 0}
@@ -259,6 +259,41 @@ WheelCollider:
   m_LayerOverridePriority: 0
   m_Enabled: 1
   m_ProvidesContacts: 0
+--- !u!1 &500577563552901505
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 4152097581373926227}
+  m_Layer: 0
+  m_Name: ban mesh
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &4152097581373926227
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 500577563552901505}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 0.008, y: 0.115, z: -0.501}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children:
+  - {fileID: 2338530562221014915}
+  - {fileID: 5098178327628115972}
+  - {fileID: 3254031230387096023}
+  - {fileID: 8985138760063584371}
+  m_Father: {fileID: 7266497692247356272}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &535019710993806903
 GameObject:
   m_ObjectHideFlags: 0
@@ -316,13 +351,13 @@ Transform:
   m_GameObject: {fileID: 1627633528550459441}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.8465933, y: 0.36952424, z: 1.4795523}
+  m_LocalPosition: {x: -0.85459334, y: 0.25452423, z: 1.9805522}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 3493180363794728389}
   - {fileID: 7105736006654478596}
-  m_Father: {fileID: 7266497692247356272}
+  m_Father: {fileID: 4152097581373926227}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &5604390945051969182
 MonoBehaviour:
@@ -438,13 +473,13 @@ Transform:
   m_GameObject: {fileID: 2849412095698604752}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.8465929, y: 0.36952424, z: -1.3810701}
+  m_LocalPosition: {x: 0.8385929, y: 0.25452423, z: -0.88007015}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2225625403772526115}
   - {fileID: 2841287942083083769}
-  m_Father: {fileID: 7266497692247356272}
+  m_Father: {fileID: 4152097581373926227}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &3994889896254355205
 MonoBehaviour:
@@ -463,6 +498,73 @@ MonoBehaviour:
   armor: 10
   wheelMesh: {fileID: 43831032412359568}
   wheelCollider: {fileID: 6958934072947121556}
+--- !u!1 &3035875516564612803
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 6033078704653034807}
+  - component: {fileID: 6005016139528942977}
+  m_Layer: 0
+  m_Name: bensin
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &6033078704653034807
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3035875516564612803}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.55452865, y: -0.6595793, z: 0.48756886}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7266497692247356272}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &6005016139528942977
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3035875516564612803}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eefaf09c318dac24ca0432bf0f98ea31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  partType: 1
+  partName: Alumunium 29L
+  maxHealth: 300
+  currentHealth: 0
+  isOneHitPart: 0
+  armor: 30
+  powerConsumption: 0
+  powerGeneration: 0
+  extraBatteryCapacity: 0
+  extraFuelCapacity: 29
+  ammoPoint: 0
+  currentAmmoPoint: 0
+  extraMaxOutput: 0
+  capacitorCapacity: 0
+  chargeRate: 0
+  hideFromModuleList: 0
+  isLamp: 0
+  volatileExplosive: 0
+  explosionDamage: 200
+  explosionRadius: 5
+  explosionVFXPrefab: {fileID: 0}
+  explosionSFX: {fileID: 0}
+  destroyedPrefab: {fileID: 0}
 --- !u!1 &3239779108437051070
 GameObject:
   m_ObjectHideFlags: 0
@@ -475,7 +577,6 @@ GameObject:
   - component: {fileID: 2313294445817618689}
   - component: {fileID: 6362960190110770296}
   - component: {fileID: 8527477312555275108}
-  - component: {fileID: 8886005906988612621}
   m_Layer: 7
   m_Name: mesh fr
   m_TagString: Untagged
@@ -549,27 +650,6 @@ MeshRenderer:
   m_SortingOrder: 0
   m_AdditionalVertexStreams: {fileID: 0}
 --- !u!65 &8527477312555275108
-BoxCollider:
-  m_ObjectHideFlags: 0
-  m_CorrespondingSourceObject: {fileID: 0}
-  m_PrefabInstance: {fileID: 0}
-  m_PrefabAsset: {fileID: 0}
-  m_GameObject: {fileID: 3239779108437051070}
-  m_Material: {fileID: 0}
-  m_IncludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_ExcludeLayers:
-    serializedVersion: 2
-    m_Bits: 0
-  m_LayerOverridePriority: 0
-  m_IsTrigger: 0
-  m_ProvidesContacts: 0
-  m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 0.28091288, y: 0.74135214, z: 0.7413522}
-  m_Center: {x: 0.007814072, y: 0, z: 0}
---- !u!65 &8886005906988612621
 BoxCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
@@ -732,6 +812,73 @@ WheelCollider:
   m_LayerOverridePriority: 0
   m_Enabled: 1
   m_ProvidesContacts: 0
+--- !u!1 &4536949923227703494
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2751257163452263495}
+  - component: {fileID: 7378671912085556794}
+  m_Layer: 0
+  m_Name: Mesin
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2751257163452263495
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4536949923227703494}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: -0.55452865, y: -0.6595793, z: 0.48756886}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7266497692247356272}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &7378671912085556794
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 4536949923227703494}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: eefaf09c318dac24ca0432bf0f98ea31, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  partType: 0
+  partName: 6.2L LXA V8 Suparcharged
+  maxHealth: 300
+  currentHealth: 0
+  isOneHitPart: 0
+  armor: 30
+  powerConsumption: 0
+  powerGeneration: 0
+  extraBatteryCapacity: 1900
+  extraFuelCapacity: 0
+  ammoPoint: 0
+  currentAmmoPoint: 0
+  extraMaxOutput: 0
+  capacitorCapacity: 0
+  chargeRate: 0
+  hideFromModuleList: 0
+  isLamp: 0
+  volatileExplosive: 0
+  explosionDamage: 200
+  explosionRadius: 5
+  explosionVFXPrefab: {fileID: 0}
+  explosionSFX: {fileID: 0}
+  destroyedPrefab: {fileID: 0}
 --- !u!1 &4752421555681763396
 GameObject:
   m_ObjectHideFlags: 0
@@ -789,13 +936,13 @@ Transform:
   m_GameObject: {fileID: 5233694179704958376}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0.8465929, y: 0.36952424, z: 1.4795504}
+  m_LocalPosition: {x: 0.8385929, y: 0.25452423, z: 1.9805503}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 2129185230072075972}
   - {fileID: 2564679407604071939}
-  m_Father: {fileID: 7266497692247356272}
+  m_Father: {fileID: 4152097581373926227}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2813577025652338083
 MonoBehaviour:
@@ -946,7 +1093,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 0.2809127, y: 0.74135214, z: 0.74135214}
   m_Center: {x: -0.007814087, y: 0, z: 0}
@@ -1088,6 +1235,37 @@ MeshCollider:
   m_Convex: 1
   m_CookingOptions: 30
   m_Mesh: {fileID: 2959467708922500008, guid: 9ec6a8fc6925acb4abc5500eeecb8270, type: 3}
+--- !u!1 &7494884152006678468
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 2082616416545131418}
+  m_Layer: 0
+  m_Name: exit point
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &2082616416545131418
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7494884152006678468}
+  serializedVersion: 2
+  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
+  m_LocalPosition: {x: 1.186, y: 0.44, z: -0.08}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 7266497692247356272}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &7539250261542827991
 GameObject:
   m_ObjectHideFlags: 0
@@ -1189,7 +1367,7 @@ BoxCollider:
   m_LayerOverridePriority: 0
   m_IsTrigger: 0
   m_ProvidesContacts: 0
-  m_Enabled: 1
+  m_Enabled: 0
   serializedVersion: 3
   m_Size: {x: 0.2809127, y: 0.74135214, z: 0.74135214}
   m_Center: {x: -0.007814087, y: 0, z: 0}
@@ -1219,13 +1397,13 @@ Transform:
   m_GameObject: {fileID: 8767511169860366018}
   serializedVersion: 2
   m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: -0.8465933, y: 0.36952424, z: -1.3810701}
+  m_LocalPosition: {x: -0.85459334, y: 0.25452423, z: -0.88007015}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
   - {fileID: 1597295575337231781}
   - {fileID: 2758712219426924656}
-  m_Father: {fileID: 7266497692247356272}
+  m_Father: {fileID: 4152097581373926227}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &2632076188387463717
 MonoBehaviour:
@@ -1257,10 +1435,14 @@ GameObject:
   - component: {fileID: 246316638623364675}
   - component: {fileID: 179251259502191177}
   - component: {fileID: 8874008394217940311}
+  - component: {fileID: 3356017895534214922}
   - component: {fileID: 6321340214497921229}
   - component: {fileID: 8766319752834695132}
   - component: {fileID: 124188638354288178}
   - component: {fileID: 311470256510549160}
+  - component: {fileID: 2843545747271988829}
+  - component: {fileID: 8462629948612562815}
+  - component: {fileID: 5359721270168292568}
   m_Layer: 2
   m_Name: Sedan AK
   m_TagString: Player
@@ -1287,10 +1469,10 @@ Transform:
   - {fileID: 1928401121685851406}
   - {fileID: 7430528426528173444}
   - {fileID: 2916181200958217102}
-  - {fileID: 2338530562221014915}
-  - {fileID: 5098178327628115972}
-  - {fileID: 3254031230387096023}
-  - {fileID: 8985138760063584371}
+  - {fileID: 2082616416545131418}
+  - {fileID: 4152097581373926227}
+  - {fileID: 2751257163452263495}
+  - {fileID: 6033078704653034807}
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!54 &2784621064803543879
@@ -1350,10 +1532,10 @@ MonoBehaviour:
     isDriveWheel: 1
     isSteerWheel: 0
   engine:
-    maxTorqueNm: 400
+    maxTorqueNm: 765
     idleRPM: 800
     maxRPM: 7000
-    peakTorqueRPM: 4000
+    peakTorqueRPM: 5300
     flywheelInertia: 0.25
     torqueCurve:
       serializedVersion: 2
@@ -1370,20 +1552,20 @@ MonoBehaviour:
   transmissionType: 1
   gearRatios:
   - gearName: R
-    ratio: -3.5
+    ratio: -3.11
   - gearName: 1
-    ratio: 3.36
+    ratio: 2.29
   - gearName: 2
-    ratio: 2.1
+    ratio: 1.61
   - gearName: 3
-    ratio: 1.48
+    ratio: 1.21
   - gearName: 4
-    ratio: 1.11
+    ratio: 1
   - gearName: 5
-    ratio: 0.85
+    ratio: 0.82
   - gearName: 6
-    ratio: 0.67
-  finalDriveRatio: 3.9
+    ratio: 0.68
+  finalDriveRatio: 3.73
   transmissionEfficiency: 0.9
   autoUpshiftRPM: 5500
   autoDownshiftRPM: 1500
@@ -1393,10 +1575,10 @@ MonoBehaviour:
     damperRate: 4500
     targetPosition: 0.3
   wheelFriction:
-    forwardStiffness: 1.5
-    sidewaysStiffness: 1.8
+    forwardStiffness: 3
+    sidewaysStiffness: 3
     forwardExtremumSlip: 0.4
-    sidewaysExtremumSlip: 0.2
+    sidewaysExtremumSlip: 0.7
     forwardAsymptoteSlip: 0.8
     sidewaysAsymptoteSlip: 0.5
     extremumValue: 1
@@ -1404,7 +1586,25 @@ MonoBehaviour:
   maxSteerAngle: 35
   steerVsSpeedCurve:
     serializedVersion: 2
-    m_Curve: []
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1.0023499
+      inSlope: -0.9952736
+      outSlope: -0.9952736
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0.0070762634
+      inSlope: -0.9952736
+      outSlope: -0.9952736
+      tangentMode: 34
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0
     m_PreInfinity: 2
     m_PostInfinity: 2
     m_RotationOrder: 4
@@ -1419,6 +1619,7 @@ MonoBehaviour:
   frontalArea: 2.6
   preventWheelSlipRPM: 1
   movementLocked: 1
+  autoAttachWheelEffects: 1
   currentRPM: 0
   currentTorqueNm: 0
   engineLoad: 0
@@ -1450,7 +1651,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   engineAudioSource: {fileID: 8874008394217940311}
-  starterAudioSource: {fileID: 0}
+  starterAudioSource: {fileID: 8874008394217940311}
   minPitch: 0.6
   maxPitch: 5
   idleVolume: 0.3
@@ -1466,6 +1667,102 @@ AudioSource:
   serializedVersion: 4
   OutputAudioMixerGroup: {fileID: 0}
   m_audioClip: {fileID: 8300000, guid: a867344d3eb7e1c4c8d896101b9688c4, type: 3}
+  m_PlayOnAwake: 0
+  m_Volume: 1
+  m_Pitch: 1
+  Loop: 0
+  Mute: 0
+  Spatialize: 0
+  SpatializePostEffects: 0
+  Priority: 128
+  DopplerLevel: 1
+  MinDistance: 1
+  MaxDistance: 500
+  Pan2D: 0
+  rolloffMode: 0
+  BypassEffects: 0
+  BypassListenerEffects: 0
+  BypassReverbZones: 0
+  rolloffCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    - serializedVersion: 3
+      time: 1
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  panLevelCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  spreadCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 0
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+  reverbZoneMixCustomCurve:
+    serializedVersion: 2
+    m_Curve:
+    - serializedVersion: 3
+      time: 0
+      value: 1
+      inSlope: 0
+      outSlope: 0
+      tangentMode: 0
+      weightedMode: 0
+      inWeight: 0.33333334
+      outWeight: 0.33333334
+    m_PreInfinity: 2
+    m_PostInfinity: 2
+    m_RotationOrder: 4
+--- !u!82 &3356017895534214922
+AudioSource:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8859394471345475044}
+  m_Enabled: 1
+  serializedVersion: 4
+  OutputAudioMixerGroup: {fileID: 0}
+  m_audioClip: {fileID: 8300000, guid: 19595c164c7b8c64295bd1c5db99db4a, type: 3}
   m_PlayOnAwake: 0
   m_Volume: 1
   m_Pitch: 1
@@ -1570,6 +1867,7 @@ MonoBehaviour:
   currentPowerGeneration: 0
   totalLampPower: 0
   activePowerConsumption: 0
+  hasFunctionalEngine: 1
   currentBatteryCapacity: 0
   currentFuelCapacity: 0
   currentMaxOutput: 0
@@ -1580,6 +1878,8 @@ MonoBehaviour:
   currentFuelAmount: 0
   currentBatteryAmount: 0
   isPreviewMode: 0
+  isGridFullyLoaded: 0
+  persistGridOnDestroy: 1
   hud: {fileID: 0}
 --- !u!114 &8766319752834695132
 MonoBehaviour:
@@ -1630,18 +1930,113 @@ MonoBehaviour:
   gridZones:
   - zoneName: atas
     origin: {fileID: 1928401121685851406}
-    capacity: {x: 2, y: 2}
+    capacity: {x: 4, y: 4}
     cellSize: 0.25
     affectDrag: 1
-  - zoneName: kanan
-    origin: {fileID: 2916181200958217102}
-    capacity: {x: 3, y: 3}
-    cellSize: 0.25
-    affectDrag: 1
-  - zoneName: kiri
-    origin: {fileID: 7430528426528173444}
-    capacity: {x: 3, y: 3}
-    cellSize: 0.25
-    affectDrag: 1
+    isInternalGrid: 0
   defaultModulePresets: []
   installedModules: []
+--- !u!114 &2843545747271988829
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8859394471345475044}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 779cf94fe5b9ddc4d9903559d3883f55, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  exitPoint: {fileID: 2082616416545131418}
+  interactionPrompt: {fileID: 0}
+  enterExitKey: 101
+--- !u!65 &8462629948612562815
+BoxCollider:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8859394471345475044}
+  m_Material: {fileID: 0}
+  m_IncludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_ExcludeLayers:
+    serializedVersion: 2
+    m_Bits: 0
+  m_LayerOverridePriority: 0
+  m_IsTrigger: 1
+  m_ProvidesContacts: 0
+  m_Enabled: 1
+  serializedVersion: 3
+  m_Size: {x: 0.5361557, y: 1.5280169, z: 1}
+  m_Center: {x: 1.2024438, y: 0.82039124, z: 0}
+--- !u!114 &5359721270168292568
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 8859394471345475044}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 82865527bc2b1134e91b4882cf3c653c, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  vehicle: {fileID: 246316638623364675}
+  statsManager: {fileID: 6321340214497921229}
+  vehicleNameText: {fileID: 0}
+  speedText: {fileID: 0}
+  gearText: {fileID: 0}
+  torqueText: {fileID: 0}
+  rpmBarFill: {fileID: 0}
+  rpmBarColor:
+    serializedVersion: 2
+    key0: {r: 1, g: 1, b: 1, a: 1}
+    key1: {r: 1, g: 1, b: 1, a: 1}
+    key2: {r: 0, g: 0, b: 0, a: 0}
+    key3: {r: 0, g: 0, b: 0, a: 0}
+    key4: {r: 0, g: 0, b: 0, a: 0}
+    key5: {r: 0, g: 0, b: 0, a: 0}
+    key6: {r: 0, g: 0, b: 0, a: 0}
+    key7: {r: 0, g: 0, b: 0, a: 0}
+    ctime0: 0
+    ctime1: 65535
+    ctime2: 0
+    ctime3: 0
+    ctime4: 0
+    ctime5: 0
+    ctime6: 0
+    ctime7: 0
+    atime0: 0
+    atime1: 65535
+    atime2: 0
+    atime3: 0
+    atime4: 0
+    atime5: 0
+    atime6: 0
+    atime7: 0
+    m_Mode: 0
+    m_ColorSpace: -1
+    m_NumColorKeys: 2
+    m_NumAlphaKeys: 2
+  fuelAmountText: {fileID: 0}
+  fuelCapacityText: {fileID: 0}
+  fuelConsumptionText: {fileID: 0}
+  fuelBarFill: {fileID: 0}
+  batteryAmountText: {fileID: 0}
+  batteryCapacityText: {fileID: 0}
+  powerGenerationText: {fileID: 0}
+  powerConsumptionText: {fileID: 0}
+  maxPowerOutputText: {fileID: 0}
+  capacitorCapacityText: {fileID: 0}
+  capacitorChargeRateText: {fileID: 0}
+  bodyArmorText: {fileID: 0}
+  wheelHPText: {fileID: 0}
+  wheelArmorText: {fileID: 0}
+  engineArmorText: {fileID: 0}
+  batteryArmorText: {fileID: 0}
+  totalWeightText: {fileID: 0}
+  showDebugOverlay: 1
+  updateRate: 15
