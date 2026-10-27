@@ -69,5 +69,6 @@ MonoBehaviour:
   explosiveRadius: 5
   explosiveDamage: 200
   explosiveForce: 500
-  explosionVFXPrefab: {fileID: 0}
-  explosionSFX: {fileID: 0}
+  explosionVFXPrefab: {fileID: 3330918266733791263, guid: 9b59fcb2a61a1d5498b8231db5ceed58,
+    type: 3}
+  explosionSFX: {fileID: 8300000, guid: b62fda66cbbf9f141bab5055d0ce2bb3, type: 3}
