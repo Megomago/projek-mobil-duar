@@ -18,7 +18,7 @@ public class WheelEffects : MonoBehaviour
     [Header("=== DUST APPEARANCE (auto-generate) ===")]
     [Tooltip("Kalau slot 'Tire Dust Systems' di atas kosong, partikel debu dibuat otomatis di tiap roda")]
     public bool autoCreateDustParticles = true;
-    [Tooltip("Warna debu / pasir gurun")]
+    [Tooltip("Warna debu saat siang. Alpha dipakai untuk kepadatan awal partikel.")]
     public Color dustColor = new Color(0.82f, 0.74f, 0.55f, 0.5f);
     [Tooltip("Ukuran awal partikel debu (meter)")]
     public float dustStartSize = 0.8f;
@@ -37,6 +37,19 @@ public class WheelEffects : MonoBehaviour
     [Tooltip("Material debu opsional. Kalau kosong, dibuat otomatis pakai URP Particles/Unlit")]
     public Material dustMaterial;
 
+    [Header("=== DUST DAY/NIGHT ===")]
+    [Tooltip("Debu roda ikut berubah warna dan opacity mengikuti Time Of Day.")]
+    public bool followDayNight = true;
+
+    [Tooltip("Warna debu saat malam. Siang memakai warna Dust Color di atas.")]
+    public Color dustNightColor = new Color(0.18f, 0.22f, 0.30f, 1f);
+
+    [Tooltip("Opacity debu saat siang. Makin besar makin menutup pandangan.")]
+    [Range(0f, 1f)] public float dustDayOpacity = 1f;
+
+    [Tooltip("Opacity debu saat malam. Tetap terlihat samar, tapi tidak kuning.")]
+    [Range(0f, 1f)] public float dustNightOpacity = 0.65f;
+
     [Header("=== SLIP SMOKE ===")]
     public ParticleSystem[] tireSmokeSystems;
     [Range(0.1f, 1f)] public float smokeThreshold = 0.4f;
@@ -52,7 +65,13 @@ public class WheelEffects : MonoBehaviour
 
     public bool IsDustActive { get; private set; }
 
+    static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+    static readonly int TintColorId = Shader.PropertyToID("_TintColor");
+    static readonly int AlphaId = Shader.PropertyToID("_Alpha");
+
     private VehicleController _vc;
+    private TimeOfDayController _timeOfDay;
+    private float _nextTimeOfDaySearch;
 
     private static Texture2D _softParticleTex;
     private static Material _runtimeDustMat;
@@ -60,6 +79,7 @@ public class WheelEffects : MonoBehaviour
     private void Awake()
     {
         _vc = GetComponent<VehicleController>();
+        _timeOfDay = FindObjectOfType<TimeOfDayController>();
 
         if (tireSquealSource != null)
         {
@@ -77,6 +97,8 @@ public class WheelEffects : MonoBehaviour
 
         if (hasAssignedDust)
             ApplyDustThicknessToAssignedSystems();
+
+        UpdateDustDayNight();
     }
 
     private void Update()
@@ -165,6 +187,48 @@ public class WheelEffects : MonoBehaviour
         UpdateSquealAudio(maxSlip);
     }
 
+    private void LateUpdate()
+    {
+        UpdateDustDayNight();
+    }
+
+    private void UpdateDustDayNight()
+    {
+        if (!followDayNight || _runtimeDustMat == null)
+            return;
+
+        if (_timeOfDay == null)
+        {
+            if (Time.time < _nextTimeOfDaySearch)
+                return;
+
+            _nextTimeOfDaySearch = Time.time + 1f;
+            _timeOfDay = FindObjectOfType<TimeOfDayController>();
+
+            if (_timeOfDay == null)
+                return;
+        }
+
+        float night = _timeOfDay.NightAmount;
+        Color tint = Color.Lerp(dustColor, dustNightColor, night);
+        float opacity = Mathf.Lerp(dustDayOpacity, dustNightOpacity, night);
+
+        if (_runtimeDustMat.HasProperty(BaseColorId))
+        {
+            tint.a = opacity;
+            _runtimeDustMat.SetColor(BaseColorId, tint);
+        }
+
+        if (_runtimeDustMat.HasProperty(TintColorId))
+        {
+            tint.a = 1f;
+            _runtimeDustMat.SetColor(TintColorId, tint);
+        }
+
+        if (_runtimeDustMat.HasProperty(AlphaId))
+            _runtimeDustMat.SetFloat(AlphaId, opacity);
+    }
+
     private bool HasVisibleDustParticles()
     {
         if (tireDustSystems == null) return false;
@@ -215,6 +279,7 @@ public class WheelEffects : MonoBehaviour
                 case ParticleSystemGradientMode.Color:
                     Color c = startColor.color;
                     c.a = Mathf.Clamp01(c.a * alphaMul);
+                    c.r = c.g = c.b = 1f;
                     main.startColor = c;
                     break;
                 case ParticleSystemGradientMode.TwoColors:
@@ -222,6 +287,8 @@ public class WheelEffects : MonoBehaviour
                     Color cMax = startColor.colorMax;
                     cMin.a = Mathf.Clamp01(cMin.a * alphaMul);
                     cMax.a = Mathf.Clamp01(cMax.a * alphaMul);
+                    cMin.r = cMin.g = cMin.b = 1f;
+                    cMax.r = cMax.g = cMax.b = 1f;
                     main.startColor = new ParticleSystem.MinMaxGradient(cMin, cMax);
                     break;
             }
@@ -310,7 +377,7 @@ public class WheelEffects : MonoBehaviour
 
         float thickness = Mathf.Max(0.1f, dustThickness);
         float startSize = dustStartSize * thickness;
-        Color dustTint = dustColor;
+        Color dustTint = Color.white;
         dustTint.a = Mathf.Clamp01(dustColor.a * Mathf.Lerp(1f, thickness, 0.5f));
 
         var main = ps.main;
@@ -376,13 +443,15 @@ public class WheelEffects : MonoBehaviour
 
     private Material GetDustMaterial()
     {
-        if (dustMaterial != null) return dustMaterial;
         if (_runtimeDustMat != null) return _runtimeDustMat;
 
-        Material baseMat = Resources.Load<Material>("VehicleFX/DustParticle");
-        if (baseMat != null)
+        Material source = dustMaterial != null
+            ? dustMaterial
+            : Resources.Load<Material>("VehicleFX/DustParticle");
+
+        if (source != null)
         {
-            _runtimeDustMat = new Material(baseMat) { name = "DustTrail_Runtime" };
+            _runtimeDustMat = new Material(source) { name = "DustTrail_Runtime" };
         }
         else
         {
@@ -406,8 +475,13 @@ public class WheelEffects : MonoBehaviour
         if (_runtimeDustMat.HasProperty("_MainTex")) _runtimeDustMat.SetTexture("_MainTex", tex);
         if (_runtimeDustMat.HasProperty("_EmissionMap")) _runtimeDustMat.SetTexture("_EmissionMap", tex);
 
-        if (_runtimeDustMat.HasProperty("_BaseColor")) _runtimeDustMat.SetColor("_BaseColor", Color.white);
-        if (_runtimeDustMat.HasProperty("_Color")) _runtimeDustMat.SetColor("_Color", Color.white);
+        Color dayTint = dustColor;
+        dayTint.a = dustDayOpacity;
+
+        if (_runtimeDustMat.HasProperty(BaseColorId)) _runtimeDustMat.SetColor(BaseColorId, dayTint);
+        if (_runtimeDustMat.HasProperty("_Color")) _runtimeDustMat.SetColor("_Color", dayTint);
+        if (_runtimeDustMat.HasProperty(TintColorId)) _runtimeDustMat.SetColor(TintColorId, dustColor);
+        if (_runtimeDustMat.HasProperty(AlphaId)) _runtimeDustMat.SetFloat(AlphaId, dustDayOpacity);
         if (_runtimeDustMat.HasProperty("_Surface")) _runtimeDustMat.SetFloat("_Surface", 1f);
         if (_runtimeDustMat.HasProperty("_Blend")) _runtimeDustMat.SetFloat("_Blend", 0f);
         if (_runtimeDustMat.HasProperty("_SrcBlend")) _runtimeDustMat.SetFloat("_SrcBlend", (float)BlendMode.SrcAlpha);

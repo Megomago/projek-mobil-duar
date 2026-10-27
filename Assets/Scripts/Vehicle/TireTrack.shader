@@ -99,7 +99,12 @@ Shader "Custom/TireTrack"
 
                 Light mainLight = GetMainLight();
                 half ndl = saturate(dot(normalWS, mainLight.direction));
-                half3 lighting = mainLight.color * ndl + _Ambient;
+
+                // FIX: Ambil ambient asli dari scene Unity (SH), dikali slider _Ambient buat pengali intensitas
+                half3 ambient = SampleSH(normalWS) * _Ambient;
+
+                // Sekarang pas malam (mainLight mati & ambient hitam), lighting-nya bakal 100% NOL!
+                half3 lighting = mainLight.color * ndl + ambient;
 
                 half3 color = albedo * lighting * edgeShadow;
                 color = MixFog(color, IN.fogFactor);
