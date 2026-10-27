@@ -590,7 +590,7 @@ MonoBehaviour:
   powerGeneration: 0
   extraBatteryCapacity: 0
   extraFuelCapacity: 40
-  ammoPoint: 200
+  ammoPoint: 0
   currentAmmoPoint: 0
   extraMaxOutput: 0
   capacitorCapacity: 0
@@ -601,6 +601,7 @@ MonoBehaviour:
   explosionDamage: 200
   explosionRadius: 5
   explosionVFXPrefab: {fileID: 0}
+  explosionVFXDespawnTime: 0
   explosionSFX: {fileID: 0}
   destroyedPrefab: {fileID: 0}
 --- !u!1 &3304918648039631990
@@ -980,6 +981,7 @@ MonoBehaviour:
   explosionDamage: 200
   explosionRadius: 5
   explosionVFXPrefab: {fileID: 0}
+  explosionVFXDespawnTime: 0
   explosionSFX: {fileID: 0}
   destroyedPrefab: {fileID: 0}
 --- !u!65 &8952641406809338648
@@ -1402,6 +1404,7 @@ MonoBehaviour:
   currentPowerGeneration: 95
   totalLampPower: 0
   activePowerConsumption: 0
+  hasFunctionalEngine: 1
   currentBatteryCapacity: 720
   currentFuelCapacity: 80
   currentMaxOutput: 1000
@@ -1413,6 +1416,7 @@ MonoBehaviour:
   currentBatteryAmount: 0
   isPreviewMode: 0
   isGridFullyLoaded: 0
+  persistGridOnDestroy: 1
   hud: {fileID: 0}
 --- !u!114 &4668030914644899591
 MonoBehaviour:
@@ -2252,6 +2256,7 @@ MonoBehaviour:
   explosionDamage: 200
   explosionRadius: 5
   explosionVFXPrefab: {fileID: 0}
+  explosionVFXDespawnTime: 0
   explosionSFX: {fileID: 0}
   destroyedPrefab: {fileID: 0}
 --- !u!65 &686875424785048373
@@ -2561,7 +2566,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   partType: 0
-  partName: 1.5L 3SZ-VE
+  partName: 1.5L 3SJ-VE
   maxHealth: 300
   currentHealth: 0
   isOneHitPart: 0
@@ -2582,6 +2587,7 @@ MonoBehaviour:
   explosionRadius: 5
   explosionVFXPrefab: {fileID: 3330918266733791263, guid: 9b59fcb2a61a1d5498b8231db5ceed58,
     type: 3}
+  explosionVFXDespawnTime: 0
   explosionSFX: {fileID: 0}
   destroyedPrefab: {fileID: 0}
 --- !u!65 &5932279255782085389

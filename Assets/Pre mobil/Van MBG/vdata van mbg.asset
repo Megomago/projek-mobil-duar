@@ -12,7 +12,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9b350e8faa2883947ab13b297ff66abb, type: 3}
   m_Name: vdata van mbg
   m_EditorClassIdentifier: 
-  vehicleName: Daihatsu Grandmax
+  uid: 9acf0cdd0ce94e028c20c9e09fbd5920
+  vehicleName: Dahatsu Landmax
   vehiclePrefab: {fileID: 5801169931204964018, guid: 30de637b82f2d51409fe866c0f404ff2,
     type: 3}
-  weaponSlotCount: 0
