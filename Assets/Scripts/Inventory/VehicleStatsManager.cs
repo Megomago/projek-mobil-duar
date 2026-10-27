@@ -226,10 +226,15 @@ public class VehicleStatsManager : MonoBehaviour
         currentBatteryAmount += netPower * Time.deltaTime / 3600f;
         currentBatteryAmount = Mathf.Clamp(currentBatteryAmount, 0f, currentBatteryCapacity);
 
-        int count = _cachedCriticalParts.Count;
-        for (int i = 0; i < count; i++)
+        _lampTimer -= Time.deltaTime;
+        if (_lampTimer <= 0f)
         {
-            _cachedCriticalParts[i].UpdateLampState(currentBatteryAmount, lightsOn);
+            _lampTimer = 0.1f;
+            int count = _cachedCriticalParts.Count;
+            for (int i = 0; i < count; i++)
+            {
+                _cachedCriticalParts[i].UpdateLampState(currentBatteryAmount, lightsOn);
+            }
         }
     }
 
@@ -237,6 +242,7 @@ public class VehicleStatsManager : MonoBehaviour
     private List<VehicleCriticalPart> _ammoCriticalCache;
     private List<VehicleCriticalPart> _cachedCriticalParts = new List<VehicleCriticalPart>();
     private int _ammoCacheIndex;
+    private float _lampTimer;
 
     public bool TryConsumeAmmo(float points)
     {

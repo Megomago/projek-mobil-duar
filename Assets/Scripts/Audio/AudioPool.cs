@@ -36,6 +36,35 @@ public class AudioPool : MonoBehaviour
         }
     }
 
+    private void OnEnable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    private void OnDisable()
+    {
+        UnityEngine.SceneManagement.SceneManager.sceneLoaded -= OnSceneLoaded;
+    }
+
+    private void OnSceneLoaded(UnityEngine.SceneManagement.Scene scene, UnityEngine.SceneManagement.LoadSceneMode mode)
+    {
+        StopAll();
+    }
+
+    public void StopAll()
+    {
+        if (_voices == null) return;
+        for (int i = 0; i < _voices.Length; i++)
+        {
+            if (_voices[i].source != null)
+            {
+                _voices[i].source.Stop();
+                _voices[i].source.clip = null;
+            }
+            _voices[i].busyUntil = 0f;
+        }
+    }
+
     private void InitializePool()
     {
         _voices = new PooledVoice[poolSize];

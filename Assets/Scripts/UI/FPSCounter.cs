@@ -121,7 +121,7 @@ public class FPSCounter : MonoBehaviour
         if (_text == null) return;
 
         int fps = Mathf.RoundToInt(_currentFps);
-        _text.text = fps + " FPS";
+        _text.SetText("{0} FPS", fps);
         _text.color = fps >= 50
             ? new Color(0.5f, 1f, 0.5f)
             : (fps >= 30 ? new Color(1f, 0.9f, 0.4f) : new Color(1f, 0.45f, 0.45f));

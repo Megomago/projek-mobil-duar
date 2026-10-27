@@ -135,7 +135,13 @@ namespace Weapons
         {
             if (turretBase == null || gunBarrel == null || aimOrigin == null) return;
 
-            if (usePlayerInput && playerCamera != null && !_isFreeLooking)
+            if (!usePlayerInput)
+            {
+                UpdateAimDebug();
+                return;
+            }
+
+            if (playerCamera != null && !_isFreeLooking)
             {
                 _currentTargetPoint = GetCrosshairTarget();
             }

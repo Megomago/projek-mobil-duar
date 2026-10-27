@@ -66,6 +66,8 @@ public class GridVisualizer : MonoBehaviour
     // Material grid overlay dibagi antar semua instance (dibuat sekali, tidak bocor per spawn)
     private static Material _cachedOverlayMaterial;
     private bool _isGridVisible = false;
+    private float _nextColorUpdate;
+    private const float ColorUpdateInterval = 0.05f;
 
     private readonly List<Vector2Int> _clearanceCells = new List<Vector2Int>();
     private readonly List<Vector2Int> _occupiedCells = new List<Vector2Int>();
@@ -120,10 +122,11 @@ public class GridVisualizer : MonoBehaviour
     
     private void Update()
     {
-        if (Application.isPlaying && _isGridVisible)
-        {
-            UpdateGridColors();
-        }
+        if (!Application.isPlaying || !_isGridVisible) return;
+
+        if (Time.unscaledTime < _nextColorUpdate) return;
+        _nextColorUpdate = Time.unscaledTime + ColorUpdateInterval;
+        UpdateGridColors();
     }
 
     private void GenerateGridVisuals()

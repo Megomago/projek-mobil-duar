@@ -54,11 +54,15 @@ public class VehicleUIManager : MonoBehaviour
     private float _nextUpdateTime;
     private string _lastGearText;
     private VehicleCriticalPart[] _cachedCritParts;
+    private VehicleController _cachedVc;
 
     public void Initialize(VehicleController controller, VehicleStatsManager stats, string vehicleName)
     {
         vehicle = controller;
         statsManager = stats;
+        _cachedVc = controller;
+        _cachedCritParts = null;
+        _debugNextCritRefresh = 0f;
         SetVehicleName(vehicleName);
 
         if (rpmBarColor == null || rpmBarColor.colorKeys.Length == 0)
@@ -127,88 +131,127 @@ public class VehicleUIManager : MonoBehaviour
         DrawDebugOverlay();
     }
 
+    private GUIStyle _debugStyle;
+    private readonly string[] _debugRows = new string[64];
+    private int _debugRowCount;
+    private int _debugBatteryRow = -1;
+    private float _debugNextRefresh;
+    private float _debugNextCritRefresh;
+    private float _debugBatteryNorm = -1f;
+
     private void DrawDebugOverlay()
     {
         if (vehicle == null) return;
-        int x = Screen.width - 330, y = 10, w = 320, h = 20, pad = 2;
-        GUIStyle lbl = new GUIStyle(GUI.skin.label) { fontSize = 12, normal = { textColor = Color.white } };
-        GUI.Box(new Rect(x - 4, y - 8, w + 8, 780), "");
 
-        void Row(string label)
+        if (Time.unscaledTime >= _debugNextRefresh)
         {
-            GUI.Label(new Rect(x, y, w, h), label, lbl);
-            y += h + pad;
+            _debugNextRefresh = Time.unscaledTime + 0.25f;
+            RebuildDebugRows();
         }
 
-        Row($"<b>=== TELEMETRY ===</b>");
-        Row($"");
+        if (_debugStyle == null)
+        {
+            _debugStyle = new GUIStyle(GUI.skin.label) { fontSize = 12 };
+            _debugStyle.normal.textColor = Color.white;
+        }
 
-        // ── DARI VEHICLE CONTROLLER ──
-        Row($"<b>── DRIVING (VC) ──</b>");
-        Row($"Speed     : {vehicle.speedKmh:F1} km/h");
-        Row($"Gear      : {vehicle.GetGearName()}");
-        Row($"RPM       : {vehicle.currentRPM:F0} / {vehicle.engine.maxRPM}");
-        Row($"Torque    : {vehicle.currentTorqueNm:F1} Nm");
-        Row($"Throttle  : {vehicle.throttleInput * 100f:F0}%");
-        Row($"Brake     : {vehicle.brakeInput * 100f:F0}%");
-        Row($"");
+        int x = Screen.width - 330, y = 10, w = 320, h = 20, pad = 2;
+        GUI.Box(new Rect(x - 4, y - 8, w + 8, 780), "");
+
+        for (int i = 0; i < _debugRowCount; i++)
+        {
+            if (i == _debugBatteryRow && _debugBatteryNorm >= 0f)
+            {
+                Rect barBG = new Rect(x, y, w, 14);
+                Rect barFG = new Rect(x, y, w * _debugBatteryNorm, 14);
+                GUI.DrawTexture(barBG, Texture2D.whiteTexture, ScaleMode.StretchToFill, false, 0, new Color(0.2f, 0.2f, 0.2f), 0, 0);
+                Color battColor = _debugBatteryNorm > 0.5f ? Color.cyan : (_debugBatteryNorm > 0.2f ? Color.yellow : Color.red);
+                GUI.DrawTexture(barFG, Texture2D.whiteTexture, ScaleMode.StretchToFill, false, 0, battColor, 0, 0);
+                y += 18;
+            }
+
+            GUI.Label(new Rect(x, y, w, h), _debugRows[i], _debugStyle);
+            y += h + pad;
+        }
+    }
+
+    private void AddDebugRow(string text)
+    {
+        if (_debugRowCount < _debugRows.Length)
+            _debugRows[_debugRowCount++] = text;
+    }
+
+    private void RebuildDebugRows()
+    {
+        _debugRowCount = 0;
+        _debugBatteryRow = -1;
+        _debugBatteryNorm = -1f;
+
+        AddDebugRow("=== TELEMETRY ===");
+        AddDebugRow("");
+        AddDebugRow("--- DRIVING (VC) ---");
+        AddDebugRow($"Speed     : {vehicle.speedKmh:F1} km/h");
+        AddDebugRow($"Gear      : {vehicle.GetGearName()}");
+        AddDebugRow($"RPM       : {vehicle.currentRPM:F0} / {vehicle.engine.maxRPM}");
+        AddDebugRow($"Torque    : {vehicle.currentTorqueNm:F1} Nm");
+        AddDebugRow($"Throttle  : {vehicle.throttleInput * 100f:F0}%");
+        AddDebugRow($"Brake     : {vehicle.brakeInput * 100f:F0}%");
+        AddDebugRow("");
 
         if (statsManager == null) return;
 
-        // ── DARI VEHICLE STATS MANAGER ──
-        Row($"<b>── FUEL (VSM) ──</b>");
-        Row($"Fuel      : {statsManager.currentFuelAmount:F1} / {statsManager.currentFuelCapacity:F0} L");
-        if (vehicle != null)
-            Row($"Consump   : {vehicle.currentFuelConsumptionRate:F4} L/s");
+        AddDebugRow("--- FUEL (VSM) ---");
+        AddDebugRow($"Fuel      : {statsManager.currentFuelAmount:F1} / {statsManager.currentFuelCapacity:F0} L");
+        AddDebugRow($"Consump   : {vehicle.currentFuelConsumptionRate:F4} L/s");
         float fuelPct = statsManager.currentFuelCapacity > 0f ? statsManager.currentFuelAmount / statsManager.currentFuelCapacity * 100f : 0f;
-        Row($"Fuel %%    : {fuelPct:F1}%");
-        Row($"");
+        AddDebugRow($"Fuel %    : {fuelPct:F1}%");
+        AddDebugRow("");
 
-        Row($"<b>── ELECTRICAL (VSM) ──</b>");
+        AddDebugRow("--- ELECTRICAL (VSM) ---");
         float battPct = statsManager.currentBatteryCapacity > 0f ? statsManager.currentBatteryAmount / statsManager.currentBatteryCapacity * 100f : 0f;
-        Row($"Battery   : {statsManager.currentBatteryAmount:F1} / {statsManager.currentBatteryCapacity:F0} Wh ({battPct:F1}%)");
+        AddDebugRow($"Battery   : {statsManager.currentBatteryAmount:F1} / {statsManager.currentBatteryCapacity:F0} Wh ({battPct:F1}%)");
         float totalGen = statsManager.currentPowerGeneration;
-        if (vehicle != null && vehicle.engineRunning)
-            totalGen += statsManager.enginePowerGeneration;
-        Row($"Power Gen : {totalGen:F0} W");
-        Row($"Power Cons: {statsManager.activePowerConsumption:F0} W");
+        if (vehicle.engineRunning) totalGen += statsManager.enginePowerGeneration;
+        AddDebugRow($"Power Gen : {totalGen:F0} W");
+        AddDebugRow($"Power Cons: {statsManager.activePowerConsumption:F0} W");
         float netPower = totalGen - statsManager.activePowerConsumption;
-        Row($"Net Power : {netPower:F0} W {(netPower >= 0 ? "(charging)" : "(draining)")}");
-        Row($"Max Out   : {statsManager.currentMaxOutput:F0} W");
-        Row($"Capacitor : {statsManager.currentCapacitorCapacity:F0} Wh");
-        Row($"Chg Rate  : {statsManager.currentCapacitorChargeRate:F0} W");
-        Row($"");
+        AddDebugRow($"Net Power : {netPower:F0} W {(netPower >= 0 ? "(charging)" : "(draining)")}");
+        AddDebugRow($"Max Out   : {statsManager.currentMaxOutput:F0} W");
+        AddDebugRow($"Capacitor : {statsManager.currentCapacitorCapacity:F0} Wh");
+        AddDebugRow($"Chg Rate  : {statsManager.currentCapacitorChargeRate:F0} W");
+        AddDebugRow("");
 
-        Row($"<b>── ARMOR & HEALTH (VSM) ──</b>");
-        Row($"Chassis DEF: {statsManager.currentChassisArmor:F0}");
-        Row($"Mass (kg)  : {statsManager.currentTotalMass:F0}");
-        Row($"");
-        Row($"<b>── CRITICAL PARTS ──</b>");
-        foreach (var cp in statsManager.GetComponentsInChildren<VehicleCriticalPart>(false))
+        AddDebugRow("--- ARMOR & HEALTH (VSM) ---");
+        AddDebugRow($"Chassis DEF: {statsManager.currentChassisArmor:F0}");
+        AddDebugRow($"Mass (kg)  : {statsManager.currentTotalMass:F0}");
+        AddDebugRow("");
+        AddDebugRow("--- CRITICAL PARTS ---");
+
+        if (_cachedCritParts == null || Time.unscaledTime >= _debugNextCritRefresh)
         {
-            if (cp.hideFromModuleList) continue;
-            Row($"{cp.partName}  HP:{cp.currentHealth}/{cp.maxHealth}  DEF:{cp.armor}");
+            _debugNextCritRefresh = Time.unscaledTime + 1f;
+            _cachedCritParts = statsManager.GetComponentsInChildren<VehicleCriticalPart>(false);
         }
 
-        // Battery bar visual
+        for (int i = 0; i < _cachedCritParts.Length; i++)
+        {
+            VehicleCriticalPart cp = _cachedCritParts[i];
+            if (cp == null || cp.hideFromModuleList) continue;
+            AddDebugRow($"{cp.partName}  HP:{cp.currentHealth}/{cp.maxHealth}  DEF:{cp.armor}");
+        }
+
         if (statsManager.currentBatteryCapacity > 0f)
         {
-            float battNorm = Mathf.Clamp01(statsManager.currentBatteryAmount / statsManager.currentBatteryCapacity);
-            Rect barBG = new Rect(x, y, w, 14);
-            Rect barFG = new Rect(x, y, w * battNorm, 14);
-            GUI.DrawTexture(barBG, Texture2D.whiteTexture, ScaleMode.StretchToFill, false, 0, new Color(0.2f, 0.2f, 0.2f), 0, 0);
-            Color battColor = battNorm > 0.5f ? Color.cyan : (battNorm > 0.2f ? Color.yellow : Color.red);
-            GUI.DrawTexture(barFG, Texture2D.whiteTexture, ScaleMode.StretchToFill, false, 0, battColor, 0, 0);
-            y += 18;
+            _debugBatteryRow = _debugRowCount;
+            _debugBatteryNorm = Mathf.Clamp01(statsManager.currentBatteryAmount / statsManager.currentBatteryCapacity);
         }
 
-        Row($"<b>── WEIGHT (VSM) ──</b>");
+        AddDebugRow("--- WEIGHT (VSM) ---");
         if (statsManager.currentTotalMass >= 10000f)
-            Row($"Mass      : {statsManager.currentTotalMass / 1000f:F2} t");
+            AddDebugRow($"Mass      : {statsManager.currentTotalMass / 1000f:F2} t");
         else
-            Row($"Mass      : {statsManager.currentTotalMass:F0} kg");
+            AddDebugRow($"Mass      : {statsManager.currentTotalMass:F0} kg");
     }
-
     private void UpdateTelemetry()
     {
         // ── DARI VEHICLE CONTROLLER (speed, gear, rpm, torsi) ──
@@ -239,7 +282,7 @@ public class VehicleUIManager : MonoBehaviour
         if (statsManager == null) return;
 
         // ── DARI VEHICLE STATS MANAGER (bensin, elektrik, armor, berat) ──
-        VehicleController vc = statsManager.GetComponent<VehicleController>();
+        VehicleController vc = _cachedVc != null ? _cachedVc : statsManager.GetComponent<VehicleController>();
 
         // Fuel
         if (fuelAmountText != null)

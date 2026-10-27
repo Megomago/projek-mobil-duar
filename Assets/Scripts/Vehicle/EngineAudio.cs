@@ -88,6 +88,10 @@ public class EngineAudio : MonoBehaviour
 
         if (!_vc.engineRunning)
         {
+            // Sudah benar-benar sunyi? Jangan tulis properti AudioSource tiap frame.
+            if (!engineAudioSource.isPlaying && engineAudioSource.volume <= 0.005f)
+                return;
+
             // Stall: fade volume & pitch lerp ke minimal
             engineAudioSource.volume = Mathf.Lerp(engineAudioSource.volume, 0f, Time.deltaTime * _fadeSpeed);
             engineAudioSource.pitch  = Mathf.Lerp(engineAudioSource.pitch, minPitch * 0.3f, Time.deltaTime * _fadeSpeed);

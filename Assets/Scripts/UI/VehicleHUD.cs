@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using UnityEngine;
 using TMPro; // Memerlukan TextMeshPro
 
@@ -44,6 +45,7 @@ public class VehicleHUD : MonoBehaviour
 
     // Referensi aktif ke VehicleStatsManager yang sedang ditampilkan
     private VehicleStatsManager _currentStats;
+    private readonly List<VehicleCriticalPart> _critPartsCache = new List<VehicleCriticalPart>(16);
 
     // ─────────────────────────────────────────────────────────────────
     // API publik: panggil ini dari VehicleSelector setiap kali kendaraan
@@ -88,31 +90,32 @@ public class VehicleHUD : MonoBehaviour
 
         // ── Health & Armor ────────────────────────────────────────────
         // Bodi — Chassis cuma armor (DEF), gada HP
-        if (bodyHPText    != null) bodyHPText.text    = statsManager.currentChassisArmor.ToString("0") + " DEF";
-        if (bodyArmorText != null) bodyArmorText.text  = statsManager.currentChassisArmor.ToString("0");
+        if (bodyHPText    != null) bodyHPText.SetText("{0:0} DEF", statsManager.currentChassisArmor);
+        if (bodyArmorText != null) bodyArmorText.SetText("{0:0}", statsManager.currentChassisArmor);
 
         // Roda, Mesin & Baterai — baca langsung dari VehicleCriticalPart
-        var critParts = statsManager.GetComponentsInChildren<VehicleCriticalPart>(false);
+        _critPartsCache.Clear();
+        statsManager.GetComponentsInChildren(false, _critPartsCache);
         float engineHP = 0, engineArmor = 0, batteryHP = 0, batteryArmor = 0, wheelHP = 0, wheelArmor = 0;
-        foreach (var cp in critParts)
+        foreach (var cp in _critPartsCache)
         {
                      if (cp.partType == VehicleCriticalPart.CriticalPartType.Engine)  { engineHP = cp.currentHealth; engineArmor = cp.armor; }
                 else if (cp.partType == VehicleCriticalPart.CriticalPartType.Battery) { batteryHP = cp.currentHealth; batteryArmor = cp.armor; }
                 else if (cp.partType == VehicleCriticalPart.CriticalPartType.Other)   { wheelHP = cp.currentHealth; wheelArmor = cp.armor; }
         }
-        if (wheelHPText     != null) wheelHPText.text     = wheelHP.ToString("0");
-        if (wheelArmorText  != null) wheelArmorText.text   = wheelArmor.ToString("0");
-        if (engineHPText    != null) engineHPText.text     = engineHP.ToString("0");
-        if (engineArmorText != null) engineArmorText.text   = engineArmor.ToString("0");
-        if (batteryHPText   != null) batteryHPText.text    = batteryHP.ToString("0");
-        if (batteryArmorText!= null) batteryArmorText.text  = batteryArmor.ToString("0");
+        if (wheelHPText     != null) wheelHPText.SetText("{0:0}", wheelHP);
+        if (wheelArmorText  != null) wheelArmorText.SetText("{0:0}", wheelArmor);
+        if (engineHPText    != null) engineHPText.SetText("{0:0}", engineHP);
+        if (engineArmorText != null) engineArmorText.SetText("{0:0}", engineArmor);
+        if (batteryHPText   != null) batteryHPText.SetText("{0:0}", batteryHP);
+        if (batteryArmorText!= null) batteryArmorText.SetText("{0:0}", batteryArmor);
 
         // ── Performa – Bensin ─────────────────────────────────────────
         VehicleController vc = statsManager.GetComponent<VehicleController>();
         if (vc != null)
         {
-            if (motorTorqueText     != null) motorTorqueText.text     = vc.engine.maxTorqueNm.ToString("0") + " Nm";
-            if (fuelConsumptionText != null) fuelConsumptionText.text = vc.engine.maxFuelConsumptionRate.ToString("0.00") + " L/s";
+            if (motorTorqueText     != null) motorTorqueText.SetText("{0:0} Nm", vc.engine.maxTorqueNm);
+            if (fuelConsumptionText != null) fuelConsumptionText.SetText("{0:0.00} L/s", vc.engine.maxFuelConsumptionRate);
         }
         else
         {
@@ -120,23 +123,23 @@ public class VehicleHUD : MonoBehaviour
             if (fuelConsumptionText != null) fuelConsumptionText.text = "0.00 L/s";
         }
         
-        if (fuelCapacityText    != null) fuelCapacityText.text    = statsManager.currentFuelCapacity.ToString("0") + " L";
+        if (fuelCapacityText    != null) fuelCapacityText.SetText("{0:0} L", statsManager.currentFuelCapacity);
 
         // ── Performa – Kelistrikan ────────────────────────────────────
-        if (batteryCapacityText    != null) batteryCapacityText.text    = statsManager.currentBatteryCapacity.ToString("0") + " Wh";
+        if (batteryCapacityText    != null) batteryCapacityText.SetText("{0:0} Wh", statsManager.currentBatteryCapacity);
         if (powerGenerationText    != null)
         {
             float totalGen = statsManager.currentPowerGeneration + statsManager.enginePowerGeneration;
-            powerGenerationText.text = totalGen.ToString("0") + " W";
+            powerGenerationText.SetText("{0:0} W", totalGen);
         }
-        if (powerConsumptionText   != null) powerConsumptionText.text   = statsManager.currentPowerConsumption.ToString("0") + " W";
-        if (maxPowerOutputText     != null) maxPowerOutputText.text     = statsManager.currentMaxOutput.ToString("0") + " W";
-        if (capacitorCapacityText  != null) capacitorCapacityText.text  = statsManager.currentCapacitorCapacity.ToString("0") + " Wh";
-        if (capacitorChargeRateText!= null) capacitorChargeRateText.text= statsManager.currentCapacitorChargeRate.ToString("0") + " W";
+        if (powerConsumptionText   != null) powerConsumptionText.SetText("{0:0} W", statsManager.currentPowerConsumption);
+        if (maxPowerOutputText     != null) maxPowerOutputText.SetText("{0:0} W", statsManager.currentMaxOutput);
+        if (capacitorCapacityText  != null) capacitorCapacityText.SetText("{0:0} Wh", statsManager.currentCapacitorCapacity);
+        if (capacitorChargeRateText!= null) capacitorChargeRateText.SetText("{0:0} W", statsManager.currentCapacitorChargeRate);
 
         // ── Amunisi ───────────────────────────────────────────────────
         if (ammoPoolText != null)
-            ammoPoolText.text = statsManager.totalAmmoPoints.ToString("0") + " pts";
+            ammoPoolText.SetText("{0:0} pts", statsManager.totalAmmoPoints);
 
         // ── Berat ─────────────────────────────────────────────────────
         if (totalWeightText != null)
@@ -144,11 +147,11 @@ public class VehicleHUD : MonoBehaviour
             if (statsManager.currentTotalMass >= 10000f)
             {
                 float massInTons = statsManager.currentTotalMass / 1000f;
-                totalWeightText.text = massInTons.ToString("0.0") + " t";
+                totalWeightText.SetText("{0:0.0} t", massInTons);
             }
             else
             {
-                totalWeightText.text = statsManager.currentTotalMass.ToString("0") + " kg";
+                totalWeightText.SetText("{0:0} kg", statsManager.currentTotalMass);
             }
         }
     }

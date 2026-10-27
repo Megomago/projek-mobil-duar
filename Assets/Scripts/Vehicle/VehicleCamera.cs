@@ -125,6 +125,12 @@ public class VehicleCamera : MonoBehaviour
 
     private void UpdateTrauma()
     {
+        if (_shakeSources.Count == 0 && _pendingShakes.Count == 0)
+        {
+            _trauma = 0f;
+            return;
+        }
+
         float decay = shakeDecay * Time.deltaTime;
 
         _expiredSources.Clear();

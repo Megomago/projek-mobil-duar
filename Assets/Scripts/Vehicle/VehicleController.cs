@@ -975,6 +975,8 @@ public class VehicleController : MonoBehaviour
 
     private void UpdateWheelMeshes()
     {
+        if (_rb != null && ((movementLocked && _rb.isKinematic) || _rb.IsSleeping())) return;
+
         foreach (var w in wheels)
         {
             if (w.collider == null || w.meshTransform == null) continue;
