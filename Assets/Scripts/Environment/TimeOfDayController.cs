@@ -218,9 +218,6 @@ public class TimeOfDayController : MonoBehaviour
         ApplyExtraLights();
         ApplyBakedLighting();
 
-        ApplyExtraLights();
-        ApplyBakedLighting();
-
         if (cloudDome != null)
         {
             float cloudTint = Mathf.InverseLerp(-0.12f, 0.45f, sunHeight);
@@ -281,7 +278,7 @@ public class TimeOfDayController : MonoBehaviour
         if (!Application.isPlaying || _resolvedExtraLights == null)
             return;
 
-        float multiplier = Mathf.Lerp(1f, nightExtraLightMultiplier, NightAmount);
+        float multiplier = Mathf.Lerp(0f, 1f, NightAmount);
 
         for (int i = 0; i < _resolvedExtraLights.Length; i++)
         {
