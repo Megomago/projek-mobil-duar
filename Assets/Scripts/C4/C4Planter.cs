@@ -71,9 +71,12 @@ namespace C4
 
         private Camera _camera;
         private GameObject _viewInstance;
+        private C4PanelController _viewPanel;
         private Renderer[] _viewRenderers;
         private Material[] _viewMaterials;
         private Color[] _viewBaseColors;
+
+        private string _pendingCode;
 
         private bool _hasAppliedColor;
         private bool _lastValidState;
@@ -88,6 +91,7 @@ namespace C4
 
         private bool _equipInput;
         private bool _placeInput;
+        private bool _blockPlaceUntilRelease;
 
         private void Awake()
         {
@@ -108,7 +112,18 @@ namespace C4
         {
             // Input ditangkap murni di Update
             if (Input.GetKeyDown(equipKey)) _equipInput = true;
-            if (Input.GetKeyDown(placeKey)) _placeInput = true;
+
+            // Abis pickup, klik yang masih ditahan buat angkat C4 gak boleh
+            // langsung nempel C4 baru. Tunggu tombolnya dilepas dulu.
+            if (_blockPlaceUntilRelease)
+            {
+                if (!Input.GetKey(placeKey))
+                    _blockPlaceUntilRelease = false;
+            }
+            else if (Input.GetKeyDown(placeKey))
+            {
+                _placeInput = true;
+            }
         }
 
         private void LateUpdate()
@@ -147,6 +162,7 @@ namespace C4
             CanPlace = false;
             _equipInput = false;
             _placeInput = false;
+            _blockPlaceUntilRelease = false;
 
             if (_viewInstance != null)
                 _viewInstance.SetActive(false);
@@ -158,6 +174,7 @@ namespace C4
             CanPlace = false;
             _equipInput = false;
             _placeInput = false;
+            _blockPlaceUntilRelease = false;
 
             if (_viewInstance != null)
                 _viewInstance.SetActive(false);
@@ -196,6 +213,16 @@ namespace C4
             if (_viewInstance == null) CreatePreview();
             if (_viewInstance == null) return;
 
+            // Pastikan ada PIN untuk C4 yang sedang dipegang di preview
+            if (string.IsNullOrEmpty(_pendingCode))
+            {
+                GenerateNewPendingCode();
+            }
+            else if (_viewPanel != null)
+            {
+                _viewPanel.SetCode(_pendingCode);
+            }
+
             IsEquipped = true;
             _hasAppliedColor = false;
             _viewInstance.SetActive(true);
@@ -211,6 +238,29 @@ namespace C4
             }
 
             UpdatePreview();
+        }
+
+        /// <summary>
+        /// Equip lagi setelah C4 yang sudah ditempel diambil (pickup).
+        /// Menyimpan kode PIN dari C4 yang diambil agar tidak berubah.
+        /// Klik yang dipakai buat pickup ditahan supaya gak langsung nempel C4 baru.
+        /// </summary>
+        public void EquipAfterPickup(string preservedCode = null)
+        {
+            _placeInput = false;
+            _blockPlaceUntilRelease = true;
+
+            if (!string.IsNullOrEmpty(preservedCode))
+            {
+                _pendingCode = preservedCode;
+            }
+
+            Equip();
+
+            if (!string.IsNullOrEmpty(preservedCode) && _viewPanel != null)
+            {
+                _viewPanel.SetCode(preservedCode);
+            }
         }
 
         public void Unequip()
@@ -378,6 +428,21 @@ namespace C4
 
             explosive.Initialize(transform);
 
+            // Pastikan C4Outline terpasang pada C4 yang baru ditempel
+            C4Outline outline = placed.GetComponent<C4Outline>();
+            if (outline == null)
+                outline = placed.AddComponent<C4Outline>();
+
+            // SAMAKAN PIN: PIN yang ada di preview harus sama persis dengan yang ditempel!
+            C4PanelController panel = placed.GetComponent<C4PanelController>();
+            if (panel != null && !string.IsNullOrEmpty(_pendingCode))
+            {
+                panel.SetCode(_pendingCode);
+            }
+
+            // Reset pending code agar jika ambil C4 baru nanti akan digenerate PIN baru yang fresh
+            _pendingCode = null;
+
             OnC4Placed?.Invoke(explosive);
             Unequip();
         }
@@ -402,11 +467,37 @@ namespace C4
                     if (colliders[i] != null)
                         Destroy(colliders[i]);
                 }
+
+                // Matikan C4Outline di viewmodel agar tidak ikut rendering outline
+                C4Outline previewOutline = _viewInstance.GetComponent<C4Outline>();
+                if (previewOutline != null)
+                    Destroy(previewOutline);
+
+                // Matikan C4Explosive di viewmodel agar tidak meledak di tangan
+                C4Explosive previewExplosive = _viewInstance.GetComponent<C4Explosive>();
+                if (previewExplosive != null)
+                    Destroy(previewExplosive);
+
+                // Disable C4PanelController di viewmodel agar tidak jalanin logic interaksi di tangan
+                _viewPanel = _viewInstance.GetComponent<C4PanelController>();
+                if (_viewPanel != null)
+                {
+                    _viewPanel.enabled = false;
+                }
             }
 
             if (_viewInstance == null) return;
 
             _viewInstance.transform.localScale = viewmodelScale;
+
+            if (string.IsNullOrEmpty(_pendingCode))
+            {
+                GenerateNewPendingCode();
+            }
+            else if (_viewPanel != null)
+            {
+                _viewPanel.SetCode(_pendingCode);
+            }
 
             _viewRenderers = _viewInstance.GetComponentsInChildren<Renderer>(true);
             List<Material> materials = new List<Material>();
@@ -439,6 +530,16 @@ namespace C4
 
             _viewMaterials = materials.ToArray();
             _viewBaseColors = baseColors.ToArray();
+        }
+
+        private void GenerateNewPendingCode()
+        {
+            int randomNum = UnityEngine.Random.Range(10000, 100000);
+            _pendingCode = randomNum.ToString();
+            if (_viewPanel != null)
+            {
+                _viewPanel.SetCode(_pendingCode);
+            }
         }
 
         private GameObject CreateFallbackPreview()
