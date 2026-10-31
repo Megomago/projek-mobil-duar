@@ -3,7 +3,7 @@ using UnityEngine;
 
 public static class ExplosionManager
 {
-    private static Collider[] _overlapCache = new Collider[64];
+    private static Collider[] _overlapCache = new Collider[256];
     private static readonly Vector2Int[] _neighborOffsets = new Vector2Int[]
     {
         new Vector2Int(1, 0),
@@ -66,10 +66,12 @@ public static class ExplosionManager
         VehicleStatsManager targetVehicle,
         LayerMask hitMask,
         VehicleStatsManager ownerVehicle = null,
-        float penetration = 0f
+        float penetration = 0f,
+        float upwardsModifier = 1f
     )
     {
-        int count = Physics.OverlapSphereNonAlloc(point, radius, _overlapCache, hitMask);
+        int count = Physics.OverlapSphereNonAlloc(
+            point, radius, _overlapCache, hitMask, QueryTriggerInteraction.Collide);
 
         // Auto-detect target vehicle jika null (misal roket meledak di tanah/near-miss)
         if (targetVehicle == null)
@@ -192,7 +194,7 @@ public static class ExplosionManager
             if (col == null || col.attachedRigidbody == null) continue;
             if (_uniqueRigidbodies.Add(col.attachedRigidbody))
             {
-                col.attachedRigidbody.AddExplosionForce(maxForce, point, radius, 1f, ForceMode.Impulse);
+                col.attachedRigidbody.AddExplosionForce(maxForce, point, radius, upwardsModifier, ForceMode.Impulse);
             }
         }
     }

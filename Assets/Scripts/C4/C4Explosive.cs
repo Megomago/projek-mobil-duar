@@ -1,4 +1,3 @@
-using System.Collections.Generic;
 using UnityEngine;
 
 namespace C4
@@ -50,6 +49,11 @@ namespace C4
         private bool _hasDetonated = false;
         public Transform planter => _planterTransform;
 
+        /// <summary>
+        /// Dipanggil tepat sebelum C4 di-Destroy. Listener masih bisa baca posisi & radius.
+        /// </summary>
+        public static event System.Action<C4Explosive> OnDetonated;
+
         // Dipanggil otomatis dari C4Planter pas C4 ditempel
         public void Initialize(Transform planter)
         {
@@ -74,35 +78,26 @@ namespace C4
             // 2. PLAY SFX SUARA DUARR YANG MENGGELEGAR
             PlayExplosionAudio(blastPosition);
 
-            // 3. KALKULASI FISIKA & DAMAGE (OVERLAP SPHERE)
-            Collider[] colliders = Physics.OverlapSphere(blastPosition, explosionRadius, explosionMask, QueryTriggerInteraction.Ignore);
+            // 3. DAMAGE MODUL, RODA, CRITICAL PART & FISIKA
+            // Pakai sistem ledakan terpusat yang sama dengan amunisi HE:
+            // - modul lewat moduleColliderMap + propagasi grid
+            // - roda / critical part / SimpleTarget lewat HitboxProxy
+            // - armor mitigation + force ke Rigidbody
+            ExplosionManager.Detonate(
+                blastPosition,
+                explosionRadius,
+                maxDamage,
+                explosionForce,
+                null,               // auto-detect kendaraan terdekat
+                explosionMask,
+                null,               // bukan self-damage prevention
+                0f,                 // penetration
+                upwardsModifier);
 
-            // Set buat nyatet Rigidbody yang udah kena (ANTI-DOBEL FORCE DI COMPOUND COLLIDER MOBIL)
-            HashSet<Rigidbody> affectedBodies = new HashSet<Rigidbody>();
+            // 4. EVENT DETONASI (kamera shake, dll) — masih sempat baca posisi & radius
+            OnDetonated?.Invoke(this);
 
-            for (int i = 0; i < colliders.Length; i++)
-            {
-                Collider col = colliders[i];
-                if (col == null) continue;
-
-                // Hitung persentase jarak (1.0 di pusat -> 0.0 di ujung radius)
-                float distance = Vector3.Distance(blastPosition, col.ClosestPoint(blastPosition));
-                float falloff = Mathf.Clamp01(1f - (distance / explosionRadius));
-
-                // A. TERAPKAN DAMAGE
-                float finalDamage = maxDamage * falloff;
-                ApplyDamage(col.gameObject, finalDamage, blastPosition);
-
-                // B. TERAPKAN FISIKA (DORONGAN LEDAKAN)
-                Rigidbody rb = col.attachedRigidbody;
-                if (rb != null && !rb.isKinematic && !affectedBodies.Contains(rb))
-                {
-                    affectedBodies.Add(rb);
-                    rb.AddExplosionForce(explosionForce, blastPosition, explosionRadius, upwardsModifier, ForceMode.Impulse);
-                }
-            }
-
-            // 4. HAPUS PREFAB C4 DARI MUKA BUMI
+            // 5. HAPUS PREFAB C4 DARI MUKA BUMI
             Destroy(gameObject);
         }
 
@@ -152,21 +147,6 @@ namespace C4
 
             // Hancurkan host otomatis setelah suara selesai
             Destroy(audioHost, explosionSound.length + 0.5f);
-        }
-
-        private void ApplyDamage(GameObject target, float damage, Vector3 blastPos)
-        {
-            // Kompatibilitas luas:
-            // 1. Cek SendMessage standar (ke method TakeDamage atau ApplyDamage)
-            target.SendMessage("TakeDamage", damage, SendMessageOptions.DontRequireReceiver);
-            target.SendMessage("ApplyDamage", damage, SendMessageOptions.DontRequireReceiver);
-
-            // 2. Kalau di project lu pake sistem modul War Thunder / HitboxProxy:
-            // Target root-nya juga dikasih tau biar modul di dalemnya ngerasa
-            if (target.transform.root != target.transform)
-            {
-                target.transform.root.SendMessage("TakeDamage", damage, SendMessageOptions.DontRequireReceiver);
-            }
         }
 
         // Gambar bola kawat merah di Scene View biar lu tau seberapa gede radiusnya

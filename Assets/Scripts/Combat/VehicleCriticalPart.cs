@@ -148,15 +148,10 @@ public class VehicleCriticalPart : MonoBehaviour
 
         Vector3 pos = transform.position;
 
-        // Spawn destroyed prefab (api/kobaran). Sengaja tidak di-parent ke kendaraan
-        // supaya efek tetap ada di lokasi hancur dan tidak ikut hilang saat kendaraan di-pool.
+        // Spawn destroyed prefab (api/kobaran). Di-parent ke root kendaraan supaya
+        // efek ikut bergeser bersama bangkai, bukan tertinggal di titik hancur.
         if (destroyedPrefab != null)
-        {
-            if (ObjectPool.Instance != null)
-                ObjectPool.Instance.Spawn(destroyedPrefab, pos, Quaternion.identity);
-            else
-                Instantiate(destroyedPrefab, pos, Quaternion.identity);
-        }
+            SpawnEffectAttachedToVehicle(destroyedPrefab);
 
         // Efek ledakan: main kalau VFX/SFX-nya di-assign. Sebelumnya digated flag
         // volatileExplosive → VFX udah dipasang tapi gak pernah main kalau flag-nya
@@ -169,23 +164,14 @@ public class VehicleCriticalPart : MonoBehaviour
 
             if (explosionVFXPrefab != null)
             {
-                if (ObjectPool.Instance != null)
+                // Skala di-set sebelum di-parent supaya tetap jadi skala dunia.
+                float scale = Mathf.Max(explosionRadius * 0.15f, 0.5f);
+                GameObject vfx = SpawnEffectAttachedToVehicle(explosionVFXPrefab, Vector3.one * scale);
+                if (vfx != null && explosionVFXDespawnTime > 0f)
                 {
-                    GameObject vfx = ObjectPool.Instance.Spawn(explosionVFXPrefab, pos, Quaternion.identity);
-                    if (vfx != null)
-                    {
-                        float scale = explosionRadius * 0.15f;
-                        vfx.transform.localScale = Vector3.one * Mathf.Max(scale, 0.5f);
-                        if (explosionVFXDespawnTime > 0f)
-                            ObjectPool.Instance.Despawn(vfx, explosionVFXDespawnTime);
-                    }
-                }
-                else
-                {
-                    GameObject vfx = Instantiate(explosionVFXPrefab, pos, Quaternion.identity);
-                    float scale = explosionRadius * 0.15f;
-                    vfx.transform.localScale = Vector3.one * Mathf.Max(scale, 0.5f);
-                    if (explosionVFXDespawnTime > 0f)
+                    if (ObjectPool.Instance != null)
+                        ObjectPool.Instance.Despawn(vfx, explosionVFXDespawnTime);
+                    else
                         Destroy(vfx, explosionVFXDespawnTime);
                 }
             }
@@ -202,5 +188,38 @@ public class VehicleCriticalPart : MonoBehaviour
 
         if (_statsManager != null)
             _statsManager.MarkStatsDirty();
+    }
+
+    /// <summary>
+    /// Spawn VFX lalu tempelkan ke root kendaraan supaya ikut bergerak bersama bangkai.
+    /// Tanpa ini api/asap tertinggal di titik hancur saat mobil bergeser.
+    ///
+    /// Sengaja tidak di-parent ke part ini karena part di-SetActive(false) di akhir
+    /// OnDestroyed — kalau di-parent ke sini, VFX-nya langsung ikut mati.
+    /// </summary>
+    private GameObject SpawnEffectAttachedToVehicle(GameObject prefab, Vector3? worldScale = null)
+    {
+        if (prefab == null) return null;
+
+        GameObject fx = ObjectPool.Instance != null
+            ? ObjectPool.Instance.Spawn(prefab, transform.position, Quaternion.identity)
+            : Instantiate(prefab, transform.position, Quaternion.identity);
+
+        if (fx == null) return null;
+
+        // Set skala selagi belum di-parent → localScale == worldScale.
+        if (worldScale.HasValue)
+            fx.transform.localScale = worldScale.Value;
+
+        // Root kendaraan. Fallback: root hierarchy (kalau part standalone).
+        Transform anchor = _statsManager != null ? _statsManager.transform : transform.root;
+        if (anchor == null || anchor == transform)
+            anchor = transform.parent;
+
+        // worldPositionStays = true → posisi/rotasi/skala dunia tetap saat di-parent.
+        if (anchor != null)
+            fx.transform.SetParent(anchor, true);
+
+        return fx;
     }
 }

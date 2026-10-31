@@ -7,28 +7,20 @@ using UnityEditor;
 namespace Combat
 {
     /// <summary>
-    /// Generator Ledakan HE (High Explosive) kelas sinematik — 100% prosedural memakai
-    /// tekstur Default-Particle bawaan Unity (tanpa alpha mask / material eksternal).
+    /// Generator Ledakan HE (High Explosive) kelas sinematik — 100% prosedural.
+    /// Api dan asap pakai shader noise prosedural (Custom/ExplosionFire &amp; Custom/ExplosionSmoke),
+    /// bukan tekstur Default-Particle Unity. Flash/shockwave masih memakai particle standar.
     ///
-    /// FASE LEDAKAN (urut waktu, realistis):
-    ///   0_Shockwave  : gelombang tekanan mengembang cepat, tipis & redup
-    ///   1_Flash      : kilatan putih HDR instan (memicu Bloom URP) — 1-2 frame
-    ///   2_FireballCore : inti terpanas, putih-kuning
-    ///   3_FireballBody : bola api utama: kuning -> oranye -> merah bara -> jelaga
+    /// FASE LEDAKAN (urut waktu, realistis & brutal):
+    ///   0_Shockwave  : gelombang tekanan mengembang SUPER cepat, tipis & redup
+    ///   1_Flash      : kilatan putih HDR instan (memicu Bloom URP & Auto-Exposure drop)
+    ///   2_FireballCore : inti terpanas, putih-kuning buta
+    ///   3_FireballBody : bola api utama: kuning -> oranye -> merah bara -> JELAGA ITEM
     ///   4_FireballOuter: selubung luar lebih dingin (merah tua), fireball mengempis
     ///   5_SmokeColumn: asap jelaga MENYUSUL dari balik api lalu bertahan paling lama
-    ///   6_Shrapnel   : serpihan logam berpijar dengan trail
+    ///   6_Shrapnel   : serpihan logam berpijar dengan trail (nembak kayak peluru)
     ///   7_Sparks     : percikan api kecil berkelip (flicker)
-    ///   8_FlashLight : point light berkedip, menerangi bodi mobil di sekitar
-    ///
-    /// RASIO API vs ASAP (fisikanya ledakan HE):
-    ///   - 0.0-0.5s : API dominan (fase pembakaran / pressure front)
-    ///   - 0.5-1.0s : api meredup & mendingin, asap mulai menutup
-    ///   - >1.0s    : ASAP dominan (residu jelaga bertahan ~3-4 detik)
-    ///
-    /// URUTAN WARNA API (suhu turun = warna bergeser):
-    ///   putih-kuning (>1500C) -> kuning -> oranye -> merah bara -> jelaga gelap (padam).
-    ///   Api SELALU menghitam dulu sebelum hilang, jangan fade dari oranye terang.
+    ///   8_FlashLight : point light HARD SHADOW berkedip, menerangi bodi mobil di sekitar
     /// </summary>
     public class ProceduralExplosionBuilder : MonoBehaviour
     {
@@ -44,10 +36,30 @@ namespace Combat
         }
 
         #if UNITY_EDITOR
+        [MenuItem("Tools/NNTI/Explosion/Upgrade Material ke Procedural")]
+        private static void UpgradeMaterialsToProcedural()
+        {
+            Material fire = LoadOrCreateProceduralMaterial(FireMatPath, FireShaderName);
+            Material smoke = LoadOrCreateProceduralMaterial(SmokeMatPath, SmokeShaderName);
+
+            if (fire == null || smoke == null)
+            {
+                EditorUtility.DisplayDialog("Explosion Material", "Gagal upgrade. Cek console: shader Custom/ExplosionFire / Custom/ExplosionSmoke nggak ketemu.", "OK");
+                return;
+            }
+
+            AssetDatabase.SaveAssets();
+            Debug.Log("[ExplosionBuilder] Material api & asap sudah pakai shader prosedural (Custom/ExplosionFire & Custom/ExplosionSmoke).");
+        }
+        #endif
+
+        #if UNITY_EDITOR
         private const string MatFolder = "Assets/Scripts/Combat/GeneratedExplosion";
         private const string FlashMatPath = MatFolder + "/Explosion_Flash_Add.mat";
         private const string FireMatPath = MatFolder + "/Explosion_Fire_Add.mat";
         private const string SmokeMatPath = MatFolder + "/Explosion_Smoke_Alpha.mat";
+        private const string FireShaderName = "Custom/ExplosionFire";
+        private const string SmokeShaderName = "Custom/ExplosionSmoke";
 
         private void BuildCinematicExplosion()
         {
@@ -58,9 +70,9 @@ namespace Combat
 
             // Flash sengaja over-bright (HDR) supaya kena Bloom; fire sedikit di atas 1
             // biar bara tetap "menyala" di tonemapping; smoke alpha-blend warna netral.
-            Material flashMat = LoadOrCreateMaterial(FlashMatPath, true, new Color(2.4f, 2.15f, 1.7f, 1f));
-            Material fireMat = LoadOrCreateMaterial(FireMatPath, true, new Color(1.8f, 1.55f, 1.25f, 1f));
-            Material smokeMat = LoadOrCreateMaterial(SmokeMatPath, false, Color.white);
+            Material flashMat = LoadOrCreateMaterial(FlashMatPath, true, new Color(3.5f, 3.0f, 2.4f, 1f)); // Lebih nge-jreng
+            Material fireMat = LoadOrCreateProceduralMaterial(FireMatPath, FireShaderName);
+            Material smokeMat = LoadOrCreateProceduralMaterial(SmokeMatPath, SmokeShaderName);
 
             if (flashMat == null || fireMat == null || smokeMat == null)
             {
@@ -84,7 +96,7 @@ namespace Combat
         }
 
         // =====================================================================
-        // 0. SHOCKWAVE — gelombang tekanan, bukan api
+        // 0. SHOCKWAVE — gelombang tekanan, bukan api (Lebih cepet dari api)
         // =====================================================================
         private void CreateShockwave(Material mat, float s)
         {
@@ -92,12 +104,12 @@ namespace Combat
             r.sortingFudge = 25f;
 
             var main = ps.main;
-            main.duration = 0.3f;
+            main.duration = 0.15f;
             main.loop = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startLifetime = 0.22f;
+            main.startLifetime = 0.18f;
             main.startSpeed = 0f;
-            main.startSize = 1.6f * s;
+            main.startSize = 2.5f * s;
             main.startColor = Color.white;
 
             var emission = ps.emission;
@@ -107,9 +119,9 @@ namespace Combat
             var size = ps.sizeOverLifetime;
             size.enabled = true;
             AnimationCurve sizeCurve = new AnimationCurve();
-            sizeCurve.AddKey(0f, 0.55f);
-            sizeCurve.AddKey(0.4f, 2.1f);
-            sizeCurve.AddKey(1f, 5.0f);
+            sizeCurve.AddKey(0f, 0.8f);
+            sizeCurve.AddKey(0.5f, 3.5f);
+            sizeCurve.AddKey(1f, 7.0f);
             size.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
 
             var col = ps.colorOverLifetime;
@@ -117,19 +129,19 @@ namespace Combat
             col.color = MakeGradient(
                 new GradientColorKey[]
                 {
-                    new GradientColorKey(new Color(0.82f, 0.84f, 0.86f), 0f),
-                    new GradientColorKey(new Color(0.55f, 0.55f, 0.56f), 1f)
+                    new GradientColorKey(new Color(0.9f, 0.92f, 0.95f), 0f),
+                    new GradientColorKey(new Color(0.4f, 0.4f, 0.42f), 1f)
                 },
                 new GradientAlphaKey[]
                 {
-                    new GradientAlphaKey(0.30f, 0f),
-                    new GradientAlphaKey(0.10f, 0.45f),
+                    new GradientAlphaKey(0.45f, 0f),
+                    new GradientAlphaKey(0.15f, 0.5f),
                     new GradientAlphaKey(0f, 1f)
                 });
         }
 
         // =====================================================================
-        // 1. FLASH — kilatan putih instan (HDR -> bloom)
+        // 1. FLASH — kilatan putih instan (HDR -> bloom & exposure drop)
         // =====================================================================
         private void CreateFlash(Material mat, float s)
         {
@@ -137,12 +149,12 @@ namespace Combat
             r.sortingFudge = -30f;
 
             var main = ps.main;
-            main.duration = 0.2f;
+            main.duration = 0.15f;
             main.loop = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.05f, 0.09f);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.04f, 0.07f);
             main.startSpeed = 0f;
-            main.startSize = new ParticleSystem.MinMaxCurve(6.5f * s, 8.5f * s);
+            main.startSize = new ParticleSystem.MinMaxCurve(8.0f * s, 11.0f * s);
             main.startColor = new Color(1f, 0.97f, 0.9f, 1f);
 
             var emission = ps.emission;
@@ -150,14 +162,14 @@ namespace Combat
             emission.SetBursts(new ParticleSystem.Burst[]
             {
                 new ParticleSystem.Burst(0f, 1),
-                new ParticleSystem.Burst(0.05f, 1) // kilatan kedua tipis, biar tidak pop-out
+                new ParticleSystem.Burst(0.04f, 1) 
             });
 
             var size = ps.sizeOverLifetime;
             size.enabled = true;
             AnimationCurve sizeCurve = new AnimationCurve();
-            sizeCurve.AddKey(0f, 0.7f);
-            sizeCurve.AddKey(1f, 1.35f);
+            sizeCurve.AddKey(0f, 0.8f);
+            sizeCurve.AddKey(1f, 1.5f);
             size.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
 
             var col = ps.colorOverLifetime;
@@ -165,19 +177,19 @@ namespace Combat
             col.color = MakeGradient(
                 new GradientColorKey[]
                 {
-                    new GradientColorKey(new Color(1f, 0.97f, 0.9f), 0f),
-                    new GradientColorKey(new Color(1f, 0.9f, 0.7f), 1f)
+                    new GradientColorKey(new Color(1.5f, 1.4f, 1.2f), 0f), // HDR
+                    new GradientColorKey(new Color(1f, 0.8f, 0.5f), 1f)
                 },
                 new GradientAlphaKey[]
                 {
                     new GradientAlphaKey(1f, 0f),
-                    new GradientAlphaKey(0.7f, 0.4f),
+                    new GradientAlphaKey(0.8f, 0.3f),
                     new GradientAlphaKey(0f, 1f)
                 });
         }
 
         // =====================================================================
-        // 2. FIREBALL CORE — inti terpanas (putih-kuning)
+        // 2. FIREBALL CORE — inti terpanas (putih-kuning buta)
         // =====================================================================
         private void CreateFireballCore(Material mat, float s)
         {
@@ -185,28 +197,28 @@ namespace Combat
             r.sortingFudge = -20f;
 
             var main = ps.main;
-            main.duration = 0.5f;
+            main.duration = 0.4f;
             main.loop = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.18f, 0.3f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(2f * s, 4.5f * s);
-            main.startSize = new ParticleSystem.MinMaxCurve(1.2f * s, 2f * s);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.15f, 0.25f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(4f * s, 8f * s);
+            main.startSize = new ParticleSystem.MinMaxCurve(1.8f * s, 3f * s);
             main.startColor = Color.white;
 
             var emission = ps.emission;
             emission.rateOverTime = 0;
-            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 10) });
+            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 15) });
 
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = 0.25f * s;
+            shape.radius = 0.3f * s;
 
             var size = ps.sizeOverLifetime;
             size.enabled = true;
             AnimationCurve sizeCurve = new AnimationCurve();
-            sizeCurve.AddKey(0f, 0.45f);
-            sizeCurve.AddKey(0.4f, 1.5f);
-            sizeCurve.AddKey(1f, 1.3f);
+            sizeCurve.AddKey(0f, 0.5f);
+            sizeCurve.AddKey(0.3f, 1.8f);
+            sizeCurve.AddKey(1f, 1.5f);
             size.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
 
             var col = ps.colorOverLifetime;
@@ -214,29 +226,28 @@ namespace Combat
             col.color = MakeGradient(
                 new GradientColorKey[]
                 {
-                    new GradientColorKey(new Color(1f, 0.98f, 0.9f), 0f),
-                    new GradientColorKey(new Color(1f, 0.9f, 0.55f), 0.4f),
-                    new GradientColorKey(new Color(1f, 0.72f, 0.25f), 0.8f),
-                    new GradientColorKey(new Color(1f, 0.6f, 0.15f), 1f)
+                    new GradientColorKey(new Color(1.5f, 1.4f, 1.2f), 0f),
+                    new GradientColorKey(new Color(1.2f, 0.9f, 0.5f), 0.5f),
+                    new GradientColorKey(new Color(1f, 0.5f, 0.1f), 1f)
                 },
                 new GradientAlphaKey[]
                 {
                     new GradientAlphaKey(1f, 0f),
-                    new GradientAlphaKey(1f, 0.55f),
+                    new GradientAlphaKey(1f, 0.7f),
                     new GradientAlphaKey(0f, 1f)
                 });
 
             var noise = ps.noise;
             noise.enabled = true;
-            noise.strength = new ParticleSystem.MinMaxCurve(0.5f * s, 1.2f * s);
-            noise.frequency = 1.2f;
-            noise.scrollSpeed = 2f;
+            noise.strength = new ParticleSystem.MinMaxCurve(1.5f * s, 3.0f * s);
+            noise.frequency = 1.5f;
+            noise.scrollSpeed = 3f;
             noise.damping = true;
-            noise.quality = ParticleSystemNoiseQuality.Medium;
+            noise.quality = ParticleSystemNoiseQuality.High;
         }
 
         // =====================================================================
-        // 3. FIREBALL BODY — bola api utama yang bergulung
+        // 3. FIREBALL BODY — bola api utama yang bergulung (API PRIORITAS)
         // =====================================================================
         private void CreateFireballBody(Material mat, float s)
         {
@@ -244,79 +255,79 @@ namespace Combat
             r.sortingFudge = -10f;
 
             var main = ps.main;
-            main.duration = 0.7f;
+            main.duration = 0.6f;
             main.loop = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.45f, 0.8f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(4f * s, 9f * s);
-            main.startSize = new ParticleSystem.MinMaxCurve(2f * s, 3.4f * s);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.4f, 0.75f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(6f * s, 14f * s);
+            main.startSize = new ParticleSystem.MinMaxCurve(2.8f * s, 4.5f * s);
             main.startColor = Color.white;
 
             var emission = ps.emission;
             emission.rateOverTime = 0;
             emission.SetBursts(new ParticleSystem.Burst[]
             {
-                new ParticleSystem.Burst(0f, 26),
-                new ParticleSystem.Burst(0.08f, 14) // gelombang kedua: apinya bergulung keluar
+                new ParticleSystem.Burst(0f, 35),
+                new ParticleSystem.Burst(0.06f, 20) 
             });
 
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = 0.35f * s;
+            shape.radius = 0.4f * s;
 
-            // Buoyancy: api menggelembung naik, bukan jatuh seperti logam
             var velocity = ps.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.World;
             AnimationCurve rise = new AnimationCurve();
             rise.AddKey(0f, 0f);
-            rise.AddKey(0.3f, 2.4f * s);
-            rise.AddKey(1f, 1.2f * s);
+            rise.AddKey(0.25f, 3.5f * s);
+            rise.AddKey(1f, 1.5f * s);
             velocity.y = new ParticleSystem.MinMaxCurve(1f, rise);
 
-            // Ekspansi fireball melambat karena hambatan udara
             var limit = ps.limitVelocityOverLifetime;
             limit.enabled = true;
             limit.space = ParticleSystemSimulationSpace.World;
-            limit.limit = new ParticleSystem.MinMaxCurve(6f * s);
-            limit.dampen = 0.3f;
+            limit.limit = new ParticleSystem.MinMaxCurve(8f * s);
+            limit.dampen = 0.4f;
 
             var size = ps.sizeOverLifetime;
             size.enabled = true;
             AnimationCurve sizeCurve = new AnimationCurve();
-            sizeCurve.AddKey(0f, 0.35f);
-            sizeCurve.AddKey(0.3f, 1.35f);
-            sizeCurve.AddKey(0.6f, 1.5f);
-            sizeCurve.AddKey(1f, 1.15f); // mengempis pelan saat mendingin
+            sizeCurve.AddKey(0f, 0.4f);
+            sizeCurve.AddKey(0.3f, 1.5f);
+            sizeCurve.AddKey(0.7f, 1.8f);
+            sizeCurve.AddKey(1f, 1.6f); 
             size.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
 
-            // Transisi warna api: kuning terang -> oranye pekat -> merah bara -> jelaga
+            // Transisi warna api: KUNING TERANG -> ORANYE -> MERAH BARA -> JELAGA ITEM
+            // Alpha ditahan solid sampe bener-bener jadi item, baru fade.
             var col = ps.colorOverLifetime;
             col.enabled = true;
             col.color = MakeGradient(
                 new GradientColorKey[]
                 {
-                    new GradientColorKey(new Color(1f, 0.82f, 0.3f), 0f),
-                    new GradientColorKey(new Color(1f, 0.45f, 0.07f), 0.4f),
-                    new GradientColorKey(new Color(0.8f, 0.13f, 0.02f), 0.72f),
-                    new GradientColorKey(new Color(0.16f, 0.07f, 0.045f), 1f)
+                    new GradientColorKey(new Color(1.2f, 0.95f, 0.5f), 0f),
+                    new GradientColorKey(new Color(1.2f, 0.45f, 0.05f), 0.35f),
+                    new GradientColorKey(new Color(0.7f, 0.1f, 0.02f), 0.65f),
+                    new GradientColorKey(new Color(0.15f, 0.08f, 0.05f), 0.85f), // Soot
+                    new GradientColorKey(new Color(0.05f, 0.05f, 0.05f), 1f) // Black
                 },
                 new GradientAlphaKey[]
                 {
                     new GradientAlphaKey(1f, 0f),
-                    new GradientAlphaKey(1f, 0.6f),
-                    new GradientAlphaKey(0.85f, 0.8f),
-                    new GradientAlphaKey(0f, 1f)
+                    new GradientAlphaKey(1f, 0.75f), // Tahan solid sampe akhir
+                    new GradientAlphaKey(0.8f, 0.9f),
+                    new GradientAlphaKey(0f, 1f) // Baru ilang pas udah jadi item
                 });
 
             var noise = ps.noise;
             noise.enabled = true;
-            noise.strength = new ParticleSystem.MinMaxCurve(1.5f * s, 3.2f * s);
-            noise.frequency = 0.55f;
-            noise.scrollSpeed = 1.1f;
+            noise.strength = new ParticleSystem.MinMaxCurve(2.5f * s, 5.0f * s);
+            noise.frequency = 0.65f;
+            noise.scrollSpeed = 1.5f;
             noise.damping = true;
-            noise.octaveCount = 2;
-            noise.quality = ParticleSystemNoiseQuality.Medium;
+            noise.octaveCount = 3;
+            noise.quality = ParticleSystemNoiseQuality.High;
         }
 
         // =====================================================================
@@ -328,68 +339,67 @@ namespace Combat
             r.sortingFudge = 0f;
 
             var main = ps.main;
-            main.duration = 0.9f;
+            main.duration = 0.8f;
             main.loop = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.7f, 1.15f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(1.5f * s, 4f * s);
-            main.startSize = new ParticleSystem.MinMaxCurve(2.6f * s, 4.4f * s);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.6f, 1.0f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(2.5f * s, 6f * s);
+            main.startSize = new ParticleSystem.MinMaxCurve(3.5f * s, 5.5f * s);
             main.startColor = Color.white;
 
             var emission = ps.emission;
             emission.rateOverTime = 0;
             emission.SetBursts(new ParticleSystem.Burst[]
             {
-                new ParticleSystem.Burst(0.05f, 16),
-                new ParticleSystem.Burst(0.2f, 8)
+                new ParticleSystem.Burst(0.04f, 20),
+                new ParticleSystem.Burst(0.15f, 12)
             });
 
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = 0.8f * s;
+            shape.radius = 0.9f * s;
 
             var velocity = ps.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.World;
             AnimationCurve rise = new AnimationCurve();
             rise.AddKey(0f, 0f);
-            rise.AddKey(0.4f, 1.6f * s);
-            rise.AddKey(1f, 0.9f * s);
+            rise.AddKey(0.35f, 2.2f * s);
+            rise.AddKey(1f, 1.2f * s);
             velocity.y = new ParticleSystem.MinMaxCurve(1f, rise);
 
             var size = ps.sizeOverLifetime;
             size.enabled = true;
             AnimationCurve sizeCurve = new AnimationCurve();
-            sizeCurve.AddKey(0f, 0.5f);
-            sizeCurve.AddKey(0.5f, 1.15f);
-            sizeCurve.AddKey(1f, 1.4f);
+            sizeCurve.AddKey(0f, 0.6f);
+            sizeCurve.AddKey(0.4f, 1.3f);
+            sizeCurve.AddKey(1f, 1.6f);
             size.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
 
-            // Lebih dingin dari Body: mulai dari oranye, habis jadi cokelat jelaga
             var col = ps.colorOverLifetime;
             col.enabled = true;
             col.color = MakeGradient(
                 new GradientColorKey[]
                 {
-                    new GradientColorKey(new Color(1f, 0.52f, 0.1f), 0f),
-                    new GradientColorKey(new Color(0.68f, 0.15f, 0.03f), 0.5f),
-                    new GradientColorKey(new Color(0.32f, 0.08f, 0.04f), 0.8f),
-                    new GradientColorKey(new Color(0.17f, 0.1f, 0.08f), 1f)
+                    new GradientColorKey(new Color(1f, 0.4f, 0.05f), 0f),
+                    new GradientColorKey(new Color(0.5f, 0.08f, 0.02f), 0.45f),
+                    new GradientColorKey(new Color(0.12f, 0.05f, 0.03f), 0.8f),
+                    new GradientColorKey(new Color(0.05f, 0.05f, 0.05f), 1f)
                 },
                 new GradientAlphaKey[]
                 {
                     new GradientAlphaKey(1f, 0f),
-                    new GradientAlphaKey(0.8f, 0.55f),
+                    new GradientAlphaKey(0.9f, 0.5f),
                     new GradientAlphaKey(0f, 1f)
                 });
 
             var noise = ps.noise;
             noise.enabled = true;
-            noise.strength = new ParticleSystem.MinMaxCurve(2f * s, 3.6f * s);
-            noise.frequency = 0.45f;
-            noise.scrollSpeed = 0.8f;
+            noise.strength = new ParticleSystem.MinMaxCurve(3f * s, 5.5f * s);
+            noise.frequency = 0.5f;
+            noise.scrollSpeed = 1.0f;
             noise.damping = true;
-            noise.quality = ParticleSystemNoiseQuality.Medium;
+            noise.quality = ParticleSystemNoiseQuality.High;
         }
 
         // =====================================================================
@@ -404,125 +414,122 @@ namespace Combat
             main.duration = 1.2f;
             main.loop = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(1.8f, 3f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(0.6f * s, 2f * s);
-            // Gumpalan besar & saling tumpuk rapat supaya tidak terlihat bola-bola terpisah
-            main.startSize = new ParticleSystem.MinMaxCurve(3f * s, 4.6f * s);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(2.2f, 3.5f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(0.8f * s, 2.5f * s);
+            main.startSize = new ParticleSystem.MinMaxCurve(4.5f * s, 6.5f * s);
             main.startColor = Color.white;
-            main.startRotation = new ParticleSystem.MinMaxCurve(0f, 2f * Mathf.PI); // tiap gumpalan beda rotasi
-            main.gravityModifier = -0.12f; // asap panas mengapung
+            main.startRotation = new ParticleSystem.MinMaxCurve(0f, 2f * Mathf.PI); 
+            main.gravityModifier = -0.15f; 
 
             var emission = ps.emission;
-            emission.rateOverTime = 10f * s; // tetesan kontinu mengisi celah antar-burst
+            emission.rateOverTime = 12f * s; 
             emission.SetBursts(new ParticleSystem.Burst[]
             {
-                new ParticleSystem.Burst(0.15f, 16), // asap mulai menyusul dari balik api
-                new ParticleSystem.Burst(0.45f, 14)
+                new ParticleSystem.Burst(0.12f, 22), 
+                new ParticleSystem.Burst(0.35f, 18)
             });
 
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = 1f * s;
-            shape.radiusThickness = 0.35f; // diisi dari volume (bukan cangkang) → massa menyatu
-            shape.randomDirectionAmount = 0.6f; // arah sebar tidak seragam, biar tidak "mekar" teratur
+            shape.radius = 1.2f * s;
+            shape.radiusThickness = 0.4f; 
+            shape.randomDirectionAmount = 0.65f; 
 
             var velocity = ps.velocityOverLifetime;
             velocity.enabled = true;
             velocity.space = ParticleSystemSimulationSpace.World;
             AnimationCurve drift = new AnimationCurve();
             drift.AddKey(0f, 0f);
-            drift.AddKey(0.35f, 1.4f * s);
-            drift.AddKey(1f, 0.5f * s); // naik lalu tertahan saat mendingin
+            drift.AddKey(0.3f, 1.8f * s);
+            drift.AddKey(1f, 0.6f * s); 
             velocity.y = new ParticleSystem.MinMaxCurve(1f, drift);
 
-            // Rem gumpalan: tiap puff berhenti mengembang cepat → menumpuk jadi satu massa
             var limit = ps.limitVelocityOverLifetime;
             limit.enabled = true;
             limit.space = ParticleSystemSimulationSpace.World;
-            limit.limit = new ParticleSystem.MinMaxCurve(2.2f * s);
-            limit.dampen = 0.45f;
+            limit.limit = new ParticleSystem.MinMaxCurve(2.5f * s);
+            limit.dampen = 0.5f;
 
             var rotation = ps.rotationOverLifetime;
             rotation.enabled = true;
-            rotation.z = new ParticleSystem.MinMaxCurve(-0.6f, 0.6f);
+            rotation.z = new ParticleSystem.MinMaxCurve(-0.8f, 0.8f);
 
             var size = ps.sizeOverLifetime;
             size.enabled = true;
             AnimationCurve sizeCurve = new AnimationCurve();
-            sizeCurve.AddKey(0f, 0.55f);
-            sizeCurve.AddKey(0.3f, 1f);
-            sizeCurve.AddKey(1f, 1.55f);
+            sizeCurve.AddKey(0f, 0.6f);
+            sizeCurve.AddKey(0.25f, 1.2f);
+            sizeCurve.AddKey(1f, 1.8f);
             size.size = new ParticleSystem.MinMaxCurve(1f, sizeCurve);
 
-            // Alpha per-gumpalan RENDAH (0.45) — kepadatan dibangun dari tumpukan,
-            // jadi tepi tiap blob tidak kelihatan, hasilnya asap pekat menyatu.
+            // Asap kudu SOLID nge-blok background, bukan transparan letoy
             var col = ps.colorOverLifetime;
             col.enabled = true;
             col.color = MakeGradient(
                 new GradientColorKey[]
                 {
-                    new GradientColorKey(new Color(0.15f, 0.13f, 0.115f), 0f),
-                    new GradientColorKey(new Color(0.30f, 0.29f, 0.28f), 0.7f),
-                    new GradientColorKey(new Color(0.42f, 0.42f, 0.43f), 1f)
+                    new GradientColorKey(new Color(0.1f, 0.09f, 0.08f), 0f),
+                    new GradientColorKey(new Color(0.18f, 0.17f, 0.16f), 0.4f),
+                    new GradientColorKey(new Color(0.28f, 0.28f, 0.29f), 1f)
                 },
                 new GradientAlphaKey[]
                 {
                     new GradientAlphaKey(0f, 0f),
-                    new GradientAlphaKey(0.42f, 0.12f),
-                    new GradientAlphaKey(0.38f, 0.6f),
+                    new GradientAlphaKey(0.85f, 0.15f), // Langsung solid nge-blok
+                    new GradientAlphaKey(0.75f, 0.6f),
                     new GradientAlphaKey(0f, 1f)
                 });
 
             var noise = ps.noise;
             noise.enabled = true;
-            noise.strength = new ParticleSystem.MinMaxCurve(1.2f * s, 2.4f * s);
-            noise.frequency = 0.3f; // fitur lebih besar = pusaran asap, bukan keriting kecil
-            noise.scrollSpeed = 0.5f;
+            noise.strength = new ParticleSystem.MinMaxCurve(1.5f * s, 3.0f * s);
+            noise.frequency = 0.35f; 
+            noise.scrollSpeed = 0.6f;
             noise.damping = true;
-            noise.quality = ParticleSystemNoiseQuality.Medium;
+            noise.quality = ParticleSystemNoiseQuality.High;
         }
 
         // =====================================================================
-        // 6. SHRAPNEL — serpihan logam berpijar (stretch + trail)
+        // 6. SHRAPNEL — serpihan logam berpijar (nembak brutal)
         // =====================================================================
         private void CreateShrapnel(Material mat, float s)
         {
             ParticleSystem ps = CreateSystem("6_Shrapnel", mat, out ParticleSystemRenderer r);
             r.renderMode = ParticleSystemRenderMode.Stretch;
-            r.velocityScale = 0.12f;
-            r.lengthScale = 1.6f;
+            r.velocityScale = 0.15f;
+            r.lengthScale = 2.0f;
             r.sortingFudge = -15f;
             r.trailMaterial = mat;
 
             var main = ps.main;
-            main.duration = 0.6f;
+            main.duration = 0.5f;
             main.loop = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.6f, 1.1f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(16f * s, 34f * s);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.12f * s, 0.22f * s);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.5f, 0.9f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(25f * s, 50f * s); // Nembak kayak peluru
+            main.startSize = new ParticleSystem.MinMaxCurve(0.1f * s, 0.2f * s);
             main.startColor = Color.white;
-            main.gravityModifier = 2.6f; // besi jatuh melengkung tajam
+            main.gravityModifier = 4.5f; // Besi jatuh melengkung tajam & nancep
 
             var emission = ps.emission;
             emission.rateOverTime = 0;
-            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0.03f, 26) });
+            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0.02f, 35) });
 
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Hemisphere;
-            shape.radius = 0.2f * s;
+            shape.radius = 0.25f * s;
 
             var trails = ps.trails;
             trails.enabled = true;
             trails.mode = ParticleSystemTrailMode.PerParticle;
-            trails.ratio = 0.35f;
-            trails.lifetime = new ParticleSystem.MinMaxCurve(0.05f, 0.1f);
-            trails.minVertexDistance = 0.04f * s;
+            trails.ratio = 0.4f;
+            trails.lifetime = new ParticleSystem.MinMaxCurve(0.04f, 0.08f);
+            trails.minVertexDistance = 0.05f * s;
             trails.worldSpace = true;
             trails.dieWithParticles = true;
             AnimationCurve trailWidth = new AnimationCurve();
             trailWidth.AddKey(0f, 1f);
-            trailWidth.AddKey(1f, 0.15f);
+            trailWidth.AddKey(1f, 0.1f);
             trails.widthOverTrail = new ParticleSystem.MinMaxCurve(1f, trailWidth);
 
             var col = ps.colorOverLifetime;
@@ -530,15 +537,15 @@ namespace Combat
             col.color = MakeGradient(
                 new GradientColorKey[]
                 {
-                    new GradientColorKey(new Color(1f, 0.6f, 0.16f), 0f),
-                    new GradientColorKey(new Color(0.6f, 0.16f, 0.03f), 0.45f),
-                    new GradientColorKey(new Color(0.14f, 0.11f, 0.1f), 0.8f),
-                    new GradientColorKey(new Color(0.1f, 0.09f, 0.09f), 1f)
+                    new GradientColorKey(new Color(1.2f, 0.8f, 0.3f), 0f),
+                    new GradientColorKey(new Color(0.8f, 0.2f, 0.05f), 0.4f),
+                    new GradientColorKey(new Color(0.1f, 0.08f, 0.08f), 0.85f),
+                    new GradientColorKey(new Color(0.05f, 0.05f, 0.05f), 1f)
                 },
                 new GradientAlphaKey[]
                 {
                     new GradientAlphaKey(1f, 0f),
-                    new GradientAlphaKey(0.9f, 0.7f),
+                    new GradientAlphaKey(0.9f, 0.6f),
                     new GradientAlphaKey(0f, 1f)
                 });
         }
@@ -550,34 +557,34 @@ namespace Combat
         {
             ParticleSystem ps = CreateSystem("7_Sparks", mat, out ParticleSystemRenderer r);
             r.renderMode = ParticleSystemRenderMode.Stretch;
-            r.velocityScale = 0.06f;
-            r.lengthScale = 2.2f;
+            r.velocityScale = 0.08f;
+            r.lengthScale = 2.5f;
             r.sortingFudge = -25f;
 
             var main = ps.main;
-            main.duration = 0.5f;
+            main.duration = 0.4f;
             main.loop = false;
             main.simulationSpace = ParticleSystemSimulationSpace.World;
-            main.startLifetime = new ParticleSystem.MinMaxCurve(0.3f, 0.7f);
-            main.startSpeed = new ParticleSystem.MinMaxCurve(9f * s, 20f * s);
-            main.startSize = new ParticleSystem.MinMaxCurve(0.05f * s, 0.1f * s);
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.25f, 0.6f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(12f * s, 28f * s);
+            main.startSize = new ParticleSystem.MinMaxCurve(0.04f * s, 0.09f * s);
             main.startColor = Color.white;
-            main.gravityModifier = 0.9f;
+            main.gravityModifier = 1.2f;
 
             var emission = ps.emission;
             emission.rateOverTime = 0;
-            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 30) });
+            emission.SetBursts(new ParticleSystem.Burst[] { new ParticleSystem.Burst(0f, 45) });
 
             var shape = ps.shape;
             shape.shapeType = ParticleSystemShapeType.Sphere;
-            shape.radius = 0.15f * s;
-            shape.randomDirectionAmount = 0.4f;
+            shape.radius = 0.2f * s;
+            shape.randomDirectionAmount = 0.5f;
 
             var noise = ps.noise;
             noise.enabled = true;
-            noise.strength = new ParticleSystem.MinMaxCurve(0.4f * s, 1f * s);
-            noise.frequency = 2.2f;
-            noise.scrollSpeed = 3f;
+            noise.strength = new ParticleSystem.MinMaxCurve(0.6f * s, 1.5f * s);
+            noise.frequency = 2.5f;
+            noise.scrollSpeed = 4f;
             noise.damping = true;
             noise.quality = ParticleSystemNoiseQuality.Low;
 
@@ -587,24 +594,24 @@ namespace Combat
             col.color = MakeGradient(
                 new GradientColorKey[]
                 {
-                    new GradientColorKey(new Color(1f, 0.92f, 0.6f), 0f),
-                    new GradientColorKey(new Color(1f, 0.65f, 0.2f), 0.35f),
-                    new GradientColorKey(new Color(0.6f, 0.2f, 0.05f), 0.75f),
-                    new GradientColorKey(new Color(0.3f, 0.1f, 0.03f), 1f)
+                    new GradientColorKey(new Color(1.2f, 1.0f, 0.7f), 0f),
+                    new GradientColorKey(new Color(1.2f, 0.6f, 0.15f), 0.35f),
+                    new GradientColorKey(new Color(0.7f, 0.15f, 0.02f), 0.75f),
+                    new GradientColorKey(new Color(0.2f, 0.05f, 0.01f), 1f)
                 },
                 new GradientAlphaKey[]
                 {
                     new GradientAlphaKey(1f, 0f),
-                    new GradientAlphaKey(0.55f, 0.18f),
-                    new GradientAlphaKey(1f, 0.3f),
-                    new GradientAlphaKey(0.4f, 0.5f),
-                    new GradientAlphaKey(1f, 0.62f),
+                    new GradientAlphaKey(0.4f, 0.15f),
+                    new GradientAlphaKey(1f, 0.25f),
+                    new GradientAlphaKey(0.3f, 0.45f),
+                    new GradientAlphaKey(1f, 0.6f),
                     new GradientAlphaKey(0f, 1f)
                 });
         }
 
         // =====================================================================
-        // 8. FLASH LIGHT — menerangi lingkungan & bodi mobil sekitar
+        // 8. FLASH LIGHT — menerangi lingkungan & bodi mobil sekitar (HARD SHADOW)
         // =====================================================================
         private void CreateFlashLight(float s)
         {
@@ -613,16 +620,16 @@ namespace Combat
 
             Light light = go.AddComponent<Light>();
             light.type = LightType.Point;
-            light.color = new Color(1f, 0.72f, 0.4f);
-            light.range = 10f * s;
+            light.color = new Color(1f, 0.85f, 0.6f); // Lebih ke putih-oranye panas
+            light.range = 18f * s; // Range lebih gede buat nyapu environment
             light.intensity = 0f;
-            light.shadows = LightShadows.None;
+            light.shadows = LightShadows.Hard; // WAJIB HARD SHADOW BUAT CINEMATIC IMPACT!
 
             ExplosionFlashLight pulse = go.AddComponent<ExplosionFlashLight>();
-            pulse.peakIntensity = 14f * s;
-            pulse.duration = 0.4f;
-            pulse.decayPower = 2.2f;
-            pulse.flickerAmount = 0.15f;
+            pulse.peakIntensity = 65f * s; // BANTER BANGET, BIAR BLOOM & EXPOSURE NGE-JERIT
+            pulse.duration = 0.25f; // Flash asli tuh cepet ilang
+            pulse.decayPower = 4.5f; // Drop-off ekstrem
+            pulse.flickerAmount = 0.2f;
         }
 
         // =====================================================================
@@ -646,10 +653,72 @@ namespace Combat
             return gradient;
         }
 
-        /// <summary>
-        /// Material URP: additive (api) atau alpha-blend (asap), memakai tekstur
-        /// Default-Particle bawaan Unity — tanpa alpha mask eksternal.
-        /// </summary>
+        private static Material LoadOrCreateProceduralMaterial(string path, string shaderName)
+        {
+            Shader shader = Shader.Find(shaderName);
+            if (shader == null)
+            {
+                Debug.LogError($"[ExplosionBuilder] Shader '{shaderName}' nggak ketemu. Pastikan file shader ada di project dan sudah diimport.");
+                return null;
+            }
+
+            Material mat = AssetDatabase.LoadAssetAtPath<Material>(path);
+            bool isNew = mat == null;
+
+            if (isNew)
+                mat = new Material(shader);
+            else if (mat.shader != shader)
+                mat.shader = shader;
+
+            mat.name = System.IO.Path.GetFileNameWithoutExtension(path);
+            mat.renderQueue = (int)UnityEngine.Rendering.RenderQueue.Transparent;
+
+            bool isFire = shaderName == FireShaderName;
+
+            if (isFire)
+            {
+                mat.SetColor("_Tint", Color.white);
+                mat.SetColor("_CoreColor", new Color(2.4f, 2.0f, 1.3f, 1f));
+                mat.SetFloat("_CoreStrength", 0.75f);
+                mat.SetFloat("_CorePower", 2.5f);
+                mat.SetFloat("_Intensity", 1.35f);
+                mat.SetFloat("_Opacity", 1f);
+                mat.SetFloat("_NoiseScale", 2.4f);
+                mat.SetFloat("_NoiseSpeed", 1.4f);
+                mat.SetFloat("_Distortion", 1.2f);
+                mat.SetFloat("_NoiseGain", 0.55f);
+                mat.SetFloat("_Erosion", 0.35f);
+                mat.SetFloat("_ErosionScale", 5.5f);
+                mat.SetFloat("_RadialPower", 1.2f);
+            }
+            else
+            {
+                mat.SetColor("_Tint", Color.white);
+                mat.SetFloat("_Intensity", 1f);
+                mat.SetFloat("_Opacity", 0.95f);
+                mat.SetFloat("_NoiseScale", 1.8f);
+                mat.SetFloat("_NoiseSpeed", 0.45f);
+                mat.SetFloat("_Distortion", 1.6f);
+                mat.SetFloat("_NoiseGain", 0.65f);
+                mat.SetFloat("_Erosion", 0.55f);
+                mat.SetFloat("_ErosionScale", 4.5f);
+                mat.SetFloat("_RadialPower", 1f);
+                mat.SetFloat("_ShadeStrength", 0.35f);
+            }
+
+            if (isNew)
+            {
+                EnsureFolder(MatFolder);
+                AssetDatabase.CreateAsset(mat, path);
+            }
+            else
+            {
+                EditorUtility.SetDirty(mat);
+            }
+
+            return mat;
+        }
+
         private static Material LoadOrCreateMaterial(string path, bool additive, Color baseColor)
         {
             Material existing = AssetDatabase.LoadAssetAtPath<Material>(path);

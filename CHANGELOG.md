@@ -3,6 +3,7 @@
 ## [Unreleased]
 
 ### Add
+- C4CameraShake — getaran kamera saat C4 meledak (radius 2x explosionRadius), jalan di FPP & kendaraan
 - HitboxProxy + VehicleHitboxInitializer — cache komponen collision biar gak traverse hierarchy tiap tembak
 - ExplosionManager — sistem ledakan terpusat buat module amunisi HE
 - WheelHealth — roda sekarang punya HP sendiri, bisa pecah
@@ -69,6 +70,7 @@
 - Rotasi module senjata samping
 - Warning unused variable `loaded` di VehicleGridSystem
 - Trigger collider sekarang gak di-skip oleh VehicleHitboxInitializer
+- VFX VehicleCriticalPart (api/asap/ledakan) sekarang ikut bergerak bersama bangkai kendaraan, gak tertinggal di titik hancur
 
 ### Remove
 - Camera shake dari explosion (module + projectile HE)
