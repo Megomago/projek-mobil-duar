@@ -58,6 +58,16 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: -1253996098385199550, guid: cda0767658360a3429d84412884e17ff,
+        type: 3}
+      propertyPath: m_LocalPosition.y
+      value: 1.12
+      objectReference: {fileID: 0}
+    - target: {fileID: -1253996098385199550, guid: cda0767658360a3429d84412884e17ff,
+        type: 3}
+      propertyPath: m_LocalPosition.z
+      value: 6.709
+      objectReference: {fileID: 0}
     - target: {fileID: 919132149155446097, guid: cda0767658360a3429d84412884e17ff,
         type: 3}
       propertyPath: m_Name
@@ -88,6 +98,11 @@ PrefabInstance:
       propertyPath: m_LocalPosition.y
       value: 2.0533075
       objectReference: {fileID: 0}
+    - target: {fileID: 8821623529969584324, guid: cda0767658360a3429d84412884e17ff,
+        type: 3}
+      propertyPath: m_Name
+      value: firepoint
+      objectReference: {fileID: 0}
     - target: {fileID: 8946660040297601765, guid: cda0767658360a3429d84412884e17ff,
         type: 3}
       propertyPath: m_LocalPosition.y
@@ -101,6 +116,10 @@ PrefabInstance:
         type: 3}
       insertIndex: -1
       addedObject: {fileID: 2741523505887850537}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: cda0767658360a3429d84412884e17ff,
+        type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 7742000000000000001}
     - targetCorrespondingSourceObject: {fileID: 6772719698040381012, guid: cda0767658360a3429d84412884e17ff,
         type: 3}
       insertIndex: -1
@@ -116,7 +135,7 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 8009987137999418058, guid: cda0767658360a3429d84412884e17ff,
         type: 3}
       insertIndex: -1
-      addedObject: {fileID: 5203014964191544837}
+      addedObject: {fileID: 2625276882440929792}
     - targetCorrespondingSourceObject: {fileID: -5568371526223589888, guid: cda0767658360a3429d84412884e17ff,
         type: 3}
       insertIndex: -1
@@ -180,14 +199,20 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 6.31744, y: 1.0772796, z: 10.653221}
   m_Center: {x: 0.4775132, y: -0.44139162, z: -2.9572623}
+--- !u!4 &4325665165272984511 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: -1253996098385199550, guid: cda0767658360a3429d84412884e17ff,
+    type: 3}
+  m_PrefabInstance: {fileID: 5953530824730514941}
+  m_PrefabAsset: {fileID: 0}
 --- !u!1 &4446742098963703607 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 8009987137999418058, guid: cda0767658360a3429d84412884e17ff,
     type: 3}
   m_PrefabInstance: {fileID: 5953530824730514941}
   m_PrefabAsset: {fileID: 0}
---- !u!65 &5203014964191544837
-BoxCollider:
+--- !u!64 &2625276882440929792
+MeshCollider:
   m_ObjectHideFlags: 0
   m_CorrespondingSourceObject: {fileID: 0}
   m_PrefabInstance: {fileID: 0}
@@ -204,9 +229,10 @@ BoxCollider:
   m_IsTrigger: 0
   m_ProvidesContacts: 0
   m_Enabled: 1
-  serializedVersion: 3
-  m_Size: {x: 3.8134093, y: 5.583413, z: 4.320506}
-  m_Center: {x: -1.1041129, y: 1.6528864, z: 1.017559}
+  serializedVersion: 5
+  m_Convex: 1
+  m_CookingOptions: 30
+  m_Mesh: {fileID: -153830957423991239, guid: cda0767658360a3429d84412884e17ff, type: 3}
 --- !u!1 &6418565367792445337 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -8391222552659086748, guid: cda0767658360a3429d84412884e17ff,
@@ -261,6 +287,50 @@ Animator:
   m_AllowConstantClipSamplingOptimization: 1
   m_KeepAnimatorStateOnDisable: 0
   m_WriteDefaultValuesOnDisable: 0
+--- !u!114 &7742000000000000001
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6799970807958972588}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 2a666a54f87746c787771ba9e3b1724e, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  breakRadiusPadding: 1
+  brokenPrefab: {fileID: 3611490962323189808, guid: db09d02c4d9bf6a4db68ac66eb8bd5ff,
+    type: 3}
+  brokenLocalPosition: {x: 0, y: 0, z: 0}
+  brokenLocalEulerAngles: {x: 0, y: 0, z: 0}
+  brokenLocalScale: {x: 1, y: 1, z: 1}
+  staticRootName: Cube.006
+  copyLayerToBroken: 1
+  destroyAfterEffects: 1
+  splitEveryMesh: 1
+  debrisLaunchSpeed: 14
+  upwardsModifier: 0.45
+  randomTorque: 3
+  enablePhysics: 1
+  debrisLifetime: 0
+  minDebrisMass: 8
+  maxDebrisMass: 80
+  disableLeftoverColliders: 1
+  fireVfxPrefab: {fileID: 100002, guid: 977bc30ff641de44bbf012f86491b775, type: 3}
+  fireVfxPoint: {fileID: 4325665165272984511}
+  fireVfxOffset: {x: 0, y: 0, z: 0}
+  fireVfxDelay: 0.8
+  fireVfxLifetime: 60
+  fireSound: {fileID: 8300000, guid: 88e2ce5b6793c3545ad26be4e7a3d74d, type: 3}
+  fireSoundDelay: 0.8
+  fireSoundVolume: 1
+  loopFireSound: 1
+  fireSoundDuration: 60
+  fireSoundMaxDistance: 200
+  onBroken:
+    m_PersistentCalls:
+      m_Calls: []
 --- !u!1 &6928254920830065661 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: -5568371526223589888, guid: cda0767658360a3429d84412884e17ff,
