@@ -212,6 +212,14 @@ public class PlayerInteraction : MonoBehaviour
             return;
         }
 
+        // Bom yang udah aktif (PIN bener, timer jalan) gak boleh diambil lagi.
+        C4PanelController panel = explosive.GetComponent<C4PanelController>();
+        if (panel != null && panel.IsArmed)
+        {
+            ResetC4Pickup();
+            return;
+        }
+
         if (_pickupTarget != explosive)
         {
             _pickupTarget = explosive;
@@ -239,6 +247,8 @@ public class PlayerInteraction : MonoBehaviour
         C4PanelController panel = explosive.GetComponent<C4PanelController>();
         if (panel != null)
         {
+            // Safety: jangan pernah angkat bom yang timernya udah jalan.
+            if (panel.IsArmed) return;
             preservedCode = panel.GeneratedCode;
         }
 

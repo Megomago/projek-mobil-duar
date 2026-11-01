@@ -60,6 +60,9 @@ namespace C4
 
         public string GeneratedCode => _generatedCode;
 
+        /// <summary>True kalau PIN udah bener & timer meledak lagi jalan.</summary>
+        public bool IsArmed => _isArmed;
+
         private void Awake()
         {
             _explosive = GetComponent<C4Explosive>();
@@ -152,11 +155,30 @@ namespace C4
         {
             if (target == null) return;
 
-            // KALAU UDAH ARMED / COUNTDOWN, KUNCI SEMUA INTERAKSI!
-            if (_isArmed) return;
+            // KALAU UDAH ARMED / COUNTDOWN:
+            // Knob & tombol tetap bisa dipencet/diputar + tetap bunyi biar gak kerasa mati,
+            // TAPI gak bisa ngubah PIN dan countdown tetap jalan sampai DUARRR.
+            if (_isArmed)
+            {
+                if (target.type == ClickableType.Knob)
+                    CycleKnob(); // visual knob muter + SFX, timer gak kesentuh
+                else
+                    PlaySound(clickSound);
 
-            // Jangan terima input kalau layar lagi nampilin pesan ERROR
-            if (_isErrorShowing) return;
+                return;
+            }
+
+            // Layar lagi nampilin pesan ERROR: jangan ubah input,
+            // tapi tombol tetap bunyi biar gak kerasa mati.
+            if (_isErrorShowing)
+            {
+                if (target.type == ClickableType.Knob)
+                    PlaySound(knobSound != null ? knobSound : clickSound);
+                else
+                    PlaySound(clickSound);
+
+                return;
+            }
 
             switch (target.type)
             {
@@ -197,9 +219,10 @@ namespace C4
 
         private void PressNumber(int num)
         {
-            if (currentKnobState != KnobState.Standby) return;
-
+            // SFX klik selalu bunyi walau knob masih Off / Prepare.
             PlaySound(clickSound);
+
+            if (currentKnobState != KnobState.Standby) return;
 
             if (_enteredCode.Length < codeLength)
             {
@@ -210,9 +233,10 @@ namespace C4
 
         private void PressClear()
         {
-            if (currentKnobState != KnobState.Standby) return;
-
+            // SFX klik selalu bunyi walau knob masih Off / Prepare.
             PlaySound(clickSound);
+
+            if (currentKnobState != KnobState.Standby) return;
 
             if (_enteredCode.Length > 0)
             {
@@ -223,7 +247,12 @@ namespace C4
 
         private void PressSubmit()
         {
-            if (currentKnobState != KnobState.Standby) return;
+            // Knob belum di Standby: tetap kasih bunyi klik, tapi jangan submit.
+            if (currentKnobState != KnobState.Standby)
+            {
+                PlaySound(clickSound);
+                return;
+            }
 
             // Cek apakah kode cocok sama yang di Post-it Note
             if (_enteredCode == _generatedCode)
@@ -234,8 +263,8 @@ namespace C4
             }
             else
             {
-                // PIN SALAH -> ERROR & CLEAR
-                PlaySound(errorSound);
+                // PIN SALAH -> ERROR & CLEAR (fallback ke klik kalau errorSound kosong)
+                PlaySound(errorSound != null ? errorSound : clickSound);
                 StartCoroutine(ShowErrorRoutine());
             }
         }
@@ -381,7 +410,7 @@ namespace C4
             }
             else if (currentKnobState == KnobState.Prepare)
             {
-                screenText.text = "HELLO";
+                screenText.text = ":D";
             }
             else if (currentKnobState == KnobState.Standby)
             {
