@@ -24,6 +24,16 @@ public class EngineAudio : MonoBehaviour
     [Tooltip("Volume saat full throttle")]
     [Range(0f, 1f)] public float maxVolume = 1.0f;
 
+    [Header("=== 3D AUDIO (JARAK SUARA) ===")]
+    [Tooltip("1 = 3D penuh (mengecil kalau jauh). 0 = 2D (kedengaran jelas di mana-mana).")]
+    [Range(0f, 1f)] public float engineSpatialBlend = 1f;
+
+    [Tooltip("Jarak suara mesin masih 100% volume. Bikin >= jarak kamera (6m) biar mesin mobil sendiri tetap jelas.")]
+    public float engineMinDistance = 8f;
+
+    [Tooltip("Jarak maksimal suara mesin masih terdengar sebelum hilang total.")]
+    public float engineMaxDistance = 60f;
+
     private VehicleController _vc;
     private float _fadeSpeed = 2.5f;
     private bool _prevEngineRunning;
@@ -41,8 +51,14 @@ public class EngineAudio : MonoBehaviour
             engineAudioSource.loop = true;
             engineAudioSource.playOnAwake = false;
             engineAudioSource.dopplerLevel = 0f;
+
+            // PENTING: AudioSource di prefab kendaraan kebanyakan spatialBlend-nya 0 (2D),
+            // jadi suara mesin tetap full volume sejauh apa pun. Paksa jadi 3D biar
+            // mengecil/hilang sesuai jarak.
+            engineAudioSource.spatialBlend = engineSpatialBlend;
             engineAudioSource.rolloffMode = AudioRolloffMode.Linear;
-            engineAudioSource.maxDistance = 120f;
+            engineAudioSource.minDistance = Mathf.Max(1f, engineMinDistance);
+            engineAudioSource.maxDistance = Mathf.Max(engineAudioSource.minDistance + 1f, engineMaxDistance);
             engineAudioSource.volume = 0f;
             engineAudioSource.pitch = minPitch * 0.3f;
             engineAudioSource.Stop();
@@ -52,8 +68,10 @@ public class EngineAudio : MonoBehaviour
         {
             starterAudioSource.playOnAwake = false;
             starterAudioSource.dopplerLevel = 0f;
+            starterAudioSource.spatialBlend = engineSpatialBlend;
             starterAudioSource.rolloffMode = AudioRolloffMode.Linear;
-            starterAudioSource.maxDistance = 60f;
+            starterAudioSource.minDistance = Mathf.Max(1f, engineMinDistance);
+            starterAudioSource.maxDistance = Mathf.Max(starterAudioSource.minDistance + 1f, engineMaxDistance);
             starterAudioSource.Stop();
         }
 
