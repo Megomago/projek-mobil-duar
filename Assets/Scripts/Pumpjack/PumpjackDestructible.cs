@@ -85,6 +85,13 @@ public class PumpjackDestructible : MonoBehaviour
     [Tooltip("Hanya dipakai kalau brokenPrefab kosong: matikan collider lama yang tidak ikut jadi debris.")]
     public bool disableLeftoverColliders = true;
 
+    [Header("=== PERFORMA DEBRIS (MOBILE) ===")]
+    [Tooltip("Interpolasi Rigidbody debris. None = paling murah, Interpolate = paling halus (lebih mahal di HP).")]
+    public RigidbodyInterpolation debrisInterpolation = RigidbodyInterpolation.Interpolate;
+
+    [Tooltip("Deteksi tabrakan debris. Discrete = paling murah. ContinuousSpeculative = anti tembus tapi lebih mahal.")]
+    public CollisionDetectionMode debrisCollisionDetection = CollisionDetectionMode.ContinuousSpeculative;
+
     [Header("=== VFX API DARI PIPA BOR ===")]
     [Tooltip("Prefab VFX api. Contoh: WFX_GazFireBig (Black Smoke).")]
     public GameObject fireVfxPrefab;
@@ -131,14 +138,19 @@ public class PumpjackDestructible : MonoBehaviour
     private bool _isBroken;
     private Vector3 _firePoint;
     private Animator[] _animators;
+    private Renderer[] _renderers;
+    private Bounds _cachedWorldBounds;
     private readonly List<Collider> _allColliders = new List<Collider>();
 
     public bool IsBroken => _isBroken;
 
     private void Awake()
     {
+        _renderers = GetComponentsInChildren<Renderer>(true);
         _animators = GetComponentsInChildren<Animator>(true);
         CacheColliders();
+        _cachedWorldBounds = GetCombinedBounds();
+        transform.hasChanged = false;
     }
 
     private void OnEnable()
@@ -156,11 +168,26 @@ public class PumpjackDestructible : MonoBehaviour
         if (_isBroken || explosive == null) return;
 
         float radius = Mathf.Max(0.01f, explosive.explosionRadius);
-        float distance = GetClosestDistance(explosive.transform.position);
+        float maxDistance = radius + breakRadiusPadding;
+        Vector3 blastPosition = explosive.transform.position;
 
-        if (distance > radius + breakRadiusPadding) return;
+        // Broad-phase murah: kalau pumpjack dipindah setelah Awake, refresh bounds.
+        // Bounds AABB selalu lebih besar dari bentuk aslinya, jadi aman dipakai
+        // sebagai penolak awal sebelum cek per-collider (bisa ratusan box).
+        if (transform.hasChanged)
+        {
+            _cachedWorldBounds = GetCombinedBounds();
+            transform.hasChanged = false;
+        }
 
-        Break(explosive.transform.position, radius);
+        if (_cachedWorldBounds.SqrDistance(blastPosition) > maxDistance * maxDistance)
+            return;
+
+        float distance = GetClosestDistance(blastPosition);
+
+        if (distance > maxDistance) return;
+
+        Break(blastPosition, radius);
     }
 
     /// <summary>
@@ -197,7 +224,7 @@ public class PumpjackDestructible : MonoBehaviour
         // coroutine VFX/suara api tidak ikut mati.
         DisableIntactVisuals();
 
-        GameObject broken = Instantiate(brokenPrefab, transform);
+        GameObject broken = Instantiate(brokenPrefab, transform, false);
         broken.name = brokenPrefab.name + " (Broken)";
         broken.transform.localPosition = brokenLocalPosition;
         broken.transform.localRotation = Quaternion.Euler(brokenLocalEulerAngles);
@@ -230,7 +257,7 @@ public class PumpjackDestructible : MonoBehaviour
             }
         }
 
-        List<GameObject> parts = CollectMeshParts(broken, staticRoot);
+        List<GameObject> parts = CollectMeshParts(broken.transform, staticRoot);
         int launched = 0;
 
         for (int i = 0; i < parts.Count; i++)
@@ -238,37 +265,8 @@ public class PumpjackDestructible : MonoBehaviour
             GameObject part = parts[i];
             if (part == null) continue;
 
-            if (enablePhysics)
-            {
-                EnsureCollider(part);
-
-                Rigidbody rb = part.GetComponent<Rigidbody>();
-                if (rb == null)
-                    rb = part.AddComponent<Rigidbody>();
-
-                rb.useGravity = true;
-                rb.interpolation = RigidbodyInterpolation.Interpolate;
-                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-                rb.drag = 0.03f;
-                rb.angularDrag = 0.05f;
-                rb.mass = EstimateMass(part);
-
-                rb.AddExplosionForce(
-                    debrisLaunchSpeed,
-                    blastPosition,
-                    Mathf.Max(0.1f, blastRadius),
-                    upwardsModifier,
-                    ForceMode.VelocityChange);
-
-                if (randomTorque > 0f)
-                {
-                    rb.AddTorque(
-                        Random.onUnitSphere * randomTorque,
-                        ForceMode.VelocityChange);
-                }
-
+            if (LaunchDebrisPart(part, blastPosition, blastRadius))
                 launched++;
-            }
 
             if (debrisLifetime > 0f)
                 Destroy(part, debrisLifetime);
@@ -279,7 +277,15 @@ public class PumpjackDestructible : MonoBehaviour
         {
             broken.transform.SetParent(null, true);
 
-            float vfxEnd = fireVfxPrefab != null ? fireVfxDelay + fireVfxLifetime : 0f;
+            float vfxEnd = 0f;
+            if (fireVfxPrefab != null)
+            {
+                // fireVfxLifetime 0 = biarkan prefab mengatur sendiri, jadi
+                // beri waktu default supaya VFX tidak ikut mati bareng controller.
+                float lifetime = fireVfxLifetime > 0f ? fireVfxLifetime : 10f;
+                vfxEnd = fireVfxDelay + lifetime;
+            }
+
             float soundEnd = 0f;
             if (fireSound != null)
             {
@@ -298,11 +304,13 @@ public class PumpjackDestructible : MonoBehaviour
 
     private void DisableIntactVisuals()
     {
-        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
-        for (int i = 0; i < renderers.Length; i++)
+        if (_renderers == null)
+            _renderers = GetComponentsInChildren<Renderer>(true);
+
+        for (int i = 0; i < _renderers.Length; i++)
         {
-            if (renderers[i] != null)
-                renderers[i].enabled = false;
+            if (_renderers[i] != null)
+                _renderers[i].enabled = false;
         }
 
         for (int i = 0; i < _allColliders.Count; i++)
@@ -321,33 +329,23 @@ public class PumpjackDestructible : MonoBehaviour
         }
     }
 
-    private static List<GameObject> CollectMeshParts(GameObject root, Transform staticRoot)
+    private static List<GameObject> CollectMeshParts(Transform root, Transform staticRoot)
     {
         List<GameObject> result = new List<GameObject>();
         HashSet<GameObject> seen = new HashSet<GameObject>();
 
-        MeshRenderer[] meshes = root.GetComponentsInChildren<MeshRenderer>(true);
-        for (int i = 0; i < meshes.Length; i++)
+        // Satu pass untuk MeshRenderer + SkinnedMeshRenderer sekaligus.
+        Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
+        for (int i = 0; i < renderers.Length; i++)
         {
-            MeshRenderer mr = meshes[i];
-            if (mr == null || !mr.enabled || !mr.gameObject.activeInHierarchy) continue;
-            if (mr.gameObject == root) continue;
-            if (staticRoot != null && IsUnder(mr.transform, staticRoot)) continue;
+            Renderer r = renderers[i];
+            if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
+            if (!(r is MeshRenderer) && !(r is SkinnedMeshRenderer)) continue;
+            if (r.gameObject == root.gameObject) continue;
+            if (staticRoot != null && IsUnder(r.transform, staticRoot)) continue;
 
-            if (seen.Add(mr.gameObject))
-                result.Add(mr.gameObject);
-        }
-
-        SkinnedMeshRenderer[] skinned = root.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-        for (int i = 0; i < skinned.Length; i++)
-        {
-            SkinnedMeshRenderer smr = skinned[i];
-            if (smr == null || !smr.enabled || !smr.gameObject.activeInHierarchy) continue;
-            if (smr.gameObject == root) continue;
-            if (staticRoot != null && IsUnder(smr.transform, staticRoot)) continue;
-
-            if (seen.Add(smr.gameObject))
-                result.Add(smr.gameObject);
+            if (seen.Add(r.gameObject))
+                result.Add(r.gameObject);
         }
 
         return result;
@@ -386,35 +384,7 @@ public class PumpjackDestructible : MonoBehaviour
             GameObject part = parts[i];
             if (part == null || part == gameObject) continue;
 
-            if (enablePhysics)
-            {
-                EnsureCollider(part);
-
-                Rigidbody rb = part.GetComponent<Rigidbody>();
-                if (rb == null)
-                    rb = part.AddComponent<Rigidbody>();
-
-                rb.useGravity = true;
-                rb.interpolation = RigidbodyInterpolation.Interpolate;
-                rb.collisionDetectionMode = CollisionDetectionMode.ContinuousSpeculative;
-                rb.drag = 0.03f;
-                rb.angularDrag = 0.05f;
-                rb.mass = EstimateMass(part);
-
-                rb.AddExplosionForce(
-                    debrisLaunchSpeed,
-                    blastPosition,
-                    Mathf.Max(0.1f, blastRadius),
-                    upwardsModifier,
-                    ForceMode.VelocityChange);
-
-                if (randomTorque > 0f)
-                {
-                    rb.AddTorque(
-                        Random.onUnitSphere * randomTorque,
-                        ForceMode.VelocityChange);
-                }
-            }
+            LaunchDebrisPart(part, blastPosition, blastRadius);
 
             if (debrisLifetime > 0f)
                 Destroy(part, debrisLifetime);
@@ -441,36 +411,16 @@ public class PumpjackDestructible : MonoBehaviour
 
     private List<GameObject> CollectParts()
     {
-        List<GameObject> result = new List<GameObject>();
+        List<GameObject> result;
 
         if (splitEveryMesh)
         {
-            HashSet<GameObject> seen = new HashSet<GameObject>();
-
-            MeshRenderer[] meshes = GetComponentsInChildren<MeshRenderer>(true);
-            for (int i = 0; i < meshes.Length; i++)
-            {
-                MeshRenderer mr = meshes[i];
-                if (mr == null || !mr.enabled || !mr.gameObject.activeInHierarchy) continue;
-                if (mr.transform == transform) continue;
-
-                if (seen.Add(mr.gameObject))
-                    result.Add(mr.gameObject);
-            }
-
-            SkinnedMeshRenderer[] skinned = GetComponentsInChildren<SkinnedMeshRenderer>(true);
-            for (int i = 0; i < skinned.Length; i++)
-            {
-                SkinnedMeshRenderer smr = skinned[i];
-                if (smr == null || !smr.enabled || !smr.gameObject.activeInHierarchy) continue;
-                if (smr.transform == transform) continue;
-
-                if (seen.Add(smr.gameObject))
-                    result.Add(smr.gameObject);
-            }
+            result = CollectMeshParts(transform, null);
         }
         else
         {
+            result = new List<GameObject>();
+
             // Pakai collider yang sudah ada sebagai chunk. Ambil yang paling atas
             // saja supaya child collider tidak dapat Rigidbody dobel.
             List<GameObject> candidates = new List<GameObject>();
@@ -523,12 +473,51 @@ public class PumpjackDestructible : MonoBehaviour
     // HELPER FISIKA
     // ================================================================
 
+    /// <summary>
+    /// Pasang collider + Rigidbody ke satu part debris lalu lempar dari titik
+    /// ledakan. Return true kalau part benar-benar dilempar.
+    /// </summary>
+    private bool LaunchDebrisPart(GameObject part, Vector3 blastPosition, float blastRadius)
+    {
+        if (!enablePhysics) return false;
+
+        EnsureCollider(part);
+
+        Rigidbody rb = part.GetComponent<Rigidbody>();
+        if (rb == null)
+            rb = part.AddComponent<Rigidbody>();
+
+        rb.useGravity = true;
+        rb.interpolation = debrisInterpolation;
+        rb.collisionDetectionMode = debrisCollisionDetection;
+        rb.drag = 0.03f;
+        rb.angularDrag = 0.05f;
+        rb.mass = EstimateMass(part);
+
+        rb.AddExplosionForce(
+            debrisLaunchSpeed,
+            blastPosition,
+            Mathf.Max(0.1f, blastRadius),
+            upwardsModifier,
+            ForceMode.VelocityChange);
+
+        if (randomTorque > 0f)
+        {
+            rb.AddTorque(
+                Random.onUnitSphere * randomTorque,
+                ForceMode.VelocityChange);
+        }
+
+        return true;
+    }
+
     private void EnsureCollider(GameObject part)
     {
-        // Pakai collider manual kalau ada, termasuk yang dipasang di child
-        // (compound / tumpuk). Baru bikin BoxCollider kalau benar-benar kosong.
-        Collider col = part.GetComponentInChildren<Collider>(true);
-        if (col == null)
+        // Satu query saja. Kalau ada collider manual (termasuk compound di
+        // child), pakai apa adanya. Baru bikin BoxCollider kalau kosong.
+        Collider[] colliders = part.GetComponentsInChildren<Collider>(true);
+
+        if (colliders.Length == 0)
         {
             Renderer r = part.GetComponent<Renderer>();
             if (r == null)
@@ -545,23 +534,22 @@ public class PumpjackDestructible : MonoBehaviour
             if (box.size.sqrMagnitude < 0.000001f)
                 box.size = Vector3.one * 0.2f;
 
-            col = box;
+            // BoxCollider baru pasti valid: bukan trigger dan bukan MeshCollider.
+            return;
         }
 
         // MeshCollider non-convex tidak boleh dipakai di Rigidbody dinamis.
-        // Cek juga collider di child, karena bisa ikut Rigidbody part ini.
-        Collider[] childColliders = part.GetComponentsInChildren<Collider>(true);
-        for (int i = 0; i < childColliders.Length; i++)
+        for (int i = 0; i < colliders.Length; i++)
         {
-            Collider child = childColliders[i];
-            if (child == null) continue;
+            Collider col = colliders[i];
+            if (col == null) continue;
 
-            MeshCollider meshCol = child as MeshCollider;
+            MeshCollider meshCol = col as MeshCollider;
             if (meshCol != null)
                 meshCol.convex = true;
 
-            if (child.isTrigger)
-                child.isTrigger = false;
+            if (col.isTrigger)
+                col.isTrigger = false;
         }
     }
 
@@ -586,7 +574,7 @@ public class PumpjackDestructible : MonoBehaviour
 
     private float GetClosestDistance(Vector3 point)
     {
-        float best = float.PositiveInfinity;
+        float bestSqr = float.PositiveInfinity;
 
         for (int i = 0; i < _allColliders.Count; i++)
         {
@@ -594,28 +582,30 @@ public class PumpjackDestructible : MonoBehaviour
             if (col == null || !col.enabled || !col.gameObject.activeInHierarchy) continue;
 
             Vector3 closest = col.ClosestPoint(point);
-            float distance = Vector3.Distance(point, closest);
-            if (distance < best)
-                best = distance;
+            float distanceSqr = (point - closest).sqrMagnitude;
+            if (distanceSqr < bestSqr)
+                bestSqr = distanceSqr;
         }
 
-        if (!float.IsPositiveInfinity(best))
-            return best;
+        if (!float.IsPositiveInfinity(bestSqr))
+            return Mathf.Sqrt(bestSqr);
 
         // Fallback kalau pumpjack tidak punya collider.
-        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
-        for (int i = 0; i < renderers.Length; i++)
+        if (_renderers == null)
+            _renderers = GetComponentsInChildren<Renderer>(true);
+
+        for (int i = 0; i < _renderers.Length; i++)
         {
-            Renderer r = renderers[i];
+            Renderer r = _renderers[i];
             if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
 
             Vector3 closest = r.bounds.ClosestPoint(point);
-            float distance = Vector3.Distance(point, closest);
-            if (distance < best)
-                best = distance;
+            float distanceSqr = (point - closest).sqrMagnitude;
+            if (distanceSqr < bestSqr)
+                bestSqr = distanceSqr;
         }
 
-        return float.IsPositiveInfinity(best) ? 0f : best;
+        return float.IsPositiveInfinity(bestSqr) ? 0f : Mathf.Sqrt(bestSqr);
     }
 
     private Vector3 GetFirePoint()
@@ -630,13 +620,15 @@ public class PumpjackDestructible : MonoBehaviour
 
     private Bounds GetCombinedBounds()
     {
-        Renderer[] renderers = GetComponentsInChildren<Renderer>(true);
+        if (_renderers == null)
+            _renderers = GetComponentsInChildren<Renderer>(true);
+
         bool hasBounds = false;
         Bounds bounds = new Bounds(transform.position, Vector3.zero);
 
-        for (int i = 0; i < renderers.Length; i++)
+        for (int i = 0; i < _renderers.Length; i++)
         {
-            Renderer r = renderers[i];
+            Renderer r = _renderers[i];
             if (r == null || !r.enabled || !r.gameObject.activeInHierarchy) continue;
 
             if (!hasBounds)
@@ -747,8 +739,9 @@ public class PumpjackDestructible : MonoBehaviour
         if (fireVfxPrefab == null)
             yield break;
 
+        // Jangan di-parent ke controller: controller bisa dihapus lebih dulu
+        // (destroyAfterEffects), sedangkan VFX harus tetap hidup sampai selesai.
         GameObject vfx = Instantiate(fireVfxPrefab, _firePoint, Quaternion.identity);
-        vfx.transform.SetParent(transform, true);
 
         ParticleSystem[] systems = vfx.GetComponentsInChildren<ParticleSystem>(true);
         for (int i = 0; i < systems.Length; i++)
