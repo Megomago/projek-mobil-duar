@@ -845,13 +845,29 @@ public class PumpjackDestructible : MonoBehaviour
 
         if (brokenPrefab == null)
         {
-            brokenPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-                "Assets/Scenes/Pumpjack/pumpjack broken.prefab");
+            // Urutan kandidat: pakai prefab wrapper, JANGAN pakai FBX langsung.
+            // FBX langsung tidak punya pivot/anchor yang sudah dirapikan,
+            // jadi objek rusak bisa melayang atau bergeser.
+            string[] candidates =
+            {
+                "Assets/Scenes/Pumpjack/pumpjack broken 2 asli.prefab",
+                "Assets/Scenes/Pumpjack/pumpjack broken asli 2.prefab",
+                "Assets/Scenes/Pumpjack/Pumpjack broken asli.prefab",
+                "Assets/Scenes/Pumpjack/pumpjack broken.prefab"
+            };
+
+            for (int i = 0; i < candidates.Length; i++)
+            {
+                brokenPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(candidates[i]);
+                if (brokenPrefab != null)
+                    break;
+            }
 
             if (brokenPrefab == null)
             {
-                brokenPrefab = UnityEditor.AssetDatabase.LoadAssetAtPath<GameObject>(
-                    "Assets/pumpjack broken.fbx");
+                Debug.LogWarning(
+                    "[Pumpjack] Prefab pumpjack rusak tidak ditemukan. Isi field 'Broken Prefab' manual.",
+                    this);
             }
         }
 

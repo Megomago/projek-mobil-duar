@@ -300,7 +300,7 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   breakRadiusPadding: 1
-  brokenPrefab: {fileID: 3611490962323189808, guid: db09d02c4d9bf6a4db68ac66eb8bd5ff,
+  brokenPrefab: {fileID: 5448175816532846308, guid: a04692c2f8955a042b8f8610af0545dd,
     type: 3}
   brokenLocalPosition: {x: 0, y: 0, z: 0}
   brokenLocalEulerAngles: {x: 0, y: 0, z: 0}
