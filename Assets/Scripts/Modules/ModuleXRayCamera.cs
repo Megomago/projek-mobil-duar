@@ -21,6 +21,12 @@ public class ModuleXRayCamera : MonoBehaviour
     [Tooltip("True = paksa nyala terus.")]
     public bool alwaysOn = false;
 
+    [Tooltip("Opsional: hanya modul di bawah root ini yang ikut X-ray (misal kendaraan yang sedang dikendarai).")]
+    public Transform xrayFocusRoot;
+
+    [Tooltip("True = kalau xrayFocusRoot kosong, modul internal tidak ditampilkan sama sekali (Battlefield saat turun dari mobil).")]
+    public bool requireFocusRoot = false;
+
     private Camera _baseCam;
     private UniversalAdditionalCameraData _baseData;
     private Camera _overlayCam;
@@ -100,6 +106,9 @@ public class ModuleXRayCamera : MonoBehaviour
 
     public void SetOverlayEnabled(bool on)
     {
+        // Modul zona internal: render hanya saat X-ray aktif (dan hanya fokus kendaraan ini).
+        InternalModuleVisibility.SetXRay(on, xrayFocusRoot, requireFocusRoot);
+
         if (on)
         {
             EnsureOverlayBuilt();

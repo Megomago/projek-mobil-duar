@@ -75,6 +75,9 @@ public class BattlefieldXRay : MonoBehaviour
         _xray = gameObject.AddComponent<ModuleXRayCamera>();
         _xray.xrayLayers = 1 << moduleLayer;
         _xray.editModePanel = null;
+        // Battlefield: X-ray cuma berlaku buat kendaraan yang sedang dikendarai.
+        // Turun dari mobil = tidak ada fokus = modul internal semua kendaraan disembunyikan.
+        _xray.requireFocusRoot = true;
 
         SetXRay(startEnabled);
     }
@@ -88,7 +91,12 @@ public class BattlefieldXRay : MonoBehaviour
 
         // Pemain ganti kendaraan / keluar kendaraan saat X-ray ON → filter ulang
         if (_enabled && _focusedVehicle != VehicleEntry.ActiveVehicle)
+        {
             ApplyModuleFilter();
+            _xray.xrayFocusRoot = _focusedVehicle != null ? _focusedVehicle.transform : null;
+            // SetOverlayEnabled meneruskan fokus + requireFocusRoot ke InternalModuleVisibility
+            _xray.SetOverlayEnabled(true);
+        }
     }
 
     private void OnDisable()
@@ -102,6 +110,9 @@ public class BattlefieldXRay : MonoBehaviour
 
         if (on) ApplyModuleFilter();
         else RestoreOtherModules();
+
+        // Filter modul internal: hanya kendaraan yang difokuskan yang ikut tampil.
+        _xray.xrayFocusRoot = _focusedVehicle != null ? _focusedVehicle.transform : null;
 
         _xray.alwaysOn = on;
         _xray.SetOverlayEnabled(on);

@@ -149,6 +149,37 @@ public class VehicleGridSystem : MonoBehaviour
         {
             RebuildColliderMapFromHierarchy();
         }
+
+        // Modul internal yang sudah terdaftar di list (mis. baked prefab) tetap
+        // harus disembunyikan sampai X-ray aktif.
+        RegisterInternalModules();
+    }
+
+    /// <summary>
+    /// Daftarkan ulang semua modul internal yang ada di installedModules.
+    /// Dipakai untuk prefab yang installedModules-nya sudah terisi (baked) sehingga
+    /// RebuildColliderMapFromHierarchy tidak jalan saat Start.
+    /// </summary>
+    public void RegisterInternalModules()
+    {
+        if (installedModules == null || gridZones == null) return;
+
+        foreach (var pm in installedModules)
+        {
+            if (pm == null) continue;
+
+            GridZone zone = null;
+            for (int i = 0; i < gridZones.Count; i++)
+            {
+                if (gridZones[i] != null && gridZones[i].zoneName == pm.zoneName)
+                {
+                    zone = gridZones[i];
+                    break;
+                }
+            }
+
+            InternalModuleVisibility.Register(pm, zone != null && zone.isInternalGrid);
+        }
     }
 
     [ContextMenu("Install Default Presets")]
@@ -205,6 +236,10 @@ public class VehicleGridSystem : MonoBehaviour
 
                 modComp.Initialize(pm, _statsManager);
                 installedModules.Add(pm);
+
+                // Zona internal: sembunyikan dari render kecuali saat X-ray aktif.
+                InternalModuleVisibility.Register(pm, zone.isInternalGrid);
+
                 anyFound = true;
             }
         }
@@ -410,6 +445,9 @@ public class VehicleGridSystem : MonoBehaviour
 
         installedModules.Add(newModule);
 
+        // Zona internal: sembunyikan dari render kecuali saat X-ray aktif.
+        InternalModuleVisibility.Register(newModule, targetZone.isInternalGrid);
+
         if (_statsManager != null)
             _statsManager.MarkStatsDirty();
 
@@ -425,6 +463,8 @@ public class VehicleGridSystem : MonoBehaviour
     {
         if (installedModules.Contains(module))
         {
+            InternalModuleVisibility.Unregister(module);
+
             if (module.spawnedPrefab != null)
             {
                 Collider[] modColliders = module.spawnedPrefab.GetComponentsInChildren<Collider>(true);
@@ -454,6 +494,8 @@ public class VehicleGridSystem : MonoBehaviour
         for (int i = installedModules.Count - 1; i >= 0; i--)
         {
             PlacedModule pm = installedModules[i];
+            InternalModuleVisibility.Unregister(pm);
+
             if (pm.spawnedPrefab != null)
             {
                 // Lepaskan collider dari map dulu — jangan tinggalkan key mati
