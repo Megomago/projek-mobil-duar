@@ -49,12 +49,26 @@ public static class InternalModuleVisibility
         if (!Application.isPlaying) return;
         if (!isInternal || module == null || module.spawnedPrefab == null) return;
 
-        // Kalau modul yang sama sudah terdaftar (rebuild/duplikat), buang dulu.
-        Unregister(module);
-
         GameObject root = module.spawnedPrefab;
         Renderer[] renderers = root.GetComponentsInChildren<Renderer>(true);
         if (renderers == null || renderers.Length == 0) return;
+
+        // Kalau modul ini sudah pernah didaftarkan, ambil state asli dari entry lama.
+        // JANGAN capture ulang saat renderer sedang disembunyikan — semua bisa
+        // tercatat false, bikin modul nggak pernah muncul lagi walau X-ray nyala.
+        bool[] originalEnabled = null;
+        for (int i = 0; i < _entries.Count; i++)
+        {
+            Entry old = _entries[i];
+            if (old.module != module) continue;
+
+            if (old.originalEnabled != null && old.originalEnabled.Length == renderers.Length)
+                originalEnabled = old.originalEnabled;
+
+            HideEntry(old);
+            _entries.RemoveAt(i);
+            break;
+        }
 
         var entry = new Entry
         {
@@ -62,13 +76,15 @@ public static class InternalModuleVisibility
             root = root,
             renderers = renderers,
             originalEnabled = new bool[renderers.Length],
+            state = -1,
         };
 
         for (int i = 0; i < renderers.Length; i++)
         {
-            Renderer r = renderers[i];
-            if (r == null) continue;
-            entry.originalEnabled[i] = r.enabled;
+            if (originalEnabled != null)
+                entry.originalEnabled[i] = originalEnabled[i];
+            else
+                entry.originalEnabled[i] = renderers[i] != null && renderers[i].enabled;
         }
 
         _entries.Add(entry);
