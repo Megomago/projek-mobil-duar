@@ -74,6 +74,11 @@ public class GridVisualizer : MonoBehaviour
     private readonly List<Vector2Int> _previewBaseCells = new List<Vector2Int>();
     private readonly List<Vector2Int> _previewClearanceCells = new List<Vector2Int>();
 
+    // Cache warna untuk gambar grid di Edit / Prefab Mode (tidak dialokasi ulang tiap repaint).
+    private readonly HashSet<GridKey> _gizmoOccupiedCells = new HashSet<GridKey>();
+    private readonly HashSet<GridKey> _gizmoClearanceCells = new HashSet<GridKey>();
+    private readonly Vector3[] _gizmoCellVerts = new Vector3[4];
+
     private void Awake()
     {
         _statsManager = GetComponent<VehicleStatsManager>();
@@ -83,15 +88,25 @@ public class GridVisualizer : MonoBehaviour
     {
         if (_statsManager == null) _statsManager = GetComponent<VehicleStatsManager>();
         if (_statsManager == null) return;
-        if (cellSprite == null) return;
 
-        if (_statsManager.gridZones == null) return;
+        // Catatan: cellSprite TIDAK wajib untuk mode edit. Grid gizmo tetap bisa digambar
+        // walau sprite belum di-assign, supaya zona tetap kelihatan saat menyusun prefab.
+        var zones = _statsManager.gridZones;
+        if (zones == null || zones.Count == 0) return;
 
-        Color gizColor = normalColor;
-        gizColor.a = Mathf.Clamp01(gizColor.a);
-        Gizmos.color = gizColor;
+        // Kumpulkan warna occupied & clearance sekali per repaint (sama seperti UpdateGridColors).
+        BuildGizmoCellColors();
 
-        foreach (var zone in _statsManager.gridZones)
+        // Di Edit / Prefab Mode gambar x-ray (tembus mesh mobil), supaya grid di dalam
+        // bodi / di balik panel tetap kelihatan. Di Play mode biarkan seperti biasa.
+        bool editMode = !Application.isPlaying;
+
+#if UNITY_EDITOR
+        var prevZTest = UnityEditor.Handles.zTest;
+        if (editMode) UnityEditor.Handles.zTest = UnityEngine.Rendering.CompareFunction.Always;
+#endif
+
+        foreach (var zone in zones)
         {
             if (zone == null || zone.origin == null) continue;
             int width = zone.capacity.x;
@@ -102,16 +117,76 @@ public class GridVisualizer : MonoBehaviour
             {
                 for (int y = 0; y < height; y++)
                 {
+                    Color cellColor = ResolveGizmoCellColor(zone.zoneName, x, y);
                     float offsetX = (x + 0.5f) * cellSize;
                     float offsetZ = (y + 0.5f) * cellSize;
+
                     Vector3 worldPos = zone.origin.TransformPoint(new Vector3(offsetX, 0f, offsetZ));
 
-                    // Draw a thin wire cube on the plane to represent the cell
-                    Vector3 size = new Vector3(cellSize, 0.01f, cellSize);
-                    Gizmos.DrawWireCube(worldPos, size);
+                    // Wireframe dasar (tetap ada seperti sebelumnya).
+                    Gizmos.color = cellColor;
+                    Gizmos.DrawWireCube(worldPos, new Vector3(cellSize, 0.01f, cellSize));
+
+#if UNITY_EDITOR
+                    if (editMode)
+                    {
+                        // Kotak berisi transparan + outline x-ray, biar bentuk grid lebih kebaca
+                        // saat edit prefab (bukan cuma garis 1px yang ketutup mesh).
+                        float half = cellSize * 0.5f;
+                        _gizmoCellVerts[0] = zone.origin.TransformPoint(new Vector3(offsetX - half, 0f, offsetZ - half));
+                        _gizmoCellVerts[1] = zone.origin.TransformPoint(new Vector3(offsetX + half, 0f, offsetZ - half));
+                        _gizmoCellVerts[2] = zone.origin.TransformPoint(new Vector3(offsetX + half, 0f, offsetZ + half));
+                        _gizmoCellVerts[3] = zone.origin.TransformPoint(new Vector3(offsetX - half, 0f, offsetZ + half));
+
+                        Color fill = new Color(cellColor.r, cellColor.g, cellColor.b, Mathf.Clamp01(cellColor.a * 0.12f));
+                        Color outline = new Color(cellColor.r, cellColor.g, cellColor.b, Mathf.Clamp01(cellColor.a * 0.85f));
+                        UnityEditor.Handles.DrawSolidRectangleWithOutline(_gizmoCellVerts, fill, outline);
+                    }
+#endif
                 }
             }
         }
+
+#if UNITY_EDITOR
+        UnityEditor.Handles.zTest = prevZTest;
+#endif
+    }
+
+    /// <summary>
+    /// Isi cache warna occupied/clearance untuk gambar gizmo, memakai data grid yang sama
+    /// dengan UpdateGridColors (jadi warna di Edit Mode konsisten dengan saat Play).
+    /// </summary>
+    private void BuildGizmoCellColors()
+    {
+        _gizmoOccupiedCells.Clear();
+        _gizmoClearanceCells.Clear();
+
+        var modules = _statsManager.installedModules;
+        if (modules == null) return;
+
+        foreach (var mod in modules)
+        {
+            if (mod == null || mod.moduleTemplate == null) continue;
+
+            if (mod.moduleTemplate.enableClearance)
+            {
+                _statsManager.GetClearanceCells(mod.gridPosition, mod.moduleTemplate, mod.rotationAngle, _clearanceCells);
+                foreach (var pos in _clearanceCells)
+                    _gizmoClearanceCells.Add(new GridKey(mod.zoneName, pos.x, pos.y));
+            }
+
+            _statsManager.GetOccupiedCells(mod.gridPosition, mod.moduleTemplate.width, mod.moduleTemplate.height, mod.rotationAngle, _occupiedCells);
+            foreach (var pos in _occupiedCells)
+                _gizmoOccupiedCells.Add(new GridKey(mod.zoneName, pos.x, pos.y));
+        }
+    }
+
+    private Color ResolveGizmoCellColor(string zoneName, int x, int y)
+    {
+        var key = new GridKey(zoneName, x, y);
+        if (_gizmoOccupiedCells.Contains(key)) return occupiedColor;
+        if (_gizmoClearanceCells.Contains(key)) return clearanceColor;
+        return normalColor;
     }
 
     private void Start()

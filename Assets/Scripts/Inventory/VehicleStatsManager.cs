@@ -69,12 +69,26 @@ public class VehicleStatsManager : MonoBehaviour
     private static readonly List<GridZone> _emptyGridZones = new List<GridZone>(0);
     private static readonly List<PlacedModule> _emptyInstalledModules = new List<PlacedModule>(0);
 
+    /// <summary>
+    /// Ambil VehicleGridSystem secara LAZY.
+    /// Penting untuk Edit / Prefab Mode: Awake() tidak jalan sebelum Play, jadi kalau
+    /// cuma mengandalkan Awake, gridSystem tetap null dan GridVisualizer tidak bisa
+    /// menggambar apa pun. GetComponent aman dipanggil berulang (hasilnya di-cache).
+    /// </summary>
+    private VehicleGridSystem ResolveGridSystem()
+    {
+        if (gridSystem == null)
+            gridSystem = GetComponent<VehicleGridSystem>();
+        return gridSystem;
+    }
+
     public List<GridZone> gridZones
     {
         get
         {
-            if (gridSystem == null) return _emptyGridZones;
-            return gridSystem.gridZones;
+            var gs = ResolveGridSystem();
+            if (gs == null) return _emptyGridZones;
+            return gs.gridZones;
         }
     }
 
@@ -82,8 +96,9 @@ public class VehicleStatsManager : MonoBehaviour
     {
         get
         {
-            if (gridSystem == null) return _emptyInstalledModules;
-            return gridSystem.installedModules;
+            var gs = ResolveGridSystem();
+            if (gs == null) return _emptyInstalledModules;
+            return gs.installedModules;
         }
     }
 
@@ -93,45 +108,52 @@ public class VehicleStatsManager : MonoBehaviour
     {
         get
         {
-            if (gridSystem == null) return _emptyColliderMap;
-            return gridSystem.moduleColliderMap;
+            var gs = ResolveGridSystem();
+            if (gs == null) return _emptyColliderMap;
+            return gs.moduleColliderMap;
         }
     }
 
     public void GetOccupiedCells(Vector2Int position, int width, int height, int angle, List<Vector2Int> dest)
     {
-        if (gridSystem == null) { dest.Clear(); return; }
-        gridSystem.GetOccupiedCells(position, width, height, angle, dest);
+        var gs = ResolveGridSystem();
+        if (gs == null) { dest.Clear(); return; }
+        gs.GetOccupiedCells(position, width, height, angle, dest);
     }
 
     public void GetClearanceCells(Vector2Int position, ModuleTemplate template, int angle, List<Vector2Int> dest)
     {
-        if (gridSystem == null) { dest.Clear(); return; }
-        gridSystem.GetClearanceCells(position, template, angle, dest);
+        var gs = ResolveGridSystem();
+        if (gs == null) { dest.Clear(); return; }
+        gs.GetClearanceCells(position, template, angle, dest);
     }
 
     public bool IsAreaFree(GridZone zone, Vector2Int position, ModuleTemplate templateToPlace, int angle, PlacedModule ignoreModule = null)
     {
-        if (gridSystem == null) return false;
-        return gridSystem.IsAreaFree(zone, position, templateToPlace, angle, ignoreModule);
+        var gs = ResolveGridSystem();
+        if (gs == null) return false;
+        return gs.IsAreaFree(zone, position, templateToPlace, angle, ignoreModule);
     }
 
     public PlacedModule InstallModule(ModuleTemplate template, string targetZoneName, Vector2Int position, int angle, bool bypassInternal = false)
     {
-        if (gridSystem == null) return null;
-        return gridSystem.InstallModule(template, targetZoneName, position, angle, bypassInternal);
+        var gs = ResolveGridSystem();
+        if (gs == null) return null;
+        return gs.InstallModule(template, targetZoneName, position, angle, bypassInternal);
     }
 
     public void UninstallModule(PlacedModule module)
     {
-        if (gridSystem != null)
-            gridSystem.UninstallModule(module);
+        var gs = ResolveGridSystem();
+        if (gs != null)
+            gs.UninstallModule(module);
     }
 
     public void ClearAllModules()
     {
-        if (gridSystem != null)
-            gridSystem.ClearAllModules();
+        var gs = ResolveGridSystem();
+        if (gs != null)
+            gs.ClearAllModules();
     }
 
     void Awake()
