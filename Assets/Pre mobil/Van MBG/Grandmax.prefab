@@ -635,6 +635,37 @@ Transform:
   m_Children: []
   m_Father: {fileID: 5941092681032020249}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!1 &3350860429171026944
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 700806371499344126}
+  m_Layer: 0
+  m_Name: side kanan (1)
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &700806371499344126
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3350860429171026944}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0.7071068, w: 0.7071068}
+  m_LocalPosition: {x: -0.81, y: 0.514, z: -1.753}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5941092681032020249}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 90}
 --- !u!1 &4268294722677824163
 GameObject:
   m_ObjectHideFlags: 0
@@ -1385,6 +1416,9 @@ MonoBehaviour:
   maxPitch: 2.8
   idleVolume: 0.3
   maxVolume: 1
+  engineSpatialBlend: 1
+  engineMinDistance: 8
+  engineMaxDistance: 60
 --- !u!114 &2771324667218329942
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1752,6 +1786,18 @@ MonoBehaviour:
     cellSize: 0.25
     affectDrag: 0
     isInternalGrid: 1
+  - zoneName: kanan
+    origin: {fileID: 3116048210541584199}
+    capacity: {x: 4, y: 6}
+    cellSize: 0.25
+    affectDrag: 0
+    isInternalGrid: 0
+  - zoneName: kiri
+    origin: {fileID: 700806371499344126}
+    capacity: {x: 4, y: 6}
+    cellSize: 0.25
+    affectDrag: 0
+    isInternalGrid: 0
   defaultModulePresets: []
   installedModules: []
 --- !u!1 &5855486573995311082
@@ -2189,6 +2235,37 @@ BoxCollider:
   serializedVersion: 3
   m_Size: {x: 0.21998382, y: 0.5996193, z: 0.59961927}
   m_Center: {x: 0.0004270412, y: -0.000027924776, z: -0.0005591661}
+--- !u!1 &7558075998858394260
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3116048210541584199}
+  m_Layer: 0
+  m_Name: side kanan
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3116048210541584199
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7558075998858394260}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: -0.7071068, w: 0.7071068}
+  m_LocalPosition: {x: 0.853, y: 1.165, z: -1.753}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 5941092681032020249}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: -90}
 --- !u!1 &7862974728470266202
 GameObject:
   m_ObjectHideFlags: 0
@@ -2317,6 +2394,8 @@ Transform:
   - {fileID: 870387885943379330}
   - {fileID: 2697281262314108122}
   - {fileID: 5959161589016137262}
+  - {fileID: 3116048210541584199}
+  - {fileID: 700806371499344126}
   - {fileID: 9007514144681849186}
   - {fileID: 6153461042030165569}
   - {fileID: 127077233326450335}
