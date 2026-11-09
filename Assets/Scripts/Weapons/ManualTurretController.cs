@@ -58,15 +58,21 @@ namespace Weapons
 
         private static readonly RaycastHit[] _turretRaycastBuffer = new RaycastHit[32];
 
-        [Header("=== DEBUG VISUALIZER (Build Visible) ===")]
-        public KeyCode debugAimKey = KeyCode.F3;
-        public KeyCode debugHitKey = KeyCode.F2;
-        private bool _showAimDebug;
-        private GameObject _debugLineGO;
-        private LineRenderer _debugLineLR;
-        private GameObject _debugHitPoint;
-        private GameObject _debugAimLineGO;
-        private LineRenderer _debugAimLineLR;
+        // Semua turret aktif mendaftar ke sini. WeaponAimIndicatorManager yang
+        // menggambar indikator global untuk semuanya sekaligus.
+        public static readonly System.Collections.Generic.List<ManualTurretController> ActiveTurrets
+            = new System.Collections.Generic.List<ManualTurretController>();
+
+        private void OnEnable()
+        {
+            if (!ActiveTurrets.Contains(this))
+                ActiveTurrets.Add(this);
+        }
+
+        private void OnDisable()
+        {
+            ActiveTurrets.Remove(this);
+        }
 
         void Start()
         {
@@ -135,11 +141,8 @@ namespace Weapons
         {
             if (turretBase == null || gunBarrel == null || aimOrigin == null) return;
 
-            if (!usePlayerInput)
-            {
-                UpdateAimDebug();
-                return;
-            }
+            // Turret non-player tetap bisa dibidik oleh AI/script lain.
+            if (!usePlayerInput) return;
 
             if (playerCamera != null && !_isFreeLooking)
             {
@@ -163,8 +166,6 @@ namespace Weapons
                     AimBarrelPitch(_currentTargetPoint);
                 }
             }
-
-            UpdateAimDebug();
         }
 
         private float CalculateOriginalDesiredPitch(Vector3 targetPoint)
@@ -279,118 +280,91 @@ namespace Weapons
             }
         }
 
-        private void UpdateAimDebug()
+        /// <summary>
+        /// Titik layar (piksel) yang dituju moncong senjata. Selalu mengembalikan
+        /// true selama referensinya ada — termasuk saat titik bidik berada di
+        /// belakang kamera. Dulu kasus itu yang bikin ring "hilang-hilangan".
+        /// Yang menggambar ring adalah WeaponAimIndicatorManager (global).
+        /// </summary>
+        public bool TryGetMuzzleAimScreenPoint(out Vector3 screenPoint)
         {
-            if (Input.GetKeyDown(debugHitKey))
+            screenPoint = Vector3.zero;
+
+            if (aimOrigin == null) return false;
+            if (playerCamera == null) playerCamera = Camera.main;
+            if (playerCamera == null) return false;
+
+            Vector3 worldPoint = GetMuzzleAimPoint();
+            Vector3 viewport = playerCamera.WorldToViewportPoint(worldPoint);
+
+            // Di belakang kamera, proyeksi x/y kebalik arah. Mirror biar ring
+            // tetap menunjuk sisi yang benar, bukan malah disembunyikan.
+            if (viewport.z < 0f)
             {
-                KinematicProjectile.ShowHitDebug = !KinematicProjectile.ShowHitDebug;
-                #if UNITY_EDITOR
-                Debug.Log($"[DEBUG] Hit indicator {(KinematicProjectile.ShowHitDebug ? "ON" : "OFF")}");
-                #endif
+                viewport.x = 1f - viewport.x;
+                viewport.y = 1f - viewport.y;
             }
 
-            if (Input.GetKeyDown(debugAimKey))
+            screenPoint = new Vector3(
+                viewport.x * Screen.width,
+                viewport.y * Screen.height,
+                viewport.z);
+            return true;
+        }
+
+        /// <summary>
+        /// Titik dunia yang dituju moncong: raycast dari aimOrigin searah forward.
+        /// Kalau tidak kena apa-apa, pakai titik jauh di ujung maxAimDistance.
+        /// </summary>
+        private Vector3 GetMuzzleAimPoint()
+        {
+            Vector3 origin = aimOrigin.position;
+            Vector3 direction = aimOrigin.forward;
+            Vector3 point = origin + direction * maxAimDistance;
+
+            int hitCount = Physics.RaycastNonAlloc(
+                origin, direction, _turretRaycastBuffer,
+                maxAimDistance, aimMask, QueryTriggerInteraction.Ignore);
+
+            float closestDistance = float.MaxValue;
+            for (int i = 0; i < hitCount; i++)
             {
-                _showAimDebug = !_showAimDebug;
-                if (_debugLineGO != null) _debugLineGO.SetActive(_showAimDebug);
-                if (_debugHitPoint != null) _debugHitPoint.SetActive(_showAimDebug);
-                if (_debugAimLineGO != null) _debugAimLineGO.SetActive(_showAimDebug);
-                #if UNITY_EDITOR
-                Debug.Log($"[DEBUG] Aim visualizer {(_showAimDebug ? "ON" : "OFF")}");
-                #endif
-            }
+                var hit = _turretRaycastBuffer[i];
+                if (hit.collider == null || hit.collider.isTrigger) continue;
+                if (hit.transform.root == transform.root) continue;
 
-            if (!_showAimDebug || aimOrigin == null || playerCamera == null) return;
-
-            if (_debugLineGO == null) CreateDebugObjects();
-
-            Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
-            Vector3 targetPt = ray.GetPoint(maxAimDistance);
-            bool hitValid = false;
-
-            if (usePlayerInput)
-            {
-                int hitCount = Physics.RaycastNonAlloc(ray, _turretRaycastBuffer, maxAimDistance, aimMask);
-                float closestDistance = float.MaxValue;
-
-                for (int i = 0; i < hitCount; i++)
+                if (hit.distance < closestDistance)
                 {
-                    var hit = _turretRaycastBuffer[i];
-                    if (hit.transform.root == transform.root) continue;
-
-                    if (hit.distance < closestDistance)
-                    {
-                        closestDistance = hit.distance;
-                        targetPt = hit.point;
-                        hitValid = true;
-                    }
+                    closestDistance = hit.distance;
+                    point = hit.point;
                 }
             }
 
-            _debugLineLR.startColor = hitValid ? Color.green : Color.red;
-            _debugLineLR.endColor = hitValid ? Color.green : Color.red;
-            _debugLineLR.SetPosition(0, playerCamera.transform.position);
-            _debugLineLR.SetPosition(1, targetPt);
-
-            _debugHitPoint.transform.position = targetPt;
-            float scale = hitValid ? 0.15f : 0.3f;
-            _debugHitPoint.transform.localScale = Vector3.one * scale;
-
-            float dist = Vector3.Distance(aimOrigin.position, targetPt);
-            _debugAimLineLR.startColor = Color.blue;
-            _debugAimLineLR.endColor = Color.blue;
-            _debugAimLineLR.SetPosition(0, aimOrigin.position);
-            _debugAimLineLR.SetPosition(1, aimOrigin.position + aimOrigin.forward * dist);
-        }
-
-        private void CreateDebugObjects()
-        {
-            _debugLineGO = new GameObject("___Debug_AimLine");
-            _debugLineGO.transform.SetParent(transform);
-            _debugLineLR = _debugLineGO.AddComponent<LineRenderer>();
-            _debugLineLR.material = new Material(Shader.Find("Sprites/Default"));
-            _debugLineLR.startWidth = 0.03f;
-            _debugLineLR.endWidth = 0.01f;
-            _debugLineLR.positionCount = 2;
-
-            _debugHitPoint = GameObject.CreatePrimitive(PrimitiveType.Sphere);
-            _debugHitPoint.name = "___Debug_AimPoint";
-            _debugHitPoint.transform.SetParent(transform);
-            Collider c = _debugHitPoint.GetComponent<Collider>();
-            if (c != null) c.enabled = false;
-
-            _debugAimLineGO = new GameObject("___Debug_AimOriginLine");
-            _debugAimLineGO.transform.SetParent(transform);
-            _debugAimLineLR = _debugAimLineGO.AddComponent<LineRenderer>();
-            _debugAimLineLR.material = new Material(Shader.Find("Sprites/Default"));
-            _debugAimLineLR.startWidth = 0.02f;
-            _debugAimLineLR.endWidth = 0.01f;
-            _debugAimLineLR.positionCount = 2;
-
-            _debugLineGO.SetActive(_showAimDebug);
-            _debugHitPoint.SetActive(_showAimDebug);
-            _debugAimLineGO.SetActive(_showAimDebug);
+            return point;
         }
 
         void OnDrawGizmos()
         {
             if (aimOrigin == null) return;
+
             Vector3 targetPt = _currentTargetPoint;
+            bool hasTarget = false;
+            bool hitValid = false;
 
             if (usePlayerInput && playerCamera != null)
             {
                 Ray ray = playerCamera.ViewportPointToRay(new Vector3(0.5f, 0.5f, 0f));
                 targetPt = ray.GetPoint(maxAimDistance);
-                
+                hasTarget = true;
+
                 int hitCount = Physics.RaycastNonAlloc(ray, _turretRaycastBuffer, maxAimDistance, aimMask);
                 float closestDistance = float.MaxValue;
-                bool hitValid = false;
 
                 for (int i = 0; i < hitCount; i++)
                 {
                     var hit = _turretRaycastBuffer[i];
                     if (hit.transform.root == transform.root) continue;
-                    
+
                     if (hit.distance < closestDistance)
                     {
                         closestDistance = hit.distance;
@@ -398,28 +372,19 @@ namespace Weapons
                         hitValid = true;
                     }
                 }
-
-                if (hitValid)
-                {
-                    Gizmos.color = Color.green;
-                    Gizmos.DrawLine(playerCamera.transform.position, targetPt);
-                    if (Application.isPlaying) Gizmos.DrawSphere(targetPt, 0.2f);
-                }
-                else
-                {
-                    Gizmos.color = Color.red;
-                    Gizmos.DrawLine(playerCamera.transform.position, targetPt);
-                }
             }
-            else
+            else if (targetPt == Vector3.zero)
             {
-                Gizmos.color = Color.yellow;
-                if (Application.isPlaying) Gizmos.DrawSphere(targetPt, 0.5f);
+                targetPt = aimOrigin.position + aimOrigin.forward * 20f;
             }
+
+            // Gizmo editor: bulat saja, tanpa garis sambung.
+            Gizmos.color = hasTarget ? (hitValid ? Color.green : Color.red) : Color.yellow;
+            Gizmos.DrawWireSphere(targetPt, Application.isPlaying ? 0.25f : 0.4f);
 
             Gizmos.color = Color.blue;
-            float dist = Vector3.Distance(aimOrigin.position, targetPt);
-            Gizmos.DrawLine(aimOrigin.position, aimOrigin.position + (aimOrigin.forward * dist));
+            float dist = Mathf.Max(1f, Vector3.Distance(aimOrigin.position, targetPt));
+            Gizmos.DrawWireSphere(aimOrigin.position + aimOrigin.forward * dist, 0.2f);
         }
     }
 }
